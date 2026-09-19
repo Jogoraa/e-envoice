@@ -1,0 +1,65 @@
+server:
+  port: 8080
+  shutdown: graceful
+  forward-headers-strategy: framework
+  max-http-request-header-size: 8KB
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+      pool-name: UtHikariPoolProd
+
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+    web:
+      pageable:
+        default-page-size: 20
+        max-page-size: 100
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+platform:
+  security:
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+    jwt:
+      secret: ${JWT_SECRET}
+      issuer: ${JWT_ISSUER:ut-einvoice-platform}
+      audience: ${JWT_AUDIENCE:ut-einvoice-api}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      show-details: never

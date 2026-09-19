@@ -1,0 +1,33 @@
+package et.ut.einvoice.audit.domain;
+
+/**
+ * Enumeration of statutory and operational audit actions for the immutable audit trail
+ * pursuant to Federal Tax Administration Proclamation No. 983/2016 Art. 17 and
+ * Directive No. 1142/2018 EC (2026 GC) Art. 4(2)(b), Art. 4(2)(c), Art. 25, Art. 26, Art. 27(2).
+ */
+public enum AuditAction {
+    INVOICE_CREATED,
+    INVOICE_SUBMITTED,
+    INVOICE_REGISTERED,
+    INVOICE_REJECTED,
+    INVOICE_CANCEL_REQUESTED,
+    INVOICE_CANCELLED,
+    CREDIT_NOTE_CREATED,
+    DEBIT_NOTE_CREATED,
+    OFFLINE_INVOICE_CREATED,
+    OFFLINE_INVOICE_RECONCILED,
+    SEQUENCE_ALLOCATED,
+    SEQUENCE_MISMATCH,
+    GOVERNMENT_RESPONSE_RECEIVED,
+    GOVERNMENT_RECONCILIATION,
+    IDEMPOTENCY_CONFLICT,
+    TENANT_CREATED,
+    TENANT_SUSPENDED,
+    TENANT_CONFIG_CHANGED,
+    FEATURE_FLAG_CHANGED,
+    GOVERNMENT_CREDENTIAL_CHANGED,
+    API_CLIENT_CREATED,
+    API_CLIENT_REVOKED,
+    USER_PERMISSION_CHANGED,
+    SECURITY_EVENT
+}

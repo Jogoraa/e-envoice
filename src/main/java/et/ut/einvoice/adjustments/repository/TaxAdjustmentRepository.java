@@ -11,4 +11,5 @@ import java.util.UUID;
 @Repository
 public interface TaxAdjustmentRepository extends JpaRepository<TaxAdjustment, UUID> {
     Page<TaxAdjustment> findAllByTenantId(UUID tenantId, Pageable pageable);
+    java.util.List<TaxAdjustment> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
 }

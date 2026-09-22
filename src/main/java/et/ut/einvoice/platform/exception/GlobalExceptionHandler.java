@@ -15,6 +15,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -208,6 +209,22 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(envelope, HttpStatus.METHOD_NOT_ALLOWED);
     }
 
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<ErrorEnvelope> handleMediaTypeNotAcceptable(HttpMediaTypeNotAcceptableException ex, HttpServletRequest request, HttpServletResponse response) {
+        String correlationId = resolveCorrelationId(request, response);
+        log.warn("Not acceptable media type on request {} [{}]: {}", correlationId, request.getRequestURI(), ex.getMessage());
+
+        ErrorEnvelope envelope = ErrorEnvelope.of(
+                HttpStatus.NOT_ACCEPTABLE.value(),
+                "NOT_ACCEPTABLE",
+                "Requested media type is not acceptable for this resource.",
+                "የተጠየቀው የሚዲያ ዓይነት ለዚህ መረጃ ተቀባይነት የለውም።",
+                correlationId,
+                request.getRequestURI()
+        );
+        return new ResponseEntity<>(envelope, HttpStatus.NOT_ACCEPTABLE);
+    }
+
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ErrorEnvelope> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex, HttpServletRequest request, HttpServletResponse response) {
         String correlationId = resolveCorrelationId(request, response);
@@ -304,6 +321,21 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return new ResponseEntity<>(envelope, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ErrorEnvelope> handleNoResourceFound(org.springframework.web.servlet.resource.NoResourceFoundException ex, HttpServletRequest request, HttpServletResponse response) {
+        String correlationId = resolveCorrelationId(request, response);
+        log.warn("Resource not found on request {} [{}]: {}", correlationId, request.getRequestURI(), ex.getMessage());
+        ErrorEnvelope envelope = ErrorEnvelope.of(
+                HttpStatus.NOT_FOUND.value(),
+                "RESOURCE_NOT_FOUND",
+                "The requested resource was not found.",
+                "የተጠየቀው መረጃ አልተገኘም።",
+                correlationId,
+                request.getRequestURI()
+        );
+        return new ResponseEntity<>(envelope, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(Exception.class)

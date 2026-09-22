@@ -10,6 +10,7 @@ import et.ut.einvoice.tenancy.domain.Tenant;
 import et.ut.einvoice.tenancy.domain.TenantStatus;
 import et.ut.einvoice.tenancy.repository.ApiClientRepository;
 import et.ut.einvoice.tenancy.repository.TenantRepository;
+import et.ut.einvoice.tenancy.service.DelegatedTenantSessionService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,19 +41,22 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
     private final RateLimitingService rateLimitingService;
     private final ObjectMapper objectMapper;
     private final JwtTokenService jwtTokenService;
+    private final DelegatedTenantSessionService delegatedTenantSessionService;
 
     public TenantAuthenticationFilter(
             ApiClientRepository apiClientRepository,
             TenantRepository tenantRepository,
             RateLimitingService rateLimitingService,
             ObjectMapper objectMapper,
-            JwtTokenService jwtTokenService
+            JwtTokenService jwtTokenService,
+            DelegatedTenantSessionService delegatedTenantSessionService
     ) {
         this.apiClientRepository = apiClientRepository;
         this.tenantRepository = tenantRepository;
         this.rateLimitingService = rateLimitingService;
         this.objectMapper = objectMapper;
         this.jwtTokenService = jwtTokenService;
+        this.delegatedTenantSessionService = delegatedTenantSessionService;
     }
 
     @Override
@@ -67,23 +71,95 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
         MDC.put("correlation_id", correlationId);
         response.setHeader("X-Correlation-ID", correlationId);
 
-        // Allow public/open endpoints
-        if (path.startsWith("/actuator") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/api/v1/public/")) {
+        // Allow public/open endpoints including login and authentication routes
+        if (path.startsWith("/actuator") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") ||
+            path.startsWith("/api/v1/public/") || path.startsWith("/api/v1/auth/") ||
+            path.startsWith("/api/v1/saas/auth/") || path.startsWith("/api/v1/master/auth/") ||
+            path.contains("/saas/auth/") || path.contains("/master/auth/") || path.contains("/auth/login")) {
             filterChain.doFilter(request, response);
             MDC.clear();
             return;
         }
 
         try {
-            UUID tenantId = null;
-            String clientId = "DEFAULT_CLIENT";
-            Set<String> scopes = new HashSet<>();
-            Set<String> roles = new HashSet<>();
-
             String apiKey = request.getHeader("X-API-Key");
             String clientSecret = request.getHeader("X-Client-Secret");
             String authHeader = request.getHeader("Authorization");
             String tenantHeader = request.getHeader("X-Tenant-ID");
+
+            boolean isSaasOrMasterPath = path.startsWith("/api/v1/saas") || path.startsWith("/api/v1/master");
+
+            // =========================================================================
+            // A. SAAS / MASTER ADMIN GATEWAY ENDPOINT PROTECTION
+            // =========================================================================
+            if (isSaasOrMasterPath) {
+                if (authHeader == null || !authHeader.regionMatches(true, 0, "Bearer ", 0, 7)) {
+                    writeError(response, HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED",
+                            "Master operator Bearer token is required for platform administration endpoints.", correlationId);
+                    return;
+                }
+
+                String token = authHeader.substring(7).trim();
+                Optional<JwtTokenService.ValidatedJwtClaims> claimsOpt = jwtTokenService.validateAndExtract(token);
+                if (claimsOpt.isEmpty()) {
+                    writeError(response, HttpStatus.UNAUTHORIZED, "AUTHENTICATION_FAILED",
+                            "Invalid, expired, or untrusted JWT authentication token.", correlationId);
+                    return;
+                }
+
+                JwtTokenService.ValidatedJwtClaims claims = claimsOpt.get();
+
+                // Reject ordinary tenant tokens attempting to access Master/SaaS APIs
+                boolean hasMasterRole = claims.roles().stream().anyMatch(r ->
+                        r.equalsIgnoreCase("ROLE_PLATFORM_ADMIN") ||
+                        r.equalsIgnoreCase("ROLE_SAAS_ADMIN") ||
+                        r.equalsIgnoreCase("ROLE_SAAS_OPERATOR") ||
+                        r.equalsIgnoreCase("ROLE_AUTHORITY_AUDITOR") ||
+                        r.equalsIgnoreCase("ROLE_DELEGATED_OPERATOR")
+                );
+
+                if (!claims.isMasterToken() && !hasMasterRole) {
+                    writeError(response, HttpStatus.FORBIDDEN, "TENANT_CANNOT_ACCESS_MASTER_API",
+                            "Tenant tokens cannot access SaaS Master platform administration endpoints.", correlationId);
+                    return;
+                }
+
+                // Establish platform operator context
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                claims.roles().forEach(r -> authorities.add(new SimpleGrantedAuthority(r)));
+                claims.scopes().forEach(s -> authorities.add(new SimpleGrantedAuthority("SCOPE_" + s)));
+                if (authorities.isEmpty()) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_SAAS_ADMIN"));
+                }
+
+                var auth = new UsernamePasswordAuthenticationToken(claims.subject(), null, authorities);
+                SecurityContextHolder.getContext().setAuthentication(auth);
+
+                TenantContext platformContext = new TenantContext(
+                        UUID.fromString("00000000-0000-0000-0000-000000000000"),
+                        "PLATFORM_OPERATOR",
+                        null,
+                        claims.subject(),
+                        "SAAS_MASTER_PORTAL",
+                        claims.roles(),
+                        claims.scopes(),
+                        null,
+                        correlationId
+                );
+                TenantContextHolder.setContext(platformContext);
+
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // =========================================================================
+            // B. TENANT BUSINESS ENDPOINT PROTECTION
+            // =========================================================================
+            UUID tenantId = null;
+            String clientId = "DEFAULT_CLIENT";
+            String userId = null;
+            Set<String> scopes = new HashSet<>();
+            Set<String> roles = new HashSet<>();
 
             // 1. API Client Key & Secret Verification (M2M Authenticated Ingress)
             if (apiKey != null && !apiKey.isBlank()) {
@@ -99,7 +175,6 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
                 }
 
                 ApiClient client = clientOpt.get();
-                // Constant-time secret comparison (supports both plaintext secret match or SHA-256 digest match)
                 byte[] expected = client.getClientSecretHash().getBytes(StandardCharsets.UTF_8);
                 byte[] provided = clientSecret.trim().getBytes(StandardCharsets.UTF_8);
                 boolean secretMatches = MessageDigest.isEqual(expected, provided);
@@ -150,6 +225,7 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
 
                 tenantId = client.getTenantId();
                 clientId = client.getClientId();
+                userId = "api-client-" + client.getClientId();
                 scopes = client.getScopeSet();
                 roles.add("ROLE_API_CLIENT");
                 roles.add("ROLE_TENANT_USER");
@@ -169,6 +245,47 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
                 }
 
                 JwtTokenService.ValidatedJwtClaims claims = claimsOpt.get();
+
+                // Prohibit direct Master JWT from calling tenant APIs without delegation
+                if (claims.isMasterToken() && !claims.isDelegated()) {
+                    log.warn("[SECURITY] Master token attempted direct access to tenant endpoint. path={} subject={} correlationId={}",
+                            path, claims.subject(), correlationId);
+                    writeError(response, HttpStatus.FORBIDDEN, "MASTER_DIRECT_TENANT_ACCESS_FORBIDDEN",
+                            "Direct master token access to tenant business APIs is prohibited. Use authorized delegated access. [path=" + path + "]", correlationId);
+                    return;
+                }
+
+                // Handle Delegated Tenant Support Session
+                if (claims.isDelegated()) {
+                    if (claims.sessionId() != null && !claims.sessionId().isBlank()) {
+                        try {
+                            UUID sessUuid = UUID.fromString(claims.sessionId());
+                            if (!delegatedTenantSessionService.isSessionActive(sessUuid)) {
+                                writeError(response, HttpStatus.UNAUTHORIZED, "DELEGATED_SESSION_INVALID",
+                                        "Delegated support session has expired or been revoked by platform operator.", correlationId);
+                                return;
+                            }
+                        } catch (IllegalArgumentException ignored) {}
+                    }
+
+                    // Enforce Read-Only Support restrictions
+                    if ("READ_ONLY_SUPPORT".equalsIgnoreCase(claims.accessType())) {
+                        String method = request.getMethod();
+                        if ("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method) ||
+                            "PATCH".equalsIgnoreCase(method) || "DELETE".equalsIgnoreCase(method)) {
+                            writeError(response, HttpStatus.FORBIDDEN, "READ_ONLY_DELEGATED_ACCESS",
+                                    "Read-only support session cannot mutate tenant financial or business records.", correlationId);
+                            return;
+                        }
+                    }
+                }
+
+                if (claims.tenantId() == null) {
+                    writeError(response, HttpStatus.FORBIDDEN, "TENANT_NOT_BOUND",
+                            "Authenticated token is not bound to an authorized tenant context.", correlationId);
+                    return;
+                }
+
                 Optional<Tenant> tenantOpt = tenantRepository.findById(claims.tenantId());
                 if (tenantOpt.isEmpty()) {
                     writeError(response, HttpStatus.FORBIDDEN, "TENANT_NOT_FOUND", "Associated tenant account does not exist.", correlationId);
@@ -195,6 +312,7 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
 
                 tenantId = claims.tenantId();
                 clientId = claims.subject();
+                userId = claims.isDelegated() && claims.delegatedBy() != null ? claims.delegatedBy() : claims.subject();
                 roles.addAll(claims.roles());
                 scopes.addAll(claims.scopes());
                 if (roles.isEmpty()) {
@@ -207,6 +325,7 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
                 scopes.add("authority:audit");
                 tenantId = UUID.fromString("00000000-0000-0000-0000-000000000000"); // Authority scope
                 clientId = "AUTHORITY_AUDITOR";
+                userId = "AUTHORITY_AUDITOR";
             }
 
             // Reject if no valid identity could be established on protected /api/v1 routes
@@ -216,7 +335,6 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
-            // Fallback for non-api or integration test contexts if tenantId established
             if (tenantId != null) {
                 MDC.put("tenant_id", tenantId.toString());
 
@@ -227,7 +345,17 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
 
-                TenantContext context = TenantContext.createWithClient(tenantId, clientId, roles, scopes, correlationId);
+                TenantContext context = new TenantContext(
+                        tenantId,
+                        tenantId.toString(),
+                        null,
+                        userId != null ? userId : "USER",
+                        clientId,
+                        roles,
+                        scopes,
+                        null,
+                        correlationId
+                );
                 TenantContextHolder.setContext(context);
 
                 List<SimpleGrantedAuthority> authorities = new ArrayList<>();
@@ -253,3 +381,4 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
         response.getWriter().write(objectMapper.writeValueAsString(envelope));
     }
 }
+

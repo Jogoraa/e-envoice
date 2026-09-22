@@ -5,10 +5,10 @@ services:
     container_name: ut_einvoice_postgres
     environment:
       POSTGRES_DB: ut_einvoice_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-CHANGE_ME_DATABASE_PASSWORD}
     ports:
-      - "5432:5432"
+      - "5435:5432"  # host 5435 → container 5432 (avoids conflict with host postgres on 5432)
     command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     volumes:
       - ./infrastructure/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
@@ -42,13 +42,14 @@ services:
     container_name: ut_einvoice_platform
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/ut_einvoice_db
-      DB_USERNAME: postgres
-      DB_PASSWORD: postgrespassword
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-CHANGE_ME_DATABASE_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      MOR_GATEWAY_URL: http://core.mor.gov.et
     depends_on:
       postgres:
         condition: service_healthy

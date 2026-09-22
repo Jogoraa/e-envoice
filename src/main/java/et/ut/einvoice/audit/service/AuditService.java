@@ -68,6 +68,11 @@ public class AuditService {
     }
 
     @Transactional
+    public AuditEvent recordEvent(UUID tenantId, String streamId, String actorId, String actorType, String action, String resourceType, String resourceId, String payloadJson, String clientIp) {
+        return recordEventInternal(tenantId, streamId, actorId, actorType, action, resourceType, resourceId, payloadJson, clientIp, null, null);
+    }
+
+    @Transactional
     public AuditEvent recordFiscalEvent(UUID tenantId, String streamId, AuditAction action, String resourceType, String resourceId, String payloadJson) {
         return recordEventInternal(tenantId, streamId, "SYSTEM", "SYSTEM", action.name(), resourceType, resourceId, payloadJson, "127.0.0.1", null, null);
     }
@@ -207,7 +212,11 @@ public class AuditService {
             return locked.get();
         }
 
-        streamInitializer.initStreamIfAbsent(tenantId, streamId);
+        try {
+            streamInitializer.initStreamIfAbsent(tenantId, streamId);
+        } catch (Exception e) {
+            log.debug("Concurrent genesis stream initialization handled for {}:{}: {}", tenantId, streamId, e.getMessage());
+        }
 
         return streamRepository.findWithLock(tenantId, streamId)
                 .orElseThrow(() -> new IllegalStateException("Failed to acquire stream lock for " + tenantId + ":" + streamId));

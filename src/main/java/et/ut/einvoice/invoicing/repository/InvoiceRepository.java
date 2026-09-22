@@ -24,6 +24,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
     Optional<Invoice> findByTenantIdAndIdempotencyKey(UUID tenantId, String idempotencyKey);
 
+    Optional<Invoice> findByTenantIdAndDocumentNumber(UUID tenantId, String documentNumber);
+
     Page<Invoice> findAllByTenantId(UUID tenantId, Pageable pageable);
 
     Page<Invoice> findByTenantId(UUID tenantId, Pageable pageable);

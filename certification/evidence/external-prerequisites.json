@@ -1,0 +1,148 @@
+[
+  {
+    "id": "EXT-01",
+    "name": "Ministry of Revenues EIRS Production Gateway",
+    "purpose": "Official statutory electronic invoice registration, IRN/RRN authorization, and cryptographic signature return",
+    "owner": "FDRE Ministry of Revenues (MoR) / EIRS Directorate",
+    "environment": "Production Government Network",
+    "softwareImplementationStatus": "SOFTWARE_COMPLETE",
+    "stagingVerificationStatus": "STAGING_VERIFIED (WireMock / Simulated Protocol)",
+    "productionConnectionStatus": "PRODUCTION_DISCONNECTED (Pending Government Credentials)",
+    "governmentAccreditationStatus": "PENDING_ACCREDITATION_BOARD_EVALUATION",
+    "blockingProduction": true,
+    "requiredCredentials": [
+      "MOR_CLIENT_ID",
+      "MOR_CLIENT_SECRET",
+      "MOR_API_KEY",
+      "MOR_SELLER_TIN",
+      "Production Mutual TLS (mTLS) Client Certificate & Private Key"
+    ],
+    "requiredNetworkAccess": [
+      "https://core.mor.gov.et (or government intranet endpoint)",
+      "TCP Port 443 outbound with TLS 1.3 / mTLS client auth"
+    ],
+    "failClosedBehavior": "In production mode, invoices buffer locally in encrypted store with 72-hour SLA when EIRS is unavailable."
+  },
+  {
+    "id": "EXT-02",
+    "name": "INSA Hardware Security Module (HSM) / PKCS#11 Cryptographic Token",
+    "purpose": "Non-exportable private key custody, SHA-256 with RSA-2048 digital signing mandated by Directive Art. 4(6)",
+    "owner": "Information Network Security Administration (INSA) / Certified Hardware Vendor (Thales/Utimaco)",
+    "environment": "Production Secure Enclave",
+    "softwareImplementationStatus": "SOFTWARE_COMPLETE",
+    "stagingVerificationStatus": "STAGING_VERIFIED (Software Development Keystore Provider)",
+    "productionConnectionStatus": "PRODUCTION_DISCONNECTED (Pending Physical Appliance / Cloud HSM Endpoint)",
+    "governmentAccreditationStatus": "PENDING_INSA_SECURITY_EVALUATION",
+    "blockingProduction": true,
+    "requiredCredentials": [
+      "HSM_PKCS11_LIB (e.g. /usr/lib/libcryptoki.so or cloudhsm_pkcs11.so)",
+      "HSM_SLOT (Hardware Slot ID)",
+      "HSM_PIN (Security Enclave Token PIN)",
+      "HSM_KEY_ALIAS (Registered Master Key Alias)"
+    ],
+    "requiredNetworkAccess": [
+      "PCIe local bus interface or dedicated private HSM VPC subnet (TCP 2223 / 2225)"
+    ],
+    "failClosedBehavior": "In production HSM mode, software fallback is strictly prohibited. Signing requests throw IllegalStateException."
+  },
+  {
+    "id": "EXT-03",
+    "name": "Ethio Telecom Commercial SMS Gateway",
+    "purpose": "Automated delivery of certified invoice particulars to buyer mobile devices mandated by Art. 4(1)(i)",
+    "owner": "Ethio Telecom Enterprise Directorate",
+    "environment": "Ethio Telecom Telephony Network",
+    "softwareImplementationStatus": "SOFTWARE_COMPLETE",
+    "stagingVerificationStatus": "STAGING_VERIFIED (Development Simulation Transport)",
+    "productionConnectionStatus": "PRODUCTION_DISCONNECTED (Pending Commercial Telephony Contract)",
+    "governmentAccreditationStatus": "NOT_APPLICABLE (Commercial Utility)",
+    "blockingProduction": false,
+    "requiredCredentials": [
+      "ETHIO_TELECOM_SMS_URL (SMPP or HTTPS shortcode endpoint)",
+      "ETHIO_TELECOM_API_TOKEN / SMPP System ID & Password",
+      "REGISTERED_SHORT_CODE (Sender Name / Short Code approved by Ethio Telecom)"
+    ],
+    "requiredNetworkAccess": [
+      "TCP Port 443 / SMPP Port 2775 outbound to Ethio Telecom gateways"
+    ],
+    "failClosedBehavior": "In production mode, unconfigured SMS triggers non-blocking alert in outbox worker without blocking fiscal invoice generation."
+  },
+  {
+    "id": "EXT-04",
+    "name": "Production SMTP Transport Service",
+    "purpose": "Buyer tax invoice delivery via email and administrative alerting",
+    "owner": "Enterprise Infrastructure Team / Cloud Email Provider",
+    "environment": "Production VPC",
+    "softwareImplementationStatus": "SOFTWARE_COMPLETE",
+    "stagingVerificationStatus": "STAGING_VERIFIED (Development Simulation Transport)",
+    "productionConnectionStatus": "PRODUCTION_CONFIGURED_OR_PENDING",
+    "governmentAccreditationStatus": "NOT_APPLICABLE",
+    "blockingProduction": false,
+    "requiredCredentials": [
+      "SMTP_HOST",
+      "SMTP_PORT (587 / 465)",
+      "SMTP_USERNAME",
+      "SMTP_PASSWORD",
+      "SMTP_FROM_ADDRESS"
+    ],
+    "requiredNetworkAccess": [
+      "TCP Port 587 (STARTTLS) or 465 (SMTPS) outbound"
+    ],
+    "failClosedBehavior": "Fails closed in prod if unconfigured; development operates in simulation mode."
+  },
+  {
+    "id": "EXT-05",
+    "name": "Dual-Datacenter Secondary Tier III Facility",
+    "purpose": "Dual datacenter active/standby replication mandated by Directive Art. 5(4) & Art. 14(3)(a)",
+    "owner": "Certified Ethiopian Datacenter Operator (e.g. Raxio / Ethio Telecom DC)",
+    "environment": "Physical Infrastructure (Addis Ababa / Regional Hub)",
+    "softwareImplementationStatus": "SOFTWARE_COMPLETE (PostgreSQL streaming replication & Patroni cluster scripts)",
+    "stagingVerificationStatus": "STAGING_VERIFIED (Containerized drill)",
+    "productionConnectionStatus": "PENDING_PHYSICAL_COLO_PROVISIONING",
+    "governmentAccreditationStatus": "PENDING_ACCREDITATION_BOARD_SITE_INSPECTION",
+    "blockingProduction": true,
+    "requiredCredentials": [
+      "Site-to-site IPsec VPN tunnel credentials",
+      "Dedicated fiber link encryption keys"
+    ],
+    "requiredNetworkAccess": [
+      "Dedicated redundant 10Gbps low-latency interconnect between DC1 and DC2"
+    ],
+    "failClosedBehavior": "Single DC operation triggers high-priority operational alert in platform readiness probes."
+  },
+  {
+    "id": "EXT-06",
+    "name": "Commercial Bank Performance Guarantee Bond",
+    "purpose": "Statutory financial security bond ($50,000 to $250,000 USD) mandated by Directive Art. 14(3)(f) & Art. 14(6)",
+    "owner": "Licensed Ethiopian Commercial Bank",
+    "environment": "Corporate Legal / Banking",
+    "softwareImplementationStatus": "NOT_APPLICABLE (Procedural Statutory Requirement)",
+    "stagingVerificationStatus": "NOT_APPLICABLE",
+    "productionConnectionStatus": "PENDING_BANK_LETTER_ISSUANCE",
+    "governmentAccreditationStatus": "PENDING_SUBMISSION_WITH_APPLICATION_DOSSIER",
+    "blockingProduction": true,
+    "requiredCredentials": [
+      "Irrevocable Bank Guarantee Bond Document referencing Directive No. 1142/2026"
+    ],
+    "requiredNetworkAccess": [],
+    "failClosedBehavior": "Administrative license gate blocks commercial rollout until MoR accepts bond."
+  },
+  {
+    "id": "EXT-07",
+    "name": "Public Domain DNS & EV TLS Certificates",
+    "purpose": "Secure HTTPS ingress, public invoice verification QR endpoints, and M2M API endpoints",
+    "owner": "Enterprise Security Team / Public CA",
+    "environment": "Production Ingress Edge",
+    "softwareImplementationStatus": "SOFTWARE_COMPLETE (TLS 1.3 reverse proxy & Spring security configs)",
+    "stagingVerificationStatus": "STAGING_VERIFIED",
+    "productionConnectionStatus": "PENDING_DOMAIN_BINDING",
+    "governmentAccreditationStatus": "VERIFIED_DURING_LAB_TESTING",
+    "blockingProduction": true,
+    "requiredCredentials": [
+      "X.509 Wildcard / SAN SSL/TLS Certificates from publicly trusted CA (DigiCert / Let's Encrypt)"
+    ],
+    "requiredNetworkAccess": [
+      "Public Static IPv4/IPv6 registered with MoR under Directive Art. 14(3)(d)"
+    ],
+    "failClosedBehavior": "Plaintext HTTP is permanently disabled; HSTS enforced."
+  }
+]

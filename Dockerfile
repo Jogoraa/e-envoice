@@ -10,7 +10,8 @@ RUN mvn clean package -DskipTests -B
 # Stage 2: Production runtime image
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN apk add --no-cache chromium font-noto-ethiopic ttf-dejavu && \
+    addgroup -S appgroup && adduser -S appuser -G appgroup
 COPY --from=build /app/target/ut-einvoice-platform-1.0.0-RELEASE.jar app.jar
 
 USER appuser:appgroup

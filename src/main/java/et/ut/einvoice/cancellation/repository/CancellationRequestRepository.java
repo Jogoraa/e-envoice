@@ -17,5 +17,7 @@ public interface CancellationRequestRepository extends JpaRepository<Cancellatio
     Optional<CancellationRequest> findByIdAndTenantId(UUID id, UUID tenantId);
     Optional<CancellationRequest> findByIrnAndTenantId(String irn, UUID tenantId);
     Page<CancellationRequest> findAllByTenantId(UUID tenantId, Pageable pageable);
+    List<CancellationRequest> findByTenantId(UUID tenantId);
+    List<CancellationRequest> findByTenantIdOrderByRequestedAtDesc(UUID tenantId);
     List<CancellationRequest> findAllByStateAndSlaDeadlineAtBefore(CancellationState state, Instant now);
 }

@@ -32,14 +32,10 @@ public class AuditStreamInitializer {
     public synchronized void initStreamIfAbsent(UUID tenantId, String streamId) {
         AuditStream.AuditStreamId id = new AuditStream.AuditStreamId(tenantId, streamId);
         if (streamRepository.findById(id).isEmpty()) {
-            try {
-                String genesisHash = hashService.computeGenesisHash(tenantId, streamId);
-                AuditStream newStream = new AuditStream(tenantId, streamId, genesisHash);
-                streamRepository.saveAndFlush(newStream);
-                log.info("Initialized genesis audit stream for tenant {} stream {}", tenantId, streamId);
-            } catch (Exception e) {
-                log.debug("Concurrent genesis stream initialization race handled for tenant {} stream {}", tenantId, streamId);
-            }
+            String genesisHash = hashService.computeGenesisHash(tenantId, streamId);
+            AuditStream newStream = new AuditStream(tenantId, streamId, genesisHash);
+            streamRepository.saveAndFlush(newStream);
+            log.info("Initialized genesis audit stream for tenant {} stream {}", tenantId, streamId);
         }
     }
 }

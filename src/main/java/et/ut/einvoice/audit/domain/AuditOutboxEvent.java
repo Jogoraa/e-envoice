@@ -41,8 +41,7 @@ public class AuditOutboxEvent {
     @Column(name = "event_hash", nullable = false, length = 64)
     private String eventHash;
 
-    @Lob
-    @Column(name = "canonical_payload", nullable = false)
+    @Column(name = "canonical_payload", columnDefinition = "TEXT", nullable = false)
     private String canonicalPayload;
 
     @Enumerated(EnumType.STRING)

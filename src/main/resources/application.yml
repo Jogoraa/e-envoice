@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8081}
   shutdown: graceful
   forward-headers-strategy: framework
   max-http-request-header-size: 8KB
@@ -19,7 +19,7 @@ spring:
       enabled: true
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/ut_einvoice_db}
+    url: ${DB_URL:jdbc:postgresql://localhost:5435/ut_einvoice_db}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
@@ -83,7 +83,13 @@ platform:
 # Ministry of Revenues EIRS Gateway Configuration
 mor:
   gateway:
-    base-url: ${MOR_GATEWAY_URL:http://core.mor.gov.et}
+    base-url: ${MOR_GATEWAY_BASE_URL:${MOR_GATEWAY_URL:http://core.mor.gov.et}}
+    client-id: ${MOR_GATEWAY_CLIENT_ID:${MOR_CLIENT_ID:}}
+    client-secret: ${MOR_GATEWAY_CLIENT_SECRET:${MOR_CLIENT_SECRET:}}
+    api-key: ${MOR_GATEWAY_API_KEY:${MOR_API_KEY:}}
+    seller-tin: ${MOR_GATEWAY_SELLER_TIN:${MOR_SELLER_TIN:}}
+    system-number: ${MOR_GATEWAY_SYSTEM_NUMBER:${MOR_SYSTEM_NUMBER:8EFBBDD7FF}}
+    system-type: ${MOR_GATEWAY_SYSTEM_TYPE:${MOR_SYSTEM_TYPE:POS}}
     auth-endpoint: /auth/login
     refresh-endpoint: /auth/refresh-token
     register-endpoint: /v1/register

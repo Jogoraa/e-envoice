@@ -70,6 +70,9 @@ public class Invoice {
     @Column(name = "buyer_tin", length = 16)
     private String buyerTin;
 
+    @Column(name = "buyer_vat_number", length = 32)
+    private String buyerVatNumber;
+
     @Column(name = "buyer_id_number", length = 64)
     private String buyerIdNumber;
 
@@ -82,11 +85,26 @@ public class Invoice {
     @Column(name = "buyer_email", length = 128)
     private String buyerEmail;
 
+    @Column(name = "buyer_country", length = 8)
+    private String buyerCountry = "ET";
+
     @Column(name = "buyer_region", length = 32)
     private String buyerRegion;
 
+    @Column(name = "buyer_city", length = 64)
+    private String buyerCity;
+
+    @Column(name = "buyer_zone", length = 64)
+    private String buyerZone;
+
     @Column(name = "buyer_woreda", length = 32)
     private String buyerWoreda;
+
+    @Column(name = "buyer_kebele", length = 32)
+    private String buyerKebele;
+
+    @Column(name = "buyer_house_no", length = 32)
+    private String buyerHouseNo;
 
     // MoR EIRS Government Acknowledgments
     @Column(name = "irn", length = 128, unique = true)
@@ -258,6 +276,8 @@ public class Invoice {
     public void setBuyerLegalName(String buyerLegalName) { this.buyerLegalName = buyerLegalName; }
     public String getBuyerTin() { return buyerTin; }
     public void setBuyerTin(String buyerTin) { this.buyerTin = buyerTin; }
+    public String getBuyerVatNumber() { return buyerVatNumber; }
+    public void setBuyerVatNumber(String buyerVatNumber) { this.buyerVatNumber = buyerVatNumber; }
     public String getBuyerIdNumber() { return buyerIdNumber; }
     public void setBuyerIdNumber(String buyerIdNumber) { this.buyerIdNumber = buyerIdNumber; }
     public String getBuyerIdType() { return buyerIdType; }
@@ -266,10 +286,20 @@ public class Invoice {
     public void setBuyerPhone(String buyerPhone) { this.buyerPhone = buyerPhone; }
     public String getBuyerEmail() { return buyerEmail; }
     public void setBuyerEmail(String buyerEmail) { this.buyerEmail = buyerEmail; }
+    public String getBuyerCountry() { return buyerCountry; }
+    public void setBuyerCountry(String buyerCountry) { this.buyerCountry = buyerCountry; }
     public String getBuyerRegion() { return buyerRegion; }
     public void setBuyerRegion(String buyerRegion) { this.buyerRegion = buyerRegion; }
+    public String getBuyerCity() { return buyerCity; }
+    public void setBuyerCity(String buyerCity) { this.buyerCity = buyerCity; }
+    public String getBuyerZone() { return buyerZone; }
+    public void setBuyerZone(String buyerZone) { this.buyerZone = buyerZone; }
     public String getBuyerWoreda() { return buyerWoreda; }
     public void setBuyerWoreda(String buyerWoreda) { this.buyerWoreda = buyerWoreda; }
+    public String getBuyerKebele() { return buyerKebele; }
+    public void setBuyerKebele(String buyerKebele) { this.buyerKebele = buyerKebele; }
+    public String getBuyerHouseNo() { return buyerHouseNo; }
+    public void setBuyerHouseNo(String buyerHouseNo) { this.buyerHouseNo = buyerHouseNo; }
     public String getIrn() { return irn; }
     public String getPreviousIrn() { return previousIrn; }
     public void setPreviousIrn(String previousIrn) { this.previousIrn = previousIrn; }

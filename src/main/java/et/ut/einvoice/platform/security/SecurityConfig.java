@@ -110,15 +110,24 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/actuator/health/**",
                                 "/actuator/prometheus",
-                                "/api/v1/public/**"
+                                "/api/v1/public/**",
+                                "/api/v1/auth/**",
+                                "/api/v1/saas/auth/**",
+                                "/api/v1/master/auth/**"
                         ).permitAll()
                         .requestMatchers("/api/v1/authority/**").hasAuthority("ROLE_AUTHORITY_AUDITOR")
+                        .requestMatchers("/api/v1/saas/**", "/api/v1/master/**").hasAnyAuthority("ROLE_SAAS_ADMIN", "ROLE_PLATFORM_ADMIN", "ROLE_SAAS_OPERATOR", "ROLE_DELEGATED_OPERATOR")
                         .requestMatchers("/actuator/**").hasRole("PLATFORM_ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(tenantAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public org.springframework.security.crypto.password.PasswordEncoder passwordEncoder() {
+        return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
     }
 
     @Bean

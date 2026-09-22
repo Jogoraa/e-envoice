@@ -10,6 +10,20 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
+# Flutter / Dart
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.pub-cache/
+frontend/.pub/
+frontend/build/
+frontend/coverage/
+frontend/doc/api/
+frontend/ios/Flutter/.last_build_id
+frontend/android/app/debug
+frontend/android/app/profile
+frontend/android/app/release
+
 # IDE & Editor
 .idea/
 *.iml
@@ -26,19 +40,21 @@ Thumbs.db
 
 # Environment & local secrets
 .env
+.env.local
+.env.*.local
 *.key
 *.pem
 *.p12
 *.pfx
+*.jks
 
-# Exclude scratch scripts & legacy prototype from clean backend
+# Temporary runtime test artifacts & exports
+exports/
+*.pdf
+*.png
+
+# Scratch scripts & legacy prototype
 dump_*.py
 extract_pdf.py
 parse_articles.py
 legacy-prototype/
-
-# Tests excluded as requested
-src/test/
-
-# Frontend tracked separately
-frontend/

@@ -6,7 +6,7 @@ import et.ut.einvoice.government.domain.GovernmentRegistrationProvider;
 import et.ut.einvoice.government.infrastructure.mor.dto.MorLoginRequest;
 import et.ut.einvoice.government.infrastructure.mor.dto.MorLoginResponse;
 import et.ut.einvoice.government.infrastructure.mor.dto.MorRegisterPayload;
-import et.ut.einvoice.government.infrastructure.mor.dto.MorRegisterResponse;
+import et.ut.einvoice.government.service.MorInvoiceCanonicalizationService;
 import et.ut.einvoice.invoicing.domain.Invoice;
 import et.ut.einvoice.taxpayer.domain.TaxpayerProfile;
 import org.slf4j.Logger;
@@ -18,12 +18,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
-import java.math.BigDecimal;
 import java.time.Duration;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.Instant;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,20 +30,57 @@ public class MorEirsRegistrationProvider implements GovernmentRegistrationProvid
 
     private static final Logger log = LoggerFactory.getLogger(MorEirsRegistrationProvider.class);
     private static final Pattern EXPECTED_SEQ_PATTERN = Pattern.compile("expected\\s*:\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
-    private static final DateTimeFormatter MOR_DATE_FORMAT = DateTimeFormatter.ofPattern("dd-MM-yyyy'T'HH:mm:ss");
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
+    private final MorInvoiceCanonicalizationService canonicalizationService;
     private final String baseUrl;
+    private final String configuredClientId;
+    private final String configuredClientSecret;
+    private final String configuredApiKey;
+    private final String configuredSellerTin;
+    private final String defaultSystemNumber;
+    private final String defaultSystemType;
+
+    private static class CachedToken {
+        final String token;
+        final Instant expiresAt;
+
+        CachedToken(String token, Instant expiresAt) {
+            this.token = token;
+            this.expiresAt = expiresAt;
+        }
+
+        boolean isValid() {
+            return token != null && !token.isBlank() && Instant.now().plusSeconds(60).isBefore(expiresAt);
+        }
+    }
+
+    private final AtomicReference<CachedToken> tokenCache = new AtomicReference<>(null);
+    private final ReentrantLock authLock = new ReentrantLock();
 
     public MorEirsRegistrationProvider(
             WebClient.Builder webClientBuilder,
             ObjectMapper objectMapper,
-            @Value("${mor.gateway.base-url:http://core.mor.gov.et}") String baseUrl
+            MorInvoiceCanonicalizationService canonicalizationService,
+            @Value("${mor.gateway.base-url:${MOR_GATEWAY_URL:http://core.mor.gov.et}}") String baseUrl,
+            @Value("${mor.gateway.client-id:${MOR_CLIENT_ID:}}") String configuredClientId,
+            @Value("${mor.gateway.client-secret:${MOR_CLIENT_SECRET:}}") String configuredClientSecret,
+            @Value("${mor.gateway.api-key:${MOR_API_KEY:}}") String configuredApiKey,
+            @Value("${mor.gateway.seller-tin:${MOR_SELLER_TIN:}}") String configuredSellerTin,
+            @Value("${mor.gateway.system-number:${MOR_SYSTEM_NUMBER:}}") String defaultSystemNumber,
+            @Value("${mor.gateway.system-type:${MOR_SYSTEM_TYPE:POS}}") String defaultSystemType
     ) {
         this.webClient = webClientBuilder.baseUrl(baseUrl).build();
         this.objectMapper = objectMapper;
+        this.canonicalizationService = canonicalizationService;
         this.baseUrl = baseUrl;
+        this.configuredClientId = configuredClientId;
+        this.configuredClientSecret = configuredClientSecret;
+        this.configuredApiKey = configuredApiKey;
+        this.configuredSellerTin = configuredSellerTin;
+        this.defaultSystemNumber = defaultSystemNumber;
+        this.defaultSystemType = defaultSystemType;
     }
 
     @Override
@@ -53,9 +88,43 @@ public class MorEirsRegistrationProvider implements GovernmentRegistrationProvid
         return "EIRS-v1.0";
     }
 
+    public String getOrAuthenticateToken(String tin) {
+        CachedToken current = tokenCache.get();
+        if (current != null && current.isValid()) {
+            return current.token;
+        }
+
+        authLock.lock();
+        try {
+            current = tokenCache.get();
+            if (current != null && current.isValid()) {
+                return current.token;
+            }
+
+            if (configuredClientId.isBlank() || configuredClientSecret.isBlank() || configuredApiKey.isBlank()) {
+                log.debug("MoR credentials not present in environment; proceeding with caller token if available");
+                return null;
+            }
+
+            String effectiveTin = (configuredSellerTin != null && !configuredSellerTin.isBlank())
+                    ? configuredSellerTin
+                    : ((tin != null && !tin.isBlank() && !"9000000000".equals(tin)) ? tin : "0041746204");
+
+            String token = authenticate(configuredClientId, configuredClientSecret, configuredApiKey, effectiveTin);
+            tokenCache.set(new CachedToken(token, Instant.now().plusSeconds(3500)));
+            return token;
+        } catch (Exception e) {
+            log.warn("Automatic token retrieval failed: {}", e.getMessage());
+            return null;
+        } finally {
+            authLock.unlock();
+        }
+    }
+
     @Override
     public String authenticate(String clientId, String clientSecret, String apiKey, String tin) {
         try {
+            log.info("Authenticating with MoR Gateway at {}", baseUrl);
             var req = new MorLoginRequest(clientId, clientSecret, apiKey, tin);
             var resp = webClient.post()
                     .uri("/auth/login")
@@ -67,25 +136,41 @@ public class MorEirsRegistrationProvider implements GovernmentRegistrationProvid
                     .block();
 
             if (resp != null && resp.data() != null && resp.data().accessToken() != null) {
-                return resp.data().accessToken();
+                String token = resp.data().accessToken();
+                Long expiresIn = resp.data().expiresIn() != null ? resp.data().expiresIn() : 3600L;
+                tokenCache.set(new CachedToken(token, Instant.now().plusSeconds(Math.max(60, expiresIn - 60))));
+                log.info("Successfully authenticated with MoR Gateway (expiresIn={}s)", expiresIn);
+                return token;
             }
             throw new RuntimeException("Authentication response missing accessToken");
         } catch (Exception ex) {
-            log.error("Failed to authenticate with MoR Gateway at {}", baseUrl, ex);
+            log.error("Failed to authenticate with MoR Gateway at {}: {}", baseUrl, ex.getMessage());
             throw new RuntimeException("MoR Gateway authentication failed: " + ex.getMessage(), ex);
         }
     }
 
     @Override
     public GovernmentRegistrationResult registerInvoice(Invoice invoice, TaxpayerProfile sellerProfile, String token) {
+        String effectiveToken = token;
+        if (effectiveToken == null || effectiveToken.isBlank() || "bearer-token".equalsIgnoreCase(effectiveToken) || "AUTO_AUTH".equalsIgnoreCase(effectiveToken) || !effectiveToken.contains(".")) {
+            effectiveToken = getOrAuthenticateToken(sellerProfile != null ? sellerProfile.getTin() : configuredSellerTin);
+        }
+
         try {
-            MorRegisterPayload payload = buildPayload(invoice, sellerProfile);
+            MorRegisterPayload payload = canonicalizationService.buildGovernmentPayload(
+                    invoice, sellerProfile, defaultSystemNumber, defaultSystemType
+            );
             log.info("Submitting Invoice [Doc: {}, Counter: {}] to MoR Gateway...", invoice.getDocumentNumber(), invoice.getInvoiceCounter());
 
-            String responseString = webClient.post()
+            var requestSpec = webClient.post()
                     .uri("/v1/register")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                    .contentType(MediaType.APPLICATION_JSON)
+                    .contentType(MediaType.APPLICATION_JSON);
+
+            if (effectiveToken != null && !effectiveToken.isBlank()) {
+                requestSpec.header(HttpHeaders.AUTHORIZATION, "Bearer " + effectiveToken);
+            }
+
+            String responseString = requestSpec
                     .bodyValue(payload)
                     .retrieve()
                     .bodyToMono(String.class)
@@ -133,6 +218,32 @@ public class MorEirsRegistrationProvider implements GovernmentRegistrationProvid
 
         } catch (WebClientResponseException ex) {
             log.error("MoR Gateway returned HTTP error status: {}", ex.getStatusCode());
+            if (ex.getStatusCode().value() == 401) {
+                tokenCache.set(null); // Invalidate token on 401
+            }
+            // Check if 400 has sequence mismatch error
+            try {
+                JsonNode errRoot = objectMapper.readTree(ex.getResponseBodyAsString());
+                if (errRoot.has("body") && errRoot.get("body").isArray()) {
+                    Long expectedDoc = null;
+                    Long expectedCounter = null;
+                    for (JsonNode err : errRoot.get("body")) {
+                        String portion = err.has("portion") ? err.get("portion").asText() : "";
+                        String msg = err.has("errorMessage") ? err.get("errorMessage").toString() : "";
+                        Matcher m = EXPECTED_SEQ_PATTERN.matcher(msg);
+                        if (m.find()) {
+                            long val = Long.parseLong(m.group(1));
+                            if ("DocumentDetails".equalsIgnoreCase(portion)) expectedDoc = val;
+                            if ("SourceSystem".equalsIgnoreCase(portion)) expectedCounter = val;
+                        }
+                    }
+                    if (expectedDoc != null || expectedCounter != null) {
+                        log.warn("MoR Gateway 400 requested sequence adjustment: nextDoc={}, nextCounter={}", expectedDoc, expectedCounter);
+                        return GovernmentRegistrationResult.sequenceAdjustment(expectedDoc, expectedCounter);
+                    }
+                }
+            } catch (Exception ignored) {}
+
             return GovernmentRegistrationResult.failure("MOR_HTTP_" + ex.getStatusCode().value(), ex.getResponseBodyAsString());
         } catch (Exception ex) {
             log.error("Network or Gateway communication failure connecting to MoR: {}", ex.getMessage());
@@ -144,12 +255,20 @@ public class MorEirsRegistrationProvider implements GovernmentRegistrationProvid
     public GovernmentVerificationResult verifySubmission(String submissionId, String documentNumber, TaxpayerProfile sellerProfile, String token) {
         try {
             log.info("Verifying submission with MoR Gateway: submissionId={}, doc={}", submissionId, documentNumber);
-            String responseString = webClient.get()
+            String effectiveToken = token != null && !token.isBlank() && !"bearer-token".equalsIgnoreCase(token)
+                    ? token : getOrAuthenticateToken(sellerProfile.getTin());
+
+            var requestSpec = webClient.get()
                     .uri(uriBuilder -> uriBuilder.path("/v1/verify")
                             .queryParam("documentNumber", documentNumber)
                             .queryParam("tin", sellerProfile.getTin())
-                            .build())
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                            .build());
+
+            if (effectiveToken != null && !effectiveToken.isBlank()) {
+                requestSpec.header(HttpHeaders.AUTHORIZATION, "Bearer " + effectiveToken);
+            }
+
+            String responseString = requestSpec
                     .retrieve()
                     .bodyToMono(String.class)
                     .timeout(Duration.ofSeconds(10))
@@ -177,10 +296,15 @@ public class MorEirsRegistrationProvider implements GovernmentRegistrationProvid
             body.put("irn", irn);
             body.put("reason", reason);
 
-            String responseString = webClient.post()
+            var requestSpec = webClient.post()
                     .uri("/v1/cancel")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                    .contentType(MediaType.APPLICATION_JSON)
+                    .contentType(MediaType.APPLICATION_JSON);
+
+            if (token != null && !token.isBlank() && !"bearer-token".equalsIgnoreCase(token)) {
+                requestSpec.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+            }
+
+            String responseString = requestSpec
                     .bodyValue(body)
                     .retrieve()
                     .bodyToMono(String.class)
@@ -193,107 +317,5 @@ public class MorEirsRegistrationProvider implements GovernmentRegistrationProvid
             log.error("Cancellation request failed with MoR for IRN {}: {}", irn, ex.getMessage());
             return new CancellationResult(false, null, ex.getMessage());
         }
-    }
-
-    private MorRegisterPayload buildPayload(Invoice inv, TaxpayerProfile seller) {
-        String formattedDate = inv.getInvoiceDate().atZone(ZoneId.of("Africa/Addis_Ababa")).format(MOR_DATE_FORMAT);
-
-        var buyerDetails = new MorRegisterPayload.BuyerDetails(
-                "0",
-                "70",
-                inv.getBuyerEmail(),
-                null,
-                inv.getBuyerIdNumber() != null ? inv.getBuyerIdNumber() : "11122222222222222",
-                inv.getBuyerIdType() != null ? inv.getBuyerIdType() : "KID",
-                "01",
-                inv.getBuyerLegalName() != null ? inv.getBuyerLegalName() : "Walk-in Customer",
-                inv.getBuyerPhone() != null ? inv.getBuyerPhone() : "0911000000",
-                inv.getBuyerRegion() != null ? inv.getBuyerRegion() : "13",
-                inv.getBuyerTin(),
-                null,
-                inv.getBuyerWoreda() != null ? inv.getBuyerWoreda() : "01",
-                "SHA"
-        );
-
-        var documentDetails = new MorRegisterPayload.DocumentDetails(
-                inv.getDocumentNumber(),
-                formattedDate,
-                "INV"
-        );
-
-        List<MorRegisterPayload.ItemDetails> itemList = new ArrayList<>();
-        for (var line : inv.getLines()) {
-            itemList.add(new MorRegisterPayload.ItemDetails(
-                    line.getLineNumber(),
-                    line.getItemCode(),
-                    line.getProductDescription(),
-                    line.getNatureOfSupplies(),
-                    line.getUnit(),
-                    line.getQuantity(),
-                    line.getUnitPrice(),
-                    line.getPreTaxValue(),
-                    line.getTaxCode(),
-                    line.getTaxAmount(),
-                    line.getDiscount(),
-                    line.getExciseTaxValue(),
-                    null,
-                    line.getTotalLineAmount()
-            ));
-        }
-
-        var paymentDetails = new MorRegisterPayload.PaymentDetails(
-                inv.getPaymentMode(),
-                inv.getPaymentTerm()
-        );
-
-        var referenceDetails = new MorRegisterPayload.ReferenceDetails(
-                inv.getPreviousIrn() != null ? inv.getPreviousIrn() : "",
-                null
-        );
-
-        var sellerDetails = new MorRegisterPayload.SellerDetails(
-                null,
-                seller.getEmail(),
-                null,
-                seller.getLegalName(),
-                null,
-                seller.getPhone(),
-                seller.getRegion(),
-                null,
-                seller.getTin(),
-                seller.getVatNumber(),
-                seller.getWoreda()
-        );
-
-        var sourceSystem = new MorRegisterPayload.SourceSystem(
-                "Cashier",
-                inv.getInvoiceCounter(),
-                "Sales Officer",
-                seller.getSystemNumber(),
-                seller.getSystemType()
-        );
-
-        var valueDetails = new MorRegisterPayload.ValueDetails(
-                BigDecimal.ZERO,
-                inv.getExciseTotal(),
-                BigDecimal.ZERO,
-                inv.getTaxTotal(),
-                inv.getGrandTotal(),
-                BigDecimal.ZERO,
-                inv.getCurrency()
-        );
-
-        return new MorRegisterPayload(
-                buyerDetails,
-                documentDetails,
-                itemList,
-                paymentDetails,
-                referenceDetails,
-                sellerDetails,
-                sourceSystem,
-                inv.getTransactionType().name(),
-                valueDetails,
-                "1"
-        );
     }
 }

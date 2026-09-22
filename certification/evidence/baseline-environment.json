@@ -1,0 +1,73 @@
+{
+  "platform": "UT Electronic Invoicing Platform",
+  "version": "1.0.0-RELEASE",
+  "regulatoryDirective": "FDRE Ministry of Revenues Directive No. 1142/2026 (2018 EC)",
+  "baselineTimestamp": "2026-09-22T13:26:00+03:00",
+  "environment": {
+    "os": "Windows 11 (build 10.0, amd64)",
+    "gitCommit": "5302e50",
+    "gitBranch": "main",
+    "java": {
+      "version": "21.0.12.1",
+      "vendor": "Microsoft",
+      "home": "C:\\Program Files\\Microsoft\\jdk-21.0.12.101-hotspot"
+    },
+    "maven": {
+      "version": "3.9.9",
+      "home": "C:\\Users\\davej\\tools\\apache-maven-3.9.9"
+    },
+    "flutter": {
+      "dartSdk": "^3.12.2",
+      "channel": "stable",
+      "framework": "Flutter 3.x"
+    },
+    "database": {
+      "engine": "PostgreSQL 16.4 + PostGIS 3.4",
+      "container": "ut_einvoice_postgres",
+      "hostPort": 5435,
+      "containerPort": 5432,
+      "rowLevelSecurity": "ENFORCED (FORCE ROW LEVEL SECURITY across 17 tenant tables)"
+    },
+    "cache": {
+      "engine": "Redis 7-alpine",
+      "container": "ut_einvoice_redis",
+      "hostPort": 6380,
+      "containerPort": 6379
+    },
+    "cryptography": {
+      "library": "Bouncy Castle 1.78.1 (bcprov-jdk18on, bcpkix-jdk18on)",
+      "algorithms": "RSA-2048, SHA-256 with PKCS#1 v1.5, HMAC-SHA256",
+      "hsmInterface": "PKCS#11 Provider Adapter (HsmPkcs11SignatureProvider)"
+    },
+    "qrCode": {
+      "library": "ZXing 3.5.3 (core, javase)",
+      "format": "ISO/IEC 18004 Error Correction Level M"
+    },
+    "springBoot": {
+      "version": "3.3.3",
+      "virtualThreads": true,
+      "flyway": "Flyway 10.x PostgreSQL"
+    }
+  },
+  "testBaseline": {
+    "backend": {
+      "totalTests": 198,
+      "passed": 198,
+      "failures": 0,
+      "errors": 0,
+      "executionTimeSec": 103.0
+    },
+    "frontend": {
+      "totalTests": 62,
+      "passed": 62,
+      "failures": 0,
+      "errors": 0,
+      "executionTimeSec": 17.0
+    },
+    "staticAnalysis": {
+      "errors": 0,
+      "warnings": 0,
+      "deprecations": 9
+    }
+  }
+}

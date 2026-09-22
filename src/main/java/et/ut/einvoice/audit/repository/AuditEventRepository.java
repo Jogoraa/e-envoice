@@ -25,6 +25,8 @@ public interface AuditEventRepository extends JpaRepository<AuditEvent, UUID> {
 
     List<AuditEvent> findByTenantIdAndStreamIdOrderBySequenceNumberAsc(UUID tenantId, String streamId);
 
+    List<AuditEvent> findByTenantIdOrderBySequenceNumberAsc(UUID tenantId);
+
     List<AuditEvent> findByTenantIdAndStreamIdAndSequenceNumberBetweenOrderBySequenceNumberAsc(
             UUID tenantId, String streamId, Long startSequence, Long endSequence);
 

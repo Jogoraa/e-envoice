@@ -30,4 +30,12 @@ public class PortabilityApiController {
         UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(portabilityService.initiateExport(tenantId));
     }
+
+    @GetMapping("/exports")
+    @PreAuthorize("hasAuthority('SCOPE_tenant:admin') or hasRole('TENANT_ADMIN')")
+    @Operation(summary = "List data export jobs for the current tenant")
+    public ResponseEntity<java.util.List<ExportJob>> listExports() {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        return ResponseEntity.ok(portabilityService.listExports(tenantId));
+    }
 }

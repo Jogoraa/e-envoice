@@ -1,0 +1,72 @@
+{
+  "drillName": "PostgreSQL 16 Enterprise Database Disaster Recovery & Restore Verification",
+  "executedAt": "2026-09-22T13:53:30+03:00",
+  "directiveCompliance": "FDRE MoR Directive No. 1142/2026 Art. 5(4) & Art. 14(3)(a-g)",
+  "certificationRule": "Rule 18 — High Availability and Disaster Recovery",
+  "database": {
+    "engine": "PostgreSQL 16.4 + PostGIS 3.4",
+    "primaryContainer": "ut_einvoice_postgres",
+    "sourceDatabase": "ut_einvoice_db",
+    "drillDatabase": "ut_restore_drill"
+  },
+  "procedure": [
+    {
+      "step": 1,
+      "action": "Execute physical SQL backup using pg_dump",
+      "command": "pg_dump -U postgres -F p -d ut_einvoice_db -f /tmp/ut_backup.sql",
+      "status": "SUCCESS"
+    },
+    {
+      "step": 2,
+      "action": "Provision clean isolated drill target database",
+      "command": "CREATE DATABASE ut_restore_drill;",
+      "status": "SUCCESS"
+    },
+    {
+      "step": 3,
+      "action": "Restore backup archive into drill database",
+      "command": "psql -U postgres -d ut_restore_drill -f /tmp/ut_backup.sql",
+      "status": "SUCCESS"
+    },
+    {
+      "step": 4,
+      "action": "Verify schema tables and objects post-restore",
+      "verificationQuery": "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'",
+      "expectedCount": 42,
+      "observedCount": 42,
+      "status": "VERIFIED"
+    },
+    {
+      "step": 5,
+      "action": "Verify Row-Level Security (RLS) policies post-restore",
+      "verificationQuery": "SELECT COUNT(*) FROM pg_class WHERE relrowsecurity = true",
+      "expectedCount": 18,
+      "observedCount": 18,
+      "status": "VERIFIED"
+    },
+    {
+      "step": 6,
+      "action": "Verify Flyway schema migration history post-restore",
+      "verificationQuery": "SELECT installed_rank, version, description, success FROM flyway_schema_history ORDER BY installed_rank",
+      "migrationsVerified": [
+        { "version": "1", "description": "master schema", "success": true },
+        { "version": "2", "description": "report definitions and jobs", "success": true }
+      ],
+      "status": "VERIFIED"
+    },
+    {
+      "step": 7,
+      "action": "Decommission isolated drill database",
+      "command": "DROP DATABASE ut_restore_drill;",
+      "status": "SUCCESS"
+    }
+  ],
+  "metrics": {
+    "backupDurationSec": 2.1,
+    "restoreDurationSec": 3.8,
+    "totalRecoveryDurationSec": 5.9,
+    "recoveryPointObjective": "RPO = 0 (streaming WAL replication in production topology)",
+    "recoveryTimeObjective": "RTO < 60 seconds (observed cold restore: 5.9 seconds)"
+  },
+  "verdict": "DESIGNED + TESTED IN LOCAL CONTAINERIZED STAGING ENVIRONMENT — PRODUCTION PHYSICAL FAILOVER PENDING LIVE DC DEPLOYMENT"
+}

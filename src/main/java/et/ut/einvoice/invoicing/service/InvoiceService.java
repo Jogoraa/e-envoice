@@ -27,8 +27,6 @@ import et.ut.einvoice.platform.outbox.worker.OutboxRelayWorker;
 import et.ut.einvoice.taxation.domain.TaxCode;
 import et.ut.einvoice.taxation.service.TaxEngine;
 import et.ut.einvoice.taxpayer.domain.TaxpayerProfile;
-import et.ut.einvoice.invoicing.domain.TenantInvoiceSequence;
-import et.ut.einvoice.invoicing.repository.TenantInvoiceSequenceRepository;
 import et.ut.einvoice.taxpayer.repository.TaxpayerProfileRepository;
 import et.ut.einvoice.tenancy.domain.GovernmentStatus;
 import et.ut.einvoice.tenancy.domain.SubscriptionStatus;
@@ -54,7 +52,6 @@ public class InvoiceService {
     private static final Logger log = LoggerFactory.getLogger(InvoiceService.class);
 
     private final InvoiceRepository invoiceRepository;
-    private final TenantInvoiceSequenceRepository sequenceRepository;
     private final TaxpayerProfileRepository taxpayerProfileRepository;
     private final GovernmentSubmissionRepository submissionRepository;
     private final TaxEngine taxEngine;
@@ -69,10 +66,11 @@ public class InvoiceService {
     private final ObjectMapper objectMapper;
     private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
     private final TenantRepository tenantRepository;
+    private final et.ut.einvoice.government.service.MorInvoiceCanonicalizationService canonicalizationService;
+    private final et.ut.einvoice.customer.service.CustomerService customerService;
 
     public InvoiceService(
             InvoiceRepository invoiceRepository,
-            TenantInvoiceSequenceRepository sequenceRepository,
             TaxpayerProfileRepository taxpayerProfileRepository,
             GovernmentSubmissionRepository submissionRepository,
             TaxEngine taxEngine,
@@ -87,10 +85,13 @@ public class InvoiceService {
             ObjectMapper objectMapper,
             org.springframework.transaction.PlatformTransactionManager transactionManager,
             @org.springframework.beans.factory.annotation.Autowired(required = false)
-            TenantRepository tenantRepository
+            TenantRepository tenantRepository,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            et.ut.einvoice.government.service.MorInvoiceCanonicalizationService canonicalizationService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            et.ut.einvoice.customer.service.CustomerService customerService
     ) {
         this.invoiceRepository = invoiceRepository;
-        this.sequenceRepository = sequenceRepository;
         this.taxpayerProfileRepository = taxpayerProfileRepository;
         this.submissionRepository = submissionRepository;
         this.taxEngine = taxEngine;
@@ -105,6 +106,8 @@ public class InvoiceService {
         this.objectMapper = objectMapper;
         this.transactionTemplate = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
         this.tenantRepository = tenantRepository;
+        this.canonicalizationService = canonicalizationService != null ? canonicalizationService : new et.ut.einvoice.government.service.MorInvoiceCanonicalizationService(objectMapper, qrCodeService);
+        this.customerService = customerService;
     }
 
     /**
@@ -169,6 +172,16 @@ public class InvoiceService {
             }
         }
 
+        // 1b. Document number reconciliation (prevents duplicate invoice constraint violation on re-submission)
+        if (request.customDocumentNumber() != null && !request.customDocumentNumber().isBlank()) {
+            Optional<Invoice> existingByDoc = invoiceRepository.findByTenantIdAndDocumentNumber(tenantId, request.customDocumentNumber());
+            if (existingByDoc.isPresent()) {
+                Invoice inv = existingByDoc.get();
+                log.info("Recovered committed invoice for custom document number {}: {}", request.customDocumentNumber(), inv.getId());
+                return InvoiceResponseDto.fromEntity(inv);
+            }
+        }
+
         // 2. Validate line items and B2B / B2C business requirements
         if (request.items() == null || request.items().isEmpty()) {
             throw new BusinessException(
@@ -193,7 +206,7 @@ public class InvoiceService {
         GovernmentSubmission submission = bundle.submission();
 
         try {
-            var regResult = governmentRegistrationProvider.registerInvoice(invoice, seller, "bearer-token");
+            var regResult = governmentRegistrationProvider.registerInvoice(invoice, seller, "AUTO_AUTH");
 
             if (regResult.success()) {
                 invoice.markRegistered(
@@ -271,13 +284,44 @@ public class InvoiceService {
 
             if (request.buyer() != null) {
                 invoice.setBuyerLegalName(request.buyer().legalName());
-                invoice.setBuyerTin(request.buyer().tin());
+                invoice.setBuyerTin(request.buyer().normalizedTin());
+                invoice.setBuyerVatNumber(request.buyer().vatNumber());
                 invoice.setBuyerIdNumber(request.buyer().idNumber());
-                invoice.setBuyerIdType(request.buyer().idType());
+                invoice.setBuyerIdType(request.buyer().idType() != null ? request.buyer().idType() : "TIN");
                 invoice.setBuyerPhone(request.buyer().phone());
                 invoice.setBuyerEmail(request.buyer().email());
+                invoice.setBuyerCountry(request.buyer().country() != null ? request.buyer().country() : "ET");
                 invoice.setBuyerRegion(request.buyer().region());
+                invoice.setBuyerCity(request.buyer().city());
+                invoice.setBuyerZone(request.buyer().zone());
                 invoice.setBuyerWoreda(request.buyer().woreda());
+                invoice.setBuyerKebele(request.buyer().kebele());
+                invoice.setBuyerHouseNo(request.buyer().houseNo());
+
+                if (Boolean.TRUE.equals(request.saveCustomerToMaster()) && request.buyer().legalName() != null && !request.buyer().legalName().isBlank() && customerService != null) {
+                    try {
+                        customerService.upsertFromInvoiceBuyer(
+                                tenantId,
+                                invoice.getBranchId(),
+                                request.buyer().legalName(),
+                                request.buyer().normalizedTin(),
+                                request.buyer().vatNumber(),
+                                request.buyer().phone(),
+                                request.buyer().email(),
+                                request.buyer().country(),
+                                request.buyer().region(),
+                                request.buyer().city(),
+                                request.buyer().zone(),
+                                request.buyer().woreda(),
+                                request.buyer().kebele(),
+                                request.buyer().houseNo(),
+                                request.buyer().idType(),
+                                request.buyer().idNumber()
+                        );
+                    } catch (Exception e) {
+                        log.warn("Customer master auto-save from invoice failed: {}", e.getMessage());
+                    }
+                }
             }
 
             int lineNum = 1;
@@ -383,7 +427,7 @@ public class InvoiceService {
         invoice.setDocumentNumber(String.valueOf(regResult.expectedNextDoc()));
         invoice.setInvoiceCounter(regResult.expectedNextCounter());
 
-        var retryResult = governmentRegistrationProvider.registerInvoice(invoice, seller, "bearer-token");
+        var retryResult = governmentRegistrationProvider.registerInvoice(invoice, seller, "AUTO_AUTH");
         if (retryResult.success()) {
             invoice.markRegistered(
                     retryResult.irn(),
@@ -404,19 +448,26 @@ public class InvoiceService {
 
     private void ensureQrCode(Invoice invoice, TaxpayerProfile seller) {
         if (invoice.getSignedQr() == null || invoice.getSignedQr().isBlank()) {
-            String qrPayload = String.format("SELLER:%s|DOC:%s|TOTAL:%s|IRN:%s",
-                    seller.getTin(), invoice.getDocumentNumber(), invoice.getGrandTotal(),
-                    invoice.getIrn() != null ? invoice.getIrn() : "OFFLINE");
-            String qrBase64 = qrCodeService.generateQrCodeBase64(qrPayload, 200, 200);
+            String qrPayload;
+            if (canonicalizationService != null) {
+                qrPayload = canonicalizationService.buildCanonicalQrData(
+                        invoice, seller, invoice.getSignedInvoice(), invoice.getAckDate()
+                );
+            } else {
+                qrPayload = String.format("SELLER:%s|DOC:%s|TOTAL:%s|IRN:%s",
+                        seller.getTin(), invoice.getDocumentNumber(), invoice.getGrandTotal(),
+                        invoice.getIrn() != null ? invoice.getIrn() : "OFFLINE");
+            }
+            String qrBase64 = qrCodeService.generateQrCodeBase64(qrPayload, 600, 600);
             if (invoice.getStatus() == InvoiceStatus.OFFLINE_BUFFERED) {
                 invoice.setOfflineQr(qrBase64);
             } else {
                 invoice.markRegistered(
                         invoice.getIrn() != null ? invoice.getIrn() : "OFFLINE-" + UUID.randomUUID(),
                         "RRN-" + invoice.getDocumentNumber(),
-                        Instant.now().toString(),
+                        invoice.getAckDate() != null ? invoice.getAckDate() : Instant.now().toString(),
                         qrBase64,
-                        ""
+                        invoice.getSignedInvoice() != null ? invoice.getSignedInvoice() : ""
                 );
             }
         }
@@ -443,14 +494,6 @@ public class InvoiceService {
                         HttpStatus.BAD_REQUEST
                 );
             }
-            if (request.buyer().tin().trim().equals("000000000") || request.buyer().tin().trim().length() < 9) {
-                throw new BusinessException(
-                        "INVALID_BUYER_TIN",
-                        "The provided Buyer TIN is invalid or improperly formatted.",
-                        "የቀረበው የገዢው ታክስ ከፋይ መለያ ቁጥር (TIN) ትክክለኛ አይደለም።",
-                        HttpStatus.BAD_REQUEST
-                );
-            }
             if (request.buyer().legalName() == null || request.buyer().legalName().isBlank()) {
                 throw new BusinessException(
                         "INVALID_BUYER_NAME",
@@ -458,6 +501,41 @@ public class InvoiceService {
                         "የገዢው ህጋዊ ስም መሞላት አለበት።",
                         HttpStatus.BAD_REQUEST
                 );
+            }
+        }
+
+        // Validate format of TIN whenever provided across all transaction types
+        if (request.buyer() != null && request.buyer().tin() != null && !request.buyer().tin().isBlank()) {
+            String cleanTin = request.buyer().tin().trim();
+            if (!cleanTin.matches("^\\d{10}$") || cleanTin.equals("0000000000")) {
+                throw new BusinessException(
+                        "INVALID_BUYER_TIN",
+                        "The provided Buyer TIN [" + cleanTin + "] is invalid. Ethiopian TIN must contain exactly 10 numeric digits.",
+                        "የቀረበው የገዢው ታክስ ከፋይ መለያ ቁጥር (TIN) ትክክለኛ አይደለም፤ በትክክል 10 አሃዞች መሆን አለበት።",
+                        HttpStatus.BAD_REQUEST
+                );
+            }
+        }
+
+        // Validate line items
+        if (request.items() != null) {
+            for (var item : request.items()) {
+                if (item.quantity() == null || item.quantity().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                    throw new BusinessException(
+                            "INVALID_ITEM_QUANTITY",
+                            "Item quantity must be greater than zero for item " + item.itemCode(),
+                            "የዕቃው መጠን ከዜሮ በላይ መሆን አለበት።",
+                            HttpStatus.BAD_REQUEST
+                    );
+                }
+                if (item.unitPrice() == null || item.unitPrice().compareTo(java.math.BigDecimal.ZERO) < 0) {
+                    throw new BusinessException(
+                            "INVALID_ITEM_PRICE",
+                            "Unit price cannot be negative for item " + item.itemCode(),
+                            "የነጠላ ዋጋ ከዜሮ ማነስ የለበትም።",
+                            HttpStatus.BAD_REQUEST
+                    );
+                }
             }
         }
     }
@@ -539,6 +617,51 @@ public class InvoiceService {
 
     public Page<InvoiceResponseDto> getInvoices(UUID tenantId, Pageable pageable) {
         return invoiceRepository.findAllByTenantId(tenantId, pageable).map(InvoiceResponseDto::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public et.ut.einvoice.invoicing.dto.InvoiceSummaryDto getTenantInvoiceSummary(UUID tenantId) {
+        java.time.Instant startOfToday = java.time.LocalDate.now(java.time.ZoneId.of("UTC")).atStartOfDay(java.time.ZoneId.of("UTC")).toInstant();
+        java.util.List<Invoice> allTenantInvoices = invoiceRepository.findAllByTenantId(tenantId, Pageable.unpaged()).getContent();
+
+        long todayCount = 0;
+        java.math.BigDecimal todayGross = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal todayVat = java.math.BigDecimal.ZERO;
+        long registeredCount = 0;
+        long pendingCount = 0;
+        java.math.BigDecimal totalGross = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal totalVat = java.math.BigDecimal.ZERO;
+
+        for (Invoice inv : allTenantInvoices) {
+            java.math.BigDecimal invTotal = inv.getGrandTotal() != null ? inv.getGrandTotal() : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal invVat = inv.getTaxTotal() != null ? inv.getTaxTotal() : java.math.BigDecimal.ZERO;
+
+            totalGross = totalGross.add(invTotal);
+            totalVat = totalVat.add(invVat);
+
+            if (inv.getInvoiceDate() != null && inv.getInvoiceDate().isAfter(startOfToday)) {
+                todayCount++;
+                todayGross = todayGross.add(invTotal);
+                todayVat = todayVat.add(invVat);
+            }
+
+            if (inv.getStatus() == InvoiceStatus.REGISTERED) {
+                registeredCount++;
+            } else if (inv.getStatus() == InvoiceStatus.PENDING_REGISTRATION) {
+                pendingCount++;
+            }
+        }
+
+        return new et.ut.einvoice.invoicing.dto.InvoiceSummaryDto(
+                todayCount,
+                todayGross,
+                todayVat,
+                allTenantInvoices.size(),
+                totalGross,
+                totalVat,
+                registeredCount,
+                pendingCount
+        );
     }
 
     public record PersistedInvoiceBundle(

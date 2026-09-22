@@ -42,14 +42,17 @@ public class TenantSequenceService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public long allocateNextCounter(UUID tenantId) {
         synchronized (locks.computeIfAbsent(tenantId, k -> new Object())) {
+            Long maxCounter = invoiceRepository.findMaxInvoiceCounter(tenantId);
+            long maxExisting = (maxCounter != null ? maxCounter : 0L);
+
             Optional<TenantInvoiceSequence> seqOpt = sequenceRepository.findByTenantIdForUpdate(tenantId);
             TenantInvoiceSequence seq;
             if (seqOpt.isPresent()) {
                 seq = seqOpt.get();
-                seq.setCurrentCounter(seq.getCurrentCounter() + 1);
+                long next = Math.max(seq.getCurrentCounter(), maxExisting) + 1;
+                seq.setCurrentCounter(next);
             } else {
-                Long maxCounter = invoiceRepository.findMaxInvoiceCounter(tenantId);
-                long initial = (maxCounter != null ? maxCounter : 0L) + 1L;
+                long initial = maxExisting + 1L;
                 seq = new TenantInvoiceSequence(tenantId, initial);
                 log.info("Initialized invoice sequence for tenant {} at initial counter {}", tenantId, initial);
             }
@@ -61,7 +64,8 @@ public class TenantSequenceService {
                 seqOpt = sequenceRepository.findByTenantIdForUpdate(tenantId);
                 if (seqOpt.isPresent()) {
                     seq = seqOpt.get();
-                    seq.setCurrentCounter(seq.getCurrentCounter() + 1);
+                    long next = Math.max(seq.getCurrentCounter(), maxExisting) + 1;
+                    seq.setCurrentCounter(next);
                     sequenceRepository.saveAndFlush(seq);
                     return seq.getCurrentCounter();
                 }

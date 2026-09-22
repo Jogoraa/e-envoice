@@ -67,6 +67,9 @@ public class OutboundWebhookDelivery {
     public Instant getLastAttemptAt() { return lastAttemptAt; }
     public String getErrorMessage() { return errorMessage; }
     public Instant getCreatedAt() { return createdAt; }
+    public int getAttempts() { return attemptCount; }
+    public String getLastError() { return errorMessage; }
+    public Instant getDeliveredAt() { return "DELIVERED".equals(status) ? lastAttemptAt : null; }
 
     public void markDelivered() {
         this.status = "DELIVERED";

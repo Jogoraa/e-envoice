@@ -54,9 +54,15 @@ class MasterAdminApiClient {
   }
 
   String _normalizePath(String path) {
-    if (_dio.options.baseUrl.endsWith('/api/v1/master') && path.startsWith('/api/v1/master')) {
-      final stripped = path.substring('/api/v1/master'.length);
-      return stripped.isEmpty ? '/' : stripped;
+    if (_dio.options.baseUrl.endsWith('/api/v1/master')) {
+      if (path.startsWith('/api/v1/master')) {
+        final stripped = path.substring('/api/v1/master'.length);
+        return stripped.isEmpty ? '/' : stripped;
+      }
+      if (path.startsWith('/api/v1/admin')) {
+        final stripped = path.substring('/api/v1/admin'.length);
+        return stripped.isEmpty ? '/' : stripped;
+      }
     }
     return path;
   }
@@ -88,6 +94,46 @@ class MasterAdminApiClient {
   }) async {
     try {
       return await _dio.post<T>(
+        _normalizePath(path),
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+      );
+    } on DioException catch (e) {
+      throw AppError.fromDioException(e);
+    }
+  }
+
+  Future<Response<T>> put<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      return await _dio.put<T>(
+        _normalizePath(path),
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+      );
+    } on DioException catch (e) {
+      throw AppError.fromDioException(e);
+    }
+  }
+
+  Future<Response<T>> delete<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      return await _dio.delete<T>(
         _normalizePath(path),
         data: data,
         queryParameters: queryParameters,

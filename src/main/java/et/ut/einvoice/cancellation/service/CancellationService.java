@@ -28,19 +28,31 @@ public class CancellationService {
     private final GovernmentRegistrationProvider governmentRegistrationProvider;
     private final DomainEventPublisher eventPublisher;
     private final et.ut.einvoice.audit.service.AuditService auditService;
+    private final et.ut.einvoice.notifications.service.InvoiceNotificationPolicyService notificationPolicyService;
+    private final et.ut.einvoice.notifications.repository.InvoiceNotificationOutboxRepository notificationOutboxRepository;
+    private final et.ut.einvoice.notifications.metrics.SmsMetrics smsMetrics;
 
     public CancellationService(
             CancellationRequestRepository cancellationRepository,
             InvoiceRepository invoiceRepository,
             GovernmentRegistrationProvider governmentRegistrationProvider,
             DomainEventPublisher eventPublisher,
-            et.ut.einvoice.audit.service.AuditService auditService
+            et.ut.einvoice.audit.service.AuditService auditService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            et.ut.einvoice.notifications.service.InvoiceNotificationPolicyService notificationPolicyService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            et.ut.einvoice.notifications.repository.InvoiceNotificationOutboxRepository notificationOutboxRepository,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            et.ut.einvoice.notifications.metrics.SmsMetrics smsMetrics
     ) {
         this.cancellationRepository = cancellationRepository;
         this.invoiceRepository = invoiceRepository;
         this.governmentRegistrationProvider = governmentRegistrationProvider;
         this.eventPublisher = eventPublisher;
         this.auditService = auditService;
+        this.notificationPolicyService = notificationPolicyService;
+        this.notificationOutboxRepository = notificationOutboxRepository;
+        this.smsMetrics = smsMetrics;
     }
 
     @Transactional
@@ -109,7 +121,32 @@ public class CancellationService {
                     "127.0.0.1"
             );
 
-            // 5. Publish Event to notify buyer per Directive Art. 26(5)
+            // 5. Same-transaction outbox enqueueing for cancellation notification
+            if (notificationPolicyService != null && notificationOutboxRepository != null) {
+                var decision = notificationPolicyService.evaluateCancellationNotification(
+                        invoice,
+                        cancelResult.cancellationRef(),
+                        UUID.randomUUID().toString()
+                );
+                if (decision.shouldNotify() && decision.outboxRecord() != null) {
+                    notificationOutboxRepository.save(decision.outboxRecord());
+                    if (smsMetrics != null) {
+                        smsMetrics.recordCreated(decision.outboxRecord().getNotificationType());
+                    }
+                    auditService.recordEvent(
+                            tenantId,
+                            "SMS_NOTIFICATION",
+                            "SYSTEM",
+                            et.ut.einvoice.audit.domain.AuditAction.SMS_NOTIFICATION_CREATED.name(),
+                            "INVOICE",
+                            invoice.getId().toString(),
+                            "outbox_id=" + decision.outboxRecord().getId() + ";party_id=" + decision.outboxRecord().getRecipientPartyId(),
+                            "127.0.0.1"
+                    );
+                }
+            }
+
+            // 6. Publish Event to notify buyer per Directive Art. 26(5)
             eventPublisher.publish(new InvoiceCancelledEvent(
                     invoice.getId(),
                     tenantId,

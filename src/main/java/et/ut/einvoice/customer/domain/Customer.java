@@ -68,6 +68,12 @@ public class Customer {
     @Column(name = "status", nullable = false, length = 32)
     private String status = "ACTIVE";
 
+    @Column(name = "sms_notifications_enabled", nullable = false)
+    private Boolean smsNotificationsEnabled = true;
+
+    @Column(name = "preferred_language", nullable = false, length = 8)
+    private String preferredLanguage = "am";
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -250,6 +256,22 @@ public class Customer {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Boolean getSmsNotificationsEnabled() {
+        return smsNotificationsEnabled;
+    }
+
+    public void setSmsNotificationsEnabled(Boolean smsNotificationsEnabled) {
+        this.smsNotificationsEnabled = smsNotificationsEnabled != null ? smsNotificationsEnabled : true;
+    }
+
+    public String getPreferredLanguage() {
+        return preferredLanguage;
+    }
+
+    public void setPreferredLanguage(String preferredLanguage) {
+        this.preferredLanguage = preferredLanguage != null ? preferredLanguage : "am";
     }
 
     public Instant getUpdatedAt() {

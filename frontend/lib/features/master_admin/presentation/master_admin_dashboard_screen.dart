@@ -42,19 +42,24 @@ class _MasterAdminDashboardScreenState extends ConsumerState<MasterAdminDashboar
       final response = await client.get('/api/v1/master/telemetry');
       if (response.data is Map) {
         final data = response.data as Map<String, dynamic>;
+        if (!mounted) return;
         setState(() {
           _gatewayStatus = data['gatewayStatus']?.toString() ?? 'ONLINE';
-          _gatewayUptime = data['gatewayUptime']?.toString() ?? '99.98%';
-          _gatewayThroughput = data['gatewayThroughput']?.toString() ?? '420 TPS';
+          _gatewayUptime = data['gatewayUptime']?.toString() ?? '100.0%';
+          _gatewayThroughput = data['gatewayThroughput']?.toString() ?? '0.0 TPS';
           _hsmStatus = data['hsmStatus']?.toString() ?? 'ONLINE';
-          _hsmAlgorithm = data['hsmAlgorithm']?.toString() ?? 'ECDSA secp256r1 via Cloud HSM';
+          _hsmAlgorithm = data['hsmAlgorithm']?.toString() ?? 'ECDSA secp256r1';
           _offlineReconciliationStatus = data['offlineReconciliationStatus']?.toString() ?? '100%';
           _unreconciledCount = (data['unreconciledInvoicesCount'] as num?)?.toInt() ?? 0;
-          _dbLag = data['dbConnectionLag']?.toString() ?? '0.2 ms';
+          _dbLag = data['dbConnectionLag']?.toString() ?? '< 1 ms';
           _isLoading = false;
         });
+      } else {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _error = 'Unable to fetch master platform telemetry: $e';

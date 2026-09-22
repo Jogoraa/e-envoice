@@ -32,13 +32,8 @@ public class NotificationService {
     @Async
     @EventListener
     public void onInvoiceRegistered(InvoiceService.InvoiceRegisteredEvent event) {
-        log.info("Dispatching async buyer notification for Registered Invoice: IRN={}, email={}, phone={} (SmsProvider={}, EmailProvider={})",
-                event.irn(), event.buyerEmail(), event.buyerPhone(), smsProvider.getProviderName(), emailProvider.getProviderName());
-
-        if (event.buyerPhone() != null && !event.buyerPhone().isBlank()) {
-            smsProvider.sendSms(event.buyerPhone(), String.format("MoR Tax Invoice Registered. IRN: %s, Date: %s. Verified by EIRS.",
-                    event.irn(), Instant.now()));
-        }
+        log.info("Processing async buyer notifications for Registered Invoice: IRN={}, email={}, phone={} (Sms handled via Outbox Worker, EmailProvider={})",
+                event.irn(), event.buyerEmail(), event.buyerPhone(), emailProvider.getProviderName());
 
         if (event.buyerEmail() != null && !event.buyerEmail().isBlank()) {
             emailProvider.sendEmail(event.buyerEmail(), "Your Certified Tax Invoice",
@@ -49,12 +44,7 @@ public class NotificationService {
     @Async
     @EventListener
     public void onInvoiceCancelled(CancellationService.InvoiceCancelledEvent event) {
-        log.info("Dispatching async buyer cancellation notification: IRN={}, ref={}", event.irn(), event.cancellationRef());
-
-        if (event.buyerPhone() != null && !event.buyerPhone().isBlank()) {
-            smsProvider.sendSms(event.buyerPhone(), String.format("Tax Invoice Cancelled. IRN: %s, Ref: %s. Notification per Directive Art. 26.",
-                    event.irn(), event.cancellationRef()));
-        }
+        log.info("Processing async buyer cancellation notification: IRN={}, ref={}", event.irn(), event.cancellationRef());
 
         if (event.buyerEmail() != null && !event.buyerEmail().isBlank()) {
             emailProvider.sendEmail(event.buyerEmail(), "Tax Invoice Cancellation Notice",

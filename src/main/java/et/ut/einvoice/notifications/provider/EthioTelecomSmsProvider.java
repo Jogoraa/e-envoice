@@ -54,21 +54,21 @@ public class EthioTelecomSmsProvider implements SmsProvider {
     }
 
     @Override
-    public boolean sendSms(String recipientPhone, String messageText) {
+    public SmsSendResult sendTransactionalSms(SmsSendRequest request) {
         if (!isConfigured || webClient == null) {
             if ("prod".equalsIgnoreCase(activeProfile) || "production".equalsIgnoreCase(activeProfile)) {
                 log.error("SMS dispatch rejected: Ethio Telecom SMS gateway credentials are not configured in production.");
-                return false;
+                return SmsSendResult.failed("UNCONFIGURED", "Gateway not configured in production", et.ut.einvoice.notifications.domain.FailureClassification.PROVIDER_CONFIGURATION_FAILURE);
             }
-            log.info("[SMS-DEV-SIMULATION -> {}] [Sender: {}]: {}", recipientPhone, senderId, messageText);
-            return true;
+            log.info("[SMS-DEV-SIMULATION -> {}] [Sender: {}]: {}", request.recipientPhone(), senderId, request.messageText());
+            return SmsSendResult.accepted("MOCK-ETHIO-" + java.util.UUID.randomUUID());
         }
 
         try {
             var payload = Map.of(
                     "sender", senderId,
-                    "recipient", recipientPhone,
-                    "message", messageText,
+                    "recipient", request.recipientPhone(),
+                    "message", request.messageText(),
                     "priority", "HIGH"
             );
 
@@ -79,12 +79,17 @@ public class EthioTelecomSmsProvider implements SmsProvider {
                     .timeout(Duration.ofSeconds(5))
                     .block();
 
-            log.info("SMS delivered successfully to {} via Ethio Telecom: response={}", recipientPhone, response);
-            return true;
+            log.info("SMS delivered successfully to {} via Ethio Telecom: response={}", request.recipientPhone(), response);
+            return SmsSendResult.accepted("ETHIO-" + java.util.UUID.randomUUID());
         } catch (Exception ex) {
-            log.error("Failed to dispatch SMS to {} via Ethio Telecom gateway: {}", recipientPhone, ex.getMessage());
-            return false;
+            log.error("Failed to dispatch SMS to {} via Ethio Telecom gateway: {}", request.recipientPhone(), ex.getMessage());
+            return SmsSendResult.failed("DISPATCH_FAILED", ex.getMessage(), et.ut.einvoice.notifications.domain.FailureClassification.PROVIDER_NETWORK_FAILURE);
         }
+    }
+
+    @Override
+    public boolean sendSms(String recipientPhone, String messageText) {
+        return sendTransactionalSms(new SmsSendRequest(recipientPhone, messageText, senderId, null)).success();
     }
 
     @Override

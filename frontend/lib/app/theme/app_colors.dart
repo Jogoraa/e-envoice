@@ -15,13 +15,16 @@ abstract class AppColors {
   ); // Sub-mark notch, one accent per screen, error state
   static const Color red700 = Color(0xFFDC1C1F);
   static const Color amber700 = Color(0xFFB35E00);
-
+  //surfaceMuted
+  static const Color surfaceMuted = Color(0xFFF1F3F5);
   // Status Semantics
   static const Color amber600 = Color(
     0xFFB3781A,
   ); // Pending / offline draft status
   static const Color green700 = Color(0xFF1C7A4C); // Synced / confirmed status
 
+  //paperMuted
+  static const Color paperMuted = Color(0xFFF7F8FA);
   // Neutral Scale (Light)
   static const Color ink = Color(0xFF101820); // Primary text on paper
   static const Color paper = Color(0xFFF4F5F6); // Application background

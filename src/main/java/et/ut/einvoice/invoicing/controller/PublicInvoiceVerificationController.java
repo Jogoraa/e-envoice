@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -94,6 +95,47 @@ public class PublicInvoiceVerificationController {
         PublicInvoiceVerificationDto response = PublicInvoiceVerificationDto.fromEntity(invoice, seller);
 
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Verify invoice by public verification token",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Verified"),
+                    @ApiResponse(responseCode = "404", description = "Token not found"),
+                    @ApiResponse(responseCode = "429", description = "Rate limit exceeded")
+            })
+    @GetMapping("/verify/token/{token}")
+    public ResponseEntity<?> verifyInvoiceByToken(
+            @PathVariable String token,
+            HttpServletRequest request) {
+
+        String clientIp = extractClientIp(request);
+        if (!rateLimitingService.tryAcquireKey("public_verify:" + clientIp, RATE_LIMIT_PER_MINUTE)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of(
+                            "error", "RATE_LIMIT_EXCEEDED",
+                            "message", "Too many verification requests. Please try again later."
+                    ));
+        }
+
+        Optional<Invoice> invoiceOpt = invoiceRepository.findByPublicVerificationToken(token);
+        if (invoiceOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(
+                            "error", "TOKEN_NOT_FOUND",
+                            "message", "No registered invoice found matching verification token.",
+                            "amharicMessage", "የተጠቀሰው የማረጋገጫ መለያ አልተገኘም።"
+                    ));
+        }
+
+        Invoice invoice = invoiceOpt.get();
+        TaxpayerProfile seller = taxpayerProfileRepository.findById(invoice.getTenantId()).orElse(null);
+        PublicInvoiceVerificationDto response = PublicInvoiceVerificationDto.fromEntity(invoice, seller);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate")
+                .header("X-Robots-Tag", "noindex, nofollow, noarchive")
+                .header("Referrer-Policy", "no-referrer")
+                .body(response);
     }
 
     private String extractClientIp(HttpServletRequest request) {

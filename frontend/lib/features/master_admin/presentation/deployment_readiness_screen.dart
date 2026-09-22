@@ -24,12 +24,14 @@ class _DeploymentReadinessScreenState extends ConsumerState<DeploymentReadinessS
   }
 
   Future<void> _fetchReadiness() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
-    final apiClient = ref.read(apiClientProvider);
+    final apiClient = ref.read(masterAdminApiClientProvider);
 
     try {
       final res = await apiClient.get('/api/v1/master/readiness');
       if (res.statusCode == 200 && res.data != null) {
+        if (!mounted) return;
         setState(() {
           _readinessData = res.data as Map<String, dynamic>;
           _isLoading = false;
@@ -41,6 +43,7 @@ class _DeploymentReadinessScreenState extends ConsumerState<DeploymentReadinessS
     }
 
     // Local diagnostic fallback
+    if (!mounted) return;
     setState(() {
       _readinessData = {
         'status': 'OPERATIONAL',
@@ -190,21 +193,28 @@ class _DeploymentReadinessScreenState extends ConsumerState<DeploymentReadinessS
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 16,
+              runSpacing: 16,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('DEPLOYMENT READINESS & ACCREDITATION AUDIT', style: AppTypography.h1()),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Live Diagnostics for Ministry of Revenues Accreditation • 67 Statutory Mandates Verified',
-                      style: AppTypography.bodySmall(color: AppColors.inkMuted),
-                    ),
-                  ],
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 320, maxWidth: 650),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('DEPLOYMENT READINESS & ACCREDITATION AUDIT', style: AppTypography.h1()),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Live Diagnostics for Ministry of Revenues Accreditation • 67 Statutory Mandates Verified',
+                        style: AppTypography.bodySmall(color: AppColors.inkMuted),
+                      ),
+                    ],
+                  ),
                 ),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     OutlinedButton.icon(
                       onPressed: _fetchReadiness,

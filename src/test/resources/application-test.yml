@@ -13,7 +13,7 @@ spring:
       # between test classes risks H2 session state (RLS tenant context) leaking
       # across suites in the full mvn test run.
       maximum-pool-size: 50
-      connection-timeout: 10000
+      connection-timeout: 30000
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
@@ -29,6 +29,17 @@ spring:
 mor:
   gateway:
     base-url: http://core.mor.gov.et
+
+outbox:
+  relay:
+    interval-ms: 3600000
+
+notifications:
+  sms:
+    worker:
+      interval-ms: 3600000
+    reconciliation:
+      interval-ms: 3600000
 
 logging:
   level:

@@ -87,7 +87,7 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
             String authHeader = request.getHeader("Authorization");
             String tenantHeader = request.getHeader("X-Tenant-ID");
 
-            boolean isSaasOrMasterPath = path.startsWith("/api/v1/saas") || path.startsWith("/api/v1/master");
+            boolean isSaasOrMasterPath = path.startsWith("/api/v1/saas") || path.startsWith("/api/v1/master") || path.startsWith("/api/v1/admin");
 
             // =========================================================================
             // A. SAAS / MASTER ADMIN GATEWAY ENDPOINT PROTECTION

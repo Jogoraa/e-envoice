@@ -111,12 +111,21 @@ public class SecurityConfig {
                                 "/actuator/health/**",
                                 "/actuator/prometheus",
                                 "/api/v1/public/**",
+                                "/v/**",
                                 "/api/v1/auth/**",
                                 "/api/v1/saas/auth/**",
                                 "/api/v1/master/auth/**"
                         ).permitAll()
                         .requestMatchers("/api/v1/authority/**").hasAuthority("ROLE_AUTHORITY_AUDITOR")
-                        .requestMatchers("/api/v1/saas/**", "/api/v1/master/**").hasAnyAuthority("ROLE_SAAS_ADMIN", "ROLE_PLATFORM_ADMIN", "ROLE_SAAS_OPERATOR", "ROLE_DELEGATED_OPERATOR")
+                        .requestMatchers(
+                                "/api/v1/admin/environment/**",
+                                "/api/v1/master/environment/**",
+                                "/api/v1/master/account/**",
+                                "/api/v1/master/users/**",
+                                "/api/v1/master/rbac/**",
+                                "/api/v1/master/access-reviews/**"
+                        ).hasAuthority("ROLE_PLATFORM_ADMIN")
+                        .requestMatchers("/api/v1/saas/**", "/api/v1/master/**", "/api/v1/admin/**").hasAnyAuthority("ROLE_SAAS_ADMIN", "ROLE_PLATFORM_ADMIN", "ROLE_SAAS_OPERATOR", "ROLE_DELEGATED_OPERATOR")
                         .requestMatchers("/actuator/**").hasRole("PLATFORM_ADMIN")
                         .anyRequest().authenticated()
                 )
@@ -135,8 +144,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-API-Key", "X-Client-Secret", "X-Tenant-ID", "X-Authority-Token", "Idempotency-Key", "X-Correlation-ID"));
-        configuration.setExposedHeaders(List.of("X-Correlation-ID", "X-Reprint-Count"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-API-Key", "X-Client-Secret", "X-Tenant-ID", "X-Authority-Token", "Idempotency-Key", "X-Correlation-ID", "X-Privileged-Token"));
+        configuration.setExposedHeaders(List.of("X-Correlation-ID", "X-Reprint-Count", "X-Privileged-Token"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 

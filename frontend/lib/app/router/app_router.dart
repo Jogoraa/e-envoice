@@ -24,6 +24,12 @@ import '../../features/master_admin/presentation/security_audit_screen.dart';
 import '../../features/master_admin/presentation/tenant_oversight_screen.dart';
 import '../../features/master_admin/presentation/master_api_management_screen.dart';
 import '../../features/master_admin/presentation/deployment_readiness_screen.dart';
+import '../../features/master_admin/presentation/master_account_settings_screen.dart';
+import '../../features/master_admin/presentation/master_users_directory_screen.dart';
+import '../../features/master_admin/presentation/master_roles_permissions_screen.dart';
+import '../../features/master_admin/presentation/master_access_reviews_screen.dart';
+import '../../features/master_admin/presentation/master_sessions_devices_screen.dart';
+import '../../features/master_admin/presentation/master_environment_secrets_screen.dart';
 import '../../features/offline/presentation/offline_queue_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/saas_management/presentation/saas_dashboard_screen.dart';
@@ -207,6 +213,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const MasterAdminDashboardScreen(),
           ),
           GoRoute(
+            path: '/admin/account/settings',
+            builder: (context, state) => const MasterAccountSettingsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/users',
+            builder: (context, state) => const MasterUsersDirectoryScreen(),
+          ),
+          GoRoute(
+            path: '/admin/roles',
+            builder: (context, state) => const MasterRolesPermissionsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/roles-permissions',
+            builder: (context, state) => const MasterRolesPermissionsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/access-reviews',
+            builder: (context, state) => const MasterAccessReviewsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/sessions',
+            builder: (context, state) => const MasterSessionsDevicesScreen(),
+          ),
+          GoRoute(
             path: '/admin/tenants',
             builder: (context, state) => const TenantOversightScreen(),
           ),
@@ -229,6 +259,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/config',
             builder: (context, state) => const PlatformConfigScreen(),
+          ),
+          GoRoute(
+            path: '/admin/system/environment',
+            builder: (context, state) => const MasterEnvironmentSecretsScreen(),
           ),
         ],
       ),

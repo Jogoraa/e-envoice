@@ -16,10 +16,11 @@ class _GovernmentGatewayMonitorScreenState extends ConsumerState<GovernmentGatew
   String? _error;
 
   String _gatewayStatus = 'ONLINE';
-  String _throughput = '420 TPS';
-  String _latency = '340 ms';
-  String _connectionPool = '64 / 64';
-  String _errorRate = '0.01%';
+  String _throughput = '0.0 TPS';
+  String _latency = '- ms';
+  String _connectionPool = '- / -';
+  String _errorRate = '0.00%';
+  String _circuitBreakerStatus = 'State: CLOSED (Normal Operation) • Failure Threshold: 50 consecutive timeouts • Half-Open Reset: 30s • Automatic Offline Outbox Fallback: ENGAGED';
   List<Map<String, dynamic>> _channels = [];
 
   @override
@@ -41,10 +42,11 @@ class _GovernmentGatewayMonitorScreenState extends ConsumerState<GovernmentGatew
         final data = response.data as Map<String, dynamic>;
         setState(() {
           _gatewayStatus = data['gatewayStatus']?.toString() ?? 'ONLINE';
-          _throughput = data['currentThroughput']?.toString() ?? '420 TPS';
-          _latency = data['averageLatency']?.toString() ?? '340 ms';
-          _connectionPool = data['connectionPool']?.toString() ?? '64 / 64';
-          _errorRate = data['gatewayErrorRate']?.toString() ?? '0.01%';
+          _throughput = data['currentThroughput']?.toString() ?? '0.0 TPS';
+          _latency = data['averageLatency']?.toString() ?? '- ms';
+          _connectionPool = data['connectionPool']?.toString() ?? '- / -';
+          _errorRate = data['gatewayErrorRate']?.toString() ?? '0.00%';
+          _circuitBreakerStatus = data['circuitBreakerStatus']?.toString() ?? _circuitBreakerStatus;
           
           final rawChannels = data['channels'];
           if (rawChannels is List) {
@@ -52,12 +54,15 @@ class _GovernmentGatewayMonitorScreenState extends ConsumerState<GovernmentGatew
           } else {
             _channels = [];
           }
+          if (!mounted) return;
           _isLoading = false;
         });
       } else {
+        if (!mounted) return;
         setState(() => _isLoading = false);
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _error = 'Unable to fetch real-time MoR gateway status from platform.';
@@ -233,7 +238,7 @@ class _GovernmentGatewayMonitorScreenState extends ConsumerState<GovernmentGatew
                     Text('CIRCUIT BREAKER & RESILIENCY POLICY', style: AppTypography.h2()),
                     const SizedBox(height: 12),
                     Text(
-                      'State: CLOSED (Normal Operation) • Failure Threshold: 50 consecutive timeouts • Half-Open Reset: 30s • Automatic Offline Outbox Fallback: ENGAGED',
+                      _circuitBreakerStatus,
                       style: AppTypography.monoSmall(color: AppColors.inkMuted),
                     ),
                   ],

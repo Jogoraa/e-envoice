@@ -20,6 +20,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
     Optional<Invoice> findByIrn(String irn);
 
+    Optional<Invoice> findByPublicVerificationToken(String publicVerificationToken);
+
     Optional<Invoice> findByIrnAndTenantId(String irn, UUID tenantId);
 
     Optional<Invoice> findByTenantIdAndIdempotencyKey(UUID tenantId, String idempotencyKey);

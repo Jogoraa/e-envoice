@@ -128,6 +128,9 @@ public class Invoice {
     @Column(name = "idempotency_key", length = 128)
     private String idempotencyKey;
 
+    @Column(name = "public_verification_token", length = 64, unique = true)
+    private String publicVerificationToken;
+
     @Column(name = "reprint_count", nullable = false)
     private int reprintCount = 0;
 
@@ -310,5 +313,7 @@ public class Invoice {
     public String getIdempotencyKey() { return idempotencyKey; }
     public void setIdempotencyKey(String idempotencyKey) { this.idempotencyKey = idempotencyKey; }
     public int getReprintCount() { return reprintCount; }
+    public String getPublicVerificationToken() { return publicVerificationToken; }
+    public void setPublicVerificationToken(String publicVerificationToken) { this.publicVerificationToken = publicVerificationToken; }
     public List<InvoiceLine> getLines() { return lines; }
 }

@@ -68,6 +68,10 @@ public class InvoiceService {
     private final TenantRepository tenantRepository;
     private final et.ut.einvoice.government.service.MorInvoiceCanonicalizationService canonicalizationService;
     private final et.ut.einvoice.customer.service.CustomerService customerService;
+    private final et.ut.einvoice.notifications.service.InvoiceNotificationPolicyService notificationPolicyService;
+    private final et.ut.einvoice.notifications.repository.InvoiceNotificationOutboxRepository notificationOutboxRepository;
+    private final et.ut.einvoice.notifications.service.InvoiceNotificationTemplateService notificationTemplateService;
+    private final et.ut.einvoice.notifications.metrics.SmsMetrics smsMetrics;
 
     public InvoiceService(
             InvoiceRepository invoiceRepository,
@@ -89,7 +93,15 @@ public class InvoiceService {
             @org.springframework.beans.factory.annotation.Autowired(required = false)
             et.ut.einvoice.government.service.MorInvoiceCanonicalizationService canonicalizationService,
             @org.springframework.beans.factory.annotation.Autowired(required = false)
-            et.ut.einvoice.customer.service.CustomerService customerService
+            et.ut.einvoice.customer.service.CustomerService customerService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            et.ut.einvoice.notifications.service.InvoiceNotificationPolicyService notificationPolicyService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            et.ut.einvoice.notifications.repository.InvoiceNotificationOutboxRepository notificationOutboxRepository,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            et.ut.einvoice.notifications.service.InvoiceNotificationTemplateService notificationTemplateService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            et.ut.einvoice.notifications.metrics.SmsMetrics smsMetrics
     ) {
         this.invoiceRepository = invoiceRepository;
         this.taxpayerProfileRepository = taxpayerProfileRepository;
@@ -108,6 +120,10 @@ public class InvoiceService {
         this.tenantRepository = tenantRepository;
         this.canonicalizationService = canonicalizationService != null ? canonicalizationService : new et.ut.einvoice.government.service.MorInvoiceCanonicalizationService(objectMapper, qrCodeService);
         this.customerService = customerService;
+        this.notificationPolicyService = notificationPolicyService;
+        this.notificationOutboxRepository = notificationOutboxRepository;
+        this.notificationTemplateService = notificationTemplateService;
+        this.smsMetrics = smsMetrics;
     }
 
     /**
@@ -217,7 +233,7 @@ public class InvoiceService {
                         regResult.signedInvoice()
                 );
                 submission.markAccepted(regResult.irn());
-                saveInvoiceAndSubmission(invoice, submission);
+                saveInvoiceAndSubmission(invoice, submission, seller.getTradeName() != null ? seller.getTradeName() : seller.getLegalName(), bundle.outboxEvent().getId().toString());
                 outboxService.markPublished(bundle.outboxEvent().getId());
 
                 eventPublisher.publish(new InvoiceRegisteredEvent(
@@ -281,6 +297,9 @@ public class InvoiceService {
             );
             invoice.setPreviousIrn(previousIrn);
             invoice.setIdempotencyKey(idempotencyKey);
+            if (notificationTemplateService != null) {
+                invoice.setPublicVerificationToken(notificationTemplateService.generateVerificationToken());
+            }
 
             if (request.buyer() != null) {
                 invoice.setBuyerLegalName(request.buyer().legalName());
@@ -475,8 +494,44 @@ public class InvoiceService {
 
     @Transactional
     public void saveInvoiceAndSubmission(Invoice invoice, GovernmentSubmission submission) {
+        saveInvoiceAndSubmission(invoice, submission, null, null);
+    }
+
+    @Transactional
+    public void saveInvoiceAndSubmission(Invoice invoice, GovernmentSubmission submission, String sellerName, String correlationId) {
+        if (invoice.getPublicVerificationToken() == null && notificationTemplateService != null) {
+            invoice.setPublicVerificationToken(notificationTemplateService.generateVerificationToken());
+        }
         invoiceRepository.save(invoice);
-        submissionRepository.save(submission);
+        if (submission != null) {
+            submissionRepository.save(submission);
+        }
+
+        if (notificationPolicyService != null && notificationOutboxRepository != null && invoice.getStatus() == InvoiceStatus.REGISTERED) {
+            var decision = notificationPolicyService.evaluateRegistrationNotification(
+                    invoice,
+                    sellerName != null ? sellerName : "Seller",
+                    correlationId
+            );
+            if (decision.shouldNotify() && decision.outboxRecord() != null) {
+                notificationOutboxRepository.save(decision.outboxRecord());
+                if (smsMetrics != null) {
+                    smsMetrics.recordCreated(decision.outboxRecord().getNotificationType());
+                }
+                if (auditService != null) {
+                    auditService.recordEvent(
+                            invoice.getTenantId(),
+                            "SMS_NOTIFICATION",
+                            "SYSTEM",
+                            et.ut.einvoice.audit.domain.AuditAction.SMS_NOTIFICATION_CREATED.name(),
+                            "INVOICE",
+                            invoice.getId().toString(),
+                            "outbox_id=" + decision.outboxRecord().getId() + ";party_id=" + decision.outboxRecord().getRecipientPartyId(),
+                            "127.0.0.1"
+                    );
+                }
+            }
+        }
     }
 
     private void fallbackToOfflineBuffer(Invoice invoice, String errorMsg) {

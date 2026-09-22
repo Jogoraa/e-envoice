@@ -17,13 +17,18 @@ class _SaasLoginScreenState extends ConsumerState<SaasLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _mfaController = TextEditingController();
+  final _mfaFocusNode = FocusNode();
   bool _isLoading = false;
+  bool _showMfaInput = false;
   String? _errorMessage;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _mfaController.dispose();
+    _mfaFocusNode.dispose();
     super.dispose();
   }
 
@@ -42,15 +47,30 @@ class _SaasLoginScreenState extends ConsumerState<SaasLoginScreen> {
           .login(
             email: _emailController.text.trim(),
             password: _passwordController.text.trim(),
+            mfaCode: _showMfaInput ? _mfaController.text.trim() : '',
           );
 
       if (mounted) {
         context.go('/saas/dashboard');
       }
     } catch (e) {
+      final errStr = e.toString().replaceAll('Exception: ', '');
+      final isMfaChallenge =
+          errStr.toLowerCase().contains('mfa') ||
+          errStr.toLowerCase().contains('totp');
+
       setState(() {
-        _errorMessage = 'SaaS Gateway Authentication Failed: ${e.toString()}';
         _isLoading = false;
+        if (isMfaChallenge && !_showMfaInput) {
+          _showMfaInput = true;
+          _errorMessage =
+              'Two-Factor Authentication is enrolled on this account. Enter your 6-digit authenticator code below to complete login.';
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _mfaFocusNode.requestFocus();
+          });
+        } else {
+          _errorMessage = errStr;
+        }
       });
     }
   }
@@ -126,17 +146,43 @@ class _SaasLoginScreenState extends ConsumerState<SaasLoginScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.red600.withValues(alpha: 0.08),
+                          color: _showMfaInput && _mfaController.text.isEmpty
+                              ? AppColors.amber700.withValues(alpha: 0.1)
+                              : AppColors.red600.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(3),
                           border: Border.all(
-                            color: AppColors.red600.withValues(alpha: 0.3),
+                            color: _showMfaInput && _mfaController.text.isEmpty
+                                ? AppColors.amber700.withValues(alpha: 0.4)
+                                : AppColors.red600.withValues(alpha: 0.3),
                           ),
                         ),
-                        child: Text(
-                          _errorMessage!,
-                          style: AppTypography.bodySmall(
-                            color: AppColors.red600,
-                          ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              _showMfaInput && _mfaController.text.isEmpty
+                                  ? Icons.shield_outlined
+                                  : Icons.error_outline,
+                              size: 16,
+                              color:
+                                  _showMfaInput && _mfaController.text.isEmpty
+                                  ? AppColors.amber700
+                                  : AppColors.red600,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: AppTypography.bodySmall(
+                                  color:
+                                      _showMfaInput &&
+                                          _mfaController.text.isEmpty
+                                      ? AppColors.amber700
+                                      : AppColors.red600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -145,11 +191,12 @@ class _SaasLoginScreenState extends ConsumerState<SaasLoginScreen> {
                     TextFormField(
                       controller: _emailController,
                       decoration: const InputDecoration(
-                        labelText: 'Operator Email',
-                        prefixIcon: Icon(Icons.email_outlined, size: 18),
+                        labelText: 'Operator Username or Email',
+                        hintText: 'email@example.com',
+                        prefixIcon: Icon(Icons.person_outline, size: 18),
                       ),
-                      validator: (v) => v == null || v.isEmpty
-                          ? 'Operator email required'
+                      validator: (v) => v == null || v.trim().isEmpty
+                          ? 'Operator identifier required'
                           : null,
                     ),
                     const SizedBox(height: 16),
@@ -163,7 +210,63 @@ class _SaasLoginScreenState extends ConsumerState<SaasLoginScreen> {
                       validator: (v) =>
                           v == null || v.isEmpty ? 'Password required' : null,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
+
+                    // TOTP MFA Field (shown only if account has registered TOTP, or toggled)
+                    if (_showMfaInput) ...[
+                      const SizedBox(height: 4),
+                      TextFormField(
+                        controller: _mfaController,
+                        focusNode: _mfaFocusNode,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        decoration: InputDecoration(
+                          labelText: 'Hardware / TOTP MFA Token (6 Digits)',
+                          hintText: 'Enter 6-digit authenticator code',
+                          prefixIcon: const Icon(Icons.security, size: 18),
+                          counterText: '',
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.close, size: 16),
+                            tooltip: 'Hide TOTP input',
+                            onPressed: () {
+                              setState(() {
+                                _showMfaInput = false;
+                                _mfaController.clear();
+                              });
+                            },
+                          ),
+                        ),
+                        validator: (v) {
+                          if (_showMfaInput &&
+                              (v == null || v.trim().length != 6)) {
+                            return '6-digit MFA token required';
+                          }
+                          return null;
+                        },
+                      ),
+                    ] else ...[
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _showMfaInput = true;
+                            });
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              _mfaFocusNode.requestFocus();
+                            });
+                          },
+                          icon: const Icon(Icons.shield_outlined, size: 14),
+                          label: Text(
+                            'Using 2FA / Authenticator app? (Optional)',
+                            style: AppTypography.monoSmall(
+                              color: AppColors.navy700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
 
                     SizedBox(
                       width: double.infinity,
@@ -178,25 +281,12 @@ class _SaasLoginScreenState extends ConsumerState<SaasLoginScreen> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text('Access SaaS Portal'),
+                            : Text(
+                                _showMfaInput
+                                    ? 'Verify & Access SaaS Portal'
+                                    : 'Access SaaS Portal',
+                              ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Divider(height: 1, color: AppColors.rule),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton.icon(
-                          onPressed: () => context.go('/'),
-                          icon: const Icon(Icons.arrow_back, size: 14),
-                          label: const Text('Workspaces', style: TextStyle(fontSize: 12)),
-                        ),
-                        TextButton(
-                          onPressed: () => context.go('/tenant/login'),
-                          child: const Text('Tenant Client', style: TextStyle(fontSize: 12)),
-                        ),
-                      ],
                     ),
                   ],
                 ),

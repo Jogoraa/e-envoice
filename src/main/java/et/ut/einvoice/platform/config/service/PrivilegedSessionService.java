@@ -6,6 +6,7 @@ import et.ut.einvoice.platform.config.repository.PrivilegedConfigurationSessionR
 import et.ut.einvoice.platform.security.JwtTokenService;
 import et.ut.einvoice.platform.security.domain.PlatformUser;
 import et.ut.einvoice.platform.security.repository.PlatformUserRepository;
+import et.ut.einvoice.platform.identity.service.TotpService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
@@ -29,6 +30,7 @@ public class PrivilegedSessionService {
     private final JwtTokenService jwtTokenService;
     private final AuditService auditService;
     private final MasterMfaOtpService mfaOtpService;
+    private final TotpService totpService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PrivilegedSessionService(
@@ -37,7 +39,8 @@ public class PrivilegedSessionService {
             PasswordEncoder passwordEncoder,
             JwtTokenService jwtTokenService,
             AuditService auditService,
-            @org.springframework.beans.factory.annotation.Autowired(required = false) MasterMfaOtpService mfaOtpService
+            @org.springframework.beans.factory.annotation.Autowired(required = false) MasterMfaOtpService mfaOtpService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) TotpService totpService
     ) {
         this.sessionRepository = sessionRepository;
         this.platformUserRepository = platformUserRepository;
@@ -45,6 +48,18 @@ public class PrivilegedSessionService {
         this.jwtTokenService = jwtTokenService;
         this.auditService = auditService;
         this.mfaOtpService = mfaOtpService;
+        this.totpService = totpService;
+    }
+
+    public PrivilegedSessionService(
+            PrivilegedConfigurationSessionRepository sessionRepository,
+            PlatformUserRepository platformUserRepository,
+            PasswordEncoder passwordEncoder,
+            JwtTokenService jwtTokenService,
+            AuditService auditService,
+            MasterMfaOtpService mfaOtpService
+    ) {
+        this(sessionRepository, platformUserRepository, passwordEncoder, jwtTokenService, auditService, mfaOtpService, null);
     }
 
     public PrivilegedSessionService(
@@ -54,7 +69,7 @@ public class PrivilegedSessionService {
             JwtTokenService jwtTokenService,
             AuditService auditService
     ) {
-        this(sessionRepository, platformUserRepository, passwordEncoder, jwtTokenService, auditService, null);
+        this(sessionRepository, platformUserRepository, passwordEncoder, jwtTokenService, auditService, null, null);
     }
 
     public record PrivilegedSessionDto(
@@ -290,7 +305,12 @@ public class PrivilegedSessionService {
             return mfaOtpService.verifyOtp(user.getUsername(), clean);
         }
 
-        // 2. Fallback: Authenticator app TOTP code or development mock code
+        // 2. If user has TOTP MFA enrolled, strictly verify against authentic time-step TOTP code
+        if (user.isMfaEnabled() && user.getMfaSecret() != null && !user.getMfaSecret().isBlank()) {
+            return totpService != null && totpService.verifyCode(user.getMfaSecret(), clean);
+        }
+
+        // 3. Fallback for un-enrolled development/test accounts
         return true;
     }
 

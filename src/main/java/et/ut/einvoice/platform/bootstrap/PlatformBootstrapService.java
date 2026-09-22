@@ -158,6 +158,32 @@ public class PlatformBootstrapService implements CommandLineRunner {
             }
         }
 
+        // 1b. Idempotent SaaS Commercial Administrator Bootstrap
+        String saasPass = generatedMasterPassword;
+        String saasHash = passwordEncoder.encode(saasPass);
+        var saasOpt = platformUserRepository.findByUsername("saas.admin")
+                .or(() -> platformUserRepository.findByEmail("saas.admin@utsolutionsplc.com"));
+        if (saasOpt.isPresent()) {
+            PlatformUser saasUser = saasOpt.get();
+            saasUser.setPasswordHash(saasHash);
+            platformUserRepository.save(saasUser);
+            log.info("Synchronized SaaS Administrator password from environment setting.");
+        } else {
+            PlatformUser saasUser = new PlatformUser(
+                    UUID.randomUUID(),
+                    "saas.admin",
+                    "saas.admin@utsolutionsplc.com",
+                    saasHash,
+                    "UT SaaS Commercial Administrator",
+                    "ROLE_SAAS_ADMIN",
+                    "ACTIVE",
+                    Instant.now()
+            );
+            saasUser.setMfaEnabled(false);
+            platformUserRepository.save(saasUser);
+            log.info("Provisioned initial SaaS Administrator account: saas.admin");
+        }
+
         // 2. Idempotent Test Tenant Bootstrap
         if (tenantRepository.findByTin(testTenantTin).isEmpty()) {
             UUID tenantId = UUID.randomUUID();

@@ -52,10 +52,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final delegatedSession = ref.watch(delegatedTenantSessionProvider);
 
   String determineInitialLocation() {
+    const appSurface = String.fromEnvironment('APP_SURFACE', defaultValue: 'tenant');
     if (delegatedSession != null) return '/dashboard';
     if (tenantSession != null) return '/dashboard';
+    if (appSurface == 'tenant') return '/login';
     if (saasSession != null) return '/saas/dashboard';
     if (masterAdminSession != null) return '/admin/dashboard';
+    if (appSurface == 'saas') return '/saas/login';
+    if (appSurface == 'admin') return '/admin/login';
     return '/';
   }
 
@@ -65,6 +69,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // 1. Workspace Selection (Root Entrypoint)
       GoRoute(
         path: '/',
+        builder: (context, state) {
+          const appSurface = String.fromEnvironment('APP_SURFACE', defaultValue: 'tenant');
+          if (appSurface == 'tenant') {
+            return tenantSession != null || delegatedSession != null
+                ? const DashboardScreen()
+                : const LoginScreen();
+          }
+          return const WorkspaceSelectionScreen();
+        },
+      ),
+      GoRoute(
+        path: '/workspace',
         builder: (context, state) => const WorkspaceSelectionScreen(),
       ),
 

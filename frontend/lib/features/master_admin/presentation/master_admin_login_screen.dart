@@ -129,7 +129,6 @@ class _MasterAdminLoginScreenState
                     ),
                     const SizedBox(height: 24),
 
-
                     if (_errorMessage != null) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -201,22 +200,6 @@ class _MasterAdminLoginScreenState
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Divider(height: 1, color: AppColors.rule),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton.icon(
-                          onPressed: () => context.go('/'),
-                          icon: const Icon(Icons.arrow_back, size: 14),
-                          label: const Text('Workspaces', style: TextStyle(fontSize: 12)),
-                        ),
-                        TextButton(
-                          onPressed: () => context.go('/tenant/login'),
-                          child: const Text('Tenant Client', style: TextStyle(fontSize: 12)),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ),

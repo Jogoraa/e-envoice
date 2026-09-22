@@ -308,7 +308,11 @@ class MasterAdminSessionNotifier extends StateNotifier<MasterAdminSession?> {
     try {
       final response = await _dio.post(
         '${GatewayConfig.activeBackendHost}/api/v1/master/auth/login',
-        data: {'username': email, 'password': password},
+        data: {
+          'username': email,
+          'password': password,
+          if (mfaCode.isNotEmpty) 'mfaCode': mfaCode,
+        },
       );
       if (response.data is Map) {
         final data = response.data as Map<String, dynamic>;
@@ -368,11 +372,16 @@ class SaasManagementSessionNotifier extends StateNotifier<SaasManagementSession?
   Future<void> login({
     required String email,
     required String password,
+    String? mfaCode,
   }) async {
     try {
       final response = await _dio.post(
         '${GatewayConfig.activeBackendHost}/api/v1/saas/auth/login',
-        data: {'username': email, 'password': password},
+        data: {
+          'username': email,
+          'password': password,
+          if (mfaCode != null && mfaCode.trim().isNotEmpty) 'mfaCode': mfaCode.trim(),
+        },
       );
       if (response.data is Map) {
         final data = response.data as Map<String, dynamic>;

@@ -16,5 +16,8 @@ public interface PlatformUserRepository extends JpaRepository<PlatformUser, UUID
 
     Optional<PlatformUser> findByUsernameOrEmail(String username, String email);
 
+    Optional<PlatformUser> findByUsernameIgnoreCaseOrEmailIgnoreCase(String username, String email);
+
     boolean existsByRole(String role);
 }
+

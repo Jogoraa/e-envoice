@@ -17,9 +17,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import et.ut.einvoice.platform.identity.repository.PlatformUserRecoveryCodeRepository;
+import et.ut.einvoice.platform.identity.service.TotpService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Optional;
@@ -35,6 +40,27 @@ public class PlatformAuthService {
     private final PlatformUserRepository platformUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
+    private final TotpService totpService;
+    private final PlatformUserRecoveryCodeRepository recoveryCodeRepository;
+
+    @Autowired
+    public PlatformAuthService(
+            TenantRepository tenantRepository,
+            TenantUserRepository tenantUserRepository,
+            PlatformUserRepository platformUserRepository,
+            PasswordEncoder passwordEncoder,
+            JwtTokenService jwtTokenService,
+            @Autowired(required = false) TotpService totpService,
+            @Autowired(required = false) PlatformUserRecoveryCodeRepository recoveryCodeRepository
+    ) {
+        this.tenantRepository = tenantRepository;
+        this.tenantUserRepository = tenantUserRepository;
+        this.platformUserRepository = platformUserRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtTokenService = jwtTokenService;
+        this.totpService = totpService;
+        this.recoveryCodeRepository = recoveryCodeRepository;
+    }
 
     public PlatformAuthService(
             TenantRepository tenantRepository,
@@ -43,11 +69,7 @@ public class PlatformAuthService {
             PasswordEncoder passwordEncoder,
             JwtTokenService jwtTokenService
     ) {
-        this.tenantRepository = tenantRepository;
-        this.tenantUserRepository = tenantUserRepository;
-        this.platformUserRepository = platformUserRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtTokenService = jwtTokenService;
+        this(tenantRepository, tenantUserRepository, platformUserRepository, passwordEncoder, jwtTokenService, null, null);
     }
 
     @Transactional
@@ -147,7 +169,14 @@ public class PlatformAuthService {
             throw new BadCredentialsException("Username/email and password must not be empty.");
         }
 
-        Optional<PlatformUser> userOpt = platformUserRepository.findByUsernameOrEmail(identifier, identifier);
+        Optional<PlatformUser> userOpt = platformUserRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(identifier, identifier);
+        if (userOpt.isEmpty() && (identifier.equalsIgnoreCase("saasadmin") || identifier.equalsIgnoreCase("saas.admin") || identifier.equalsIgnoreCase("saasadmin@utsolutionsplc.com"))) {
+            userOpt = platformUserRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase("saas.admin", "saas.admin@utsolutionsplc.com");
+        }
+        if (userOpt.isEmpty() && (identifier.equalsIgnoreCase("admin") || identifier.equalsIgnoreCase("masteradmin") || identifier.equalsIgnoreCase("master.admin"))) {
+            userOpt = platformUserRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase("platform.admin", "admin@ut-invoice.internal");
+        }
+
         if (userOpt.isEmpty()) {
             log.warn("Failed platform operator authentication attempt for '{}'", identifier);
             throw new BadCredentialsException("Invalid platform credentials.");
@@ -162,6 +191,38 @@ public class PlatformAuthService {
         if (!user.isActive()) {
             log.warn("Platform operator authentication rejected: user '{}' is not ACTIVE (status: {})", identifier, user.getStatus());
             throw new DisabledException("Platform operator account is inactive or suspended.");
+        }
+
+        // Validate Hardware / TOTP MFA token only if account has enrolled and set up a registered secret
+        boolean hasRegisteredMfa = user.isMfaEnabled() && user.getMfaSecret() != null && !user.getMfaSecret().isBlank();
+
+        if (hasRegisteredMfa) {
+            String mfaCode = request.mfaCode() != null ? request.mfaCode().trim() : "";
+            if (mfaCode.isEmpty()) {
+                log.warn("Platform operator authentication rejected: MFA code missing for enrolled user '{}'", identifier);
+                throw new BadCredentialsException("MFA is enabled on this account. 6-digit TOTP token is required.");
+            }
+
+            boolean valid = totpService != null && totpService.verifyCode(user.getMfaSecret(), mfaCode);
+            if (!valid && recoveryCodeRepository != null) {
+                String hash = sha256Hex(mfaCode);
+                var matchingCode = recoveryCodeRepository.findByUserId(user.getId()).stream()
+                        .filter(rc -> !rc.isUsed() && rc.getCodeHash().equalsIgnoreCase(hash))
+                        .findFirst();
+                if (matchingCode.isPresent()) {
+                    valid = true;
+                    var rc = matchingCode.get();
+                    rc.setUsed(true);
+                    rc.setUsedAt(Instant.now());
+                    recoveryCodeRepository.save(rc);
+                    log.info("Platform operator '{}' authenticated using emergency recovery backup code.", identifier);
+                }
+            }
+
+            if (!valid) {
+                log.warn("Platform operator authentication failed: invalid MFA token for '{}'", identifier);
+                throw new BadCredentialsException("Invalid 6-digit MFA / TOTP token. Please check your authenticator app.");
+            }
         }
 
         user.setLastLoginAt(Instant.now());
@@ -200,4 +261,19 @@ public class PlatformAuthService {
                 Instant.now()
         );
     }
+
+    private String sha256Hex(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw new IllegalStateException("SHA-256 cryptographic digest unavailable.", e);
+        }
+    }
 }
+

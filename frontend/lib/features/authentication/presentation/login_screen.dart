@@ -226,23 +226,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           : const Text('Sign In to Tenant Portal'),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(height: 1, color: AppColors.rule),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton.icon(
-                        onPressed: () => context.go('/'),
-                        icon: const Icon(Icons.arrow_back, size: 14),
-                        label: const Text('Workspaces', style: TextStyle(fontSize: 12)),
-                      ),
-                      TextButton(
-                        onPressed: () => context.go('/saas/login'),
-                        child: const Text('Master Portal', style: TextStyle(fontSize: 12)),
-                      ),
-                    ],
-                  ),
+
                   const SizedBox(height: 8),
                   Center(
                     child: Text(

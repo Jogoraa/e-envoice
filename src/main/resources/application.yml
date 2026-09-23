@@ -103,6 +103,23 @@ mor:
     max-retry-attempts: 3
     retry-delay-ms: 2000
 
+# Transactional SMS Gateway Configuration
+notifications:
+  sms:
+    # Active SMS provider: geezsms (production), ethio-telecom, mock (dev/test)
+    # Override with SMS_PROVIDER environment variable.
+    active-provider: ${SMS_PROVIDER:mock}
+    geezsms:
+      # Production GeezSMS token — must be set via GEEZSMS_TOKEN environment variable.
+      # Never hard-code here; keep out of source control.
+      token: ${GEEZSMS_TOKEN:}
+      api-url: ${GEEZSMS_API_URL:https://api.geezsms.com}
+      sender-id: ${GEEZSMS_SENDER_ID:}
+    ethio-telecom:
+      endpoint: ${ETHIO_TELECOM_SMS_URL:}
+      api-key: ${ETHIO_TELECOM_SMS_KEY:}
+      sender-id: ${ETHIO_TELECOM_SMS_SENDER_ID:MoR-EIRS}
+
 # SpringDoc / OpenAPI
 springdoc:
   api-docs:

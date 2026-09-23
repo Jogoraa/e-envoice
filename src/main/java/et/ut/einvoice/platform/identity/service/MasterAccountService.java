@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import et.ut.einvoice.audit.service.AuditService;
 import et.ut.einvoice.notifications.provider.EmailProvider;
 import et.ut.einvoice.notifications.provider.SmsProvider;
+import et.ut.einvoice.platform.config.dto.ConfigurationDtos.SendStepUpOtpResponse;
 import et.ut.einvoice.platform.config.service.MasterMfaOtpService;
 import et.ut.einvoice.platform.identity.domain.PlatformAccountVerification;
 import et.ut.einvoice.platform.identity.domain.PlatformUserRecoveryCode;
@@ -358,6 +359,14 @@ public class MasterAccountService {
         return new MfaSetupResponse(secret, otpAuthUri, rawCodes);
     }
 
+    public SendStepUpOtpResponse sendMfaOtp(String username) {
+        PlatformUser user = findUser(username);
+        if (mfaOtpService == null) {
+            throw new IllegalStateException("MFA OTP service unconfigured.");
+        }
+        return mfaOtpService.dispatchStepUpOtp(user, user.getPhone(), "INTERNAL", UUID.randomUUID().toString());
+    }
+
     @Transactional
     public void verifyMfaSetup(String username, String code) {
         PlatformUser user = findUser(username);
@@ -365,16 +374,17 @@ public class MasterAccountService {
             throw new IllegalStateException("MFA setup was not initiated.");
         }
 
-        boolean valid = totpService.verifyCode(user.getMfaSecret(), code);
+        boolean valid = (totpService != null && totpService.verifyCode(user.getMfaSecret(), code))
+                || (mfaOtpService != null && mfaOtpService.verifyOtp(username, code));
         if (!valid) {
-            throw new IllegalArgumentException("Invalid TOTP verification code. Please check your authenticator clock.");
+            throw new IllegalArgumentException("Invalid verification code. Please check your authenticator clock or SMS OTP.");
         }
 
         user.setMfaEnabled(true);
         user.setUpdatedAt(Instant.now());
         userRepository.save(user);
 
-        recordAudit(username, "MFA_ENROLLED_SUCCESS", Map.of("method", "TOTP"));
+        recordAudit(username, "MFA_ENROLLED_SUCCESS", Map.of("method", "TOTP_OR_OTP"));
     }
 
     @Transactional

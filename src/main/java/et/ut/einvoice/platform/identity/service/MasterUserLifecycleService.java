@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import et.ut.einvoice.audit.service.AuditService;
 import et.ut.einvoice.notifications.provider.EmailProvider;
 import et.ut.einvoice.notifications.provider.SmsProvider;
+import et.ut.einvoice.platform.config.service.MasterMfaOtpService;
 import et.ut.einvoice.platform.identity.domain.PlatformUserInvitation;
 import et.ut.einvoice.platform.identity.domain.SystemRole;
 import et.ut.einvoice.platform.identity.dto.IdentityDtos.*;
@@ -142,6 +143,17 @@ public class MasterUserLifecycleService {
             emailProvider.sendEmail(cleanEmail, subject, body);
         } catch (Exception e) {
             log.warn("Failed to dispatch invitation email to {}: {}", cleanEmail, e.getMessage());
+        }
+
+        if (req.phone() != null && !req.phone().isBlank()) {
+            try {
+                String smsBody = "[UT-INVOICE] Dear " + req.fullName().trim() + ", you have been invited to UT Electronic Invoicing Platform as "
+                        + role.getName() + ". Invitation Token: " + rawToken + " (valid for 72h).";
+                smsProvider.sendSms(req.phone().trim(), smsBody);
+                log.info("Dispatched administrator invitation SMS to phone '{}'", MasterMfaOtpService.maskPhone(req.phone().trim()));
+            } catch (Exception e) {
+                log.warn("Failed to dispatch invitation SMS to phone {}: {}", req.phone(), e.getMessage());
+            }
         }
 
         recordAudit(adminUsername, "ADMIN_INVITATION_ISSUED", Map.of(

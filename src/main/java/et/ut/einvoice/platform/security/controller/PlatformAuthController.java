@@ -39,4 +39,32 @@ public class PlatformAuthController {
         PlatformAuthResponse response = platformAuthService.authenticatePlatformOperator(request);
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * Dispatch Login Verification Code (SMS / Email OTP)
+     */
+    @PostMapping({"/saas/auth/send-otp", "/master/auth/send-otp", "/public/saas/auth/send-otp"})
+    public ResponseEntity<java.util.Map<String, Object>> sendLoginOtp(
+            @RequestBody java.util.Map<String, String> body,
+            jakarta.servlet.http.HttpServletRequest request
+    ) {
+        String usernameOrEmail = body.get("usernameOrEmail");
+        if (usernameOrEmail == null || usernameOrEmail.isBlank()) {
+            usernameOrEmail = body.get("username");
+        }
+        if (usernameOrEmail == null || usernameOrEmail.isBlank()) {
+            usernameOrEmail = body.get("email");
+        }
+        String ipAddress = request.getRemoteAddr();
+        String correlationId = java.util.UUID.randomUUID().toString();
+        var resp = platformAuthService.sendLoginOtp(usernameOrEmail, ipAddress, correlationId);
+        return ResponseEntity.ok(java.util.Map.of(
+                "success", true,
+                "message", resp.message(),
+                "maskedEmail", resp.maskedEmail(),
+                "maskedPhone", resp.maskedPhone(),
+                "expiresAt", resp.expiresAt().toString(),
+                "cooldownSeconds", resp.cooldownSeconds()
+        ));
+    }
 }

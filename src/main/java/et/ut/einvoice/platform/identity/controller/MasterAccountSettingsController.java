@@ -118,6 +118,20 @@ public class MasterAccountSettingsController {
         return ResponseEntity.ok(accountService.setupMfa(username));
     }
 
+    @PostMapping("/mfa/send-otp")
+    public ResponseEntity<Map<String, Object>> sendMfaOtp(Authentication auth) {
+        String username = resolveUsername(auth);
+        var resp = accountService.sendMfaOtp(username);
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", resp.message(),
+                "maskedEmail", resp.maskedEmail(),
+                "maskedPhone", resp.maskedPhone(),
+                "expiresAt", resp.expiresAt().toString(),
+                "cooldownSeconds", resp.cooldownSeconds()
+        ));
+    }
+
     @PostMapping("/mfa/verify")
     public ResponseEntity<Map<String, Object>> verifyMfaSetup(
             Authentication auth,

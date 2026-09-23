@@ -141,6 +141,39 @@ class MasterUserLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("inviteAdmin dispatches both email and SMS when phone is provided")
+    void testInviteAdminDispatchesSmsWhenPhoneProvided() {
+        when(userRepository.findByEmail("newops@utsolutionsplc.com")).thenReturn(Optional.empty());
+        when(roleRepository.findByCode("ROLE_SAAS_ADMIN")).thenReturn(Optional.of(saasRole));
+
+        InviteAdminRequest req = new InviteAdminRequest("newops@utsolutionsplc.com", "+251925970827", "Samson Aweke", "ROLE_SAAS_ADMIN", null);
+
+        var result = service.inviteAdmin("platform.admin", req);
+
+        assertThat(result).isNotNull();
+        assertThat(result.email()).isEqualTo("newops@utsolutionsplc.com");
+        assertThat(result.phone()).isEqualTo("+251925970827");
+
+        verify(emailProvider).sendEmail(eq("newops@utsolutionsplc.com"), anyString(), contains("Invitation Token:"));
+        verify(smsProvider).sendSms(eq("+251925970827"), contains("Invitation Token:"));
+    }
+
+    @Test
+    @DisplayName("inviteAdmin dispatches only email when phone is omitted")
+    void testInviteAdminOmitsSmsWhenPhoneNull() {
+        when(userRepository.findByEmail("newops@utsolutionsplc.com")).thenReturn(Optional.empty());
+        when(roleRepository.findByCode("ROLE_SAAS_ADMIN")).thenReturn(Optional.of(saasRole));
+
+        InviteAdminRequest req = new InviteAdminRequest("newops@utsolutionsplc.com", null, "Samson Aweke", "ROLE_SAAS_ADMIN", null);
+
+        var result = service.inviteAdmin("platform.admin", req);
+
+        assertThat(result).isNotNull();
+        verify(emailProvider).sendEmail(eq("newops@utsolutionsplc.com"), anyString(), contains("Invitation Token:"));
+        verify(smsProvider, never()).sendSms(anyString(), anyString());
+    }
+
+    @Test
     @DisplayName("updateUserStatus prevents self-lockout")
     void testUpdateUserStatusPreventsSelfLockout() {
         when(userRepository.findById(adminUser.getId())).thenReturn(Optional.of(adminUser));

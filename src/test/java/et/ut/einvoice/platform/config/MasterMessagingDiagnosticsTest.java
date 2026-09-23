@@ -2,10 +2,10 @@ package et.ut.einvoice.platform.config;
 
 import et.ut.einvoice.audit.service.AuditService;
 import et.ut.einvoice.notifications.provider.EthioTelecomSmsProvider;
+import et.ut.einvoice.notifications.provider.GeezSmsProvider;
 import et.ut.einvoice.notifications.provider.MockGeezSmsProvider;
 import et.ut.einvoice.notifications.provider.SmsProviderRouter;
 import et.ut.einvoice.notifications.provider.SmtpEmailProvider;
-import et.ut.einvoice.platform.config.domain.ConfigurationEntry;
 import et.ut.einvoice.platform.config.repository.ConfigurationEntryRepository;
 import et.ut.einvoice.platform.config.service.MasterMessagingDiagnosticsService;
 import et.ut.einvoice.platform.security.domain.PlatformUser;
@@ -30,6 +30,7 @@ class MasterMessagingDiagnosticsTest {
     private SmsProviderRouter smsProviderRouter;
     private MockGeezSmsProvider mockGeezSmsProvider;
     private EthioTelecomSmsProvider ethioTelecomSmsProvider;
+    private GeezSmsProvider geezSmsProvider;
     private PlatformUserRepository userRepository;
     private ConfigurationEntryRepository entryRepository;
     private AuditService auditService;
@@ -44,6 +45,7 @@ class MasterMessagingDiagnosticsTest {
         smsProviderRouter = mock(SmsProviderRouter.class);
         mockGeezSmsProvider = new MockGeezSmsProvider();
         ethioTelecomSmsProvider = mock(EthioTelecomSmsProvider.class);
+        geezSmsProvider = mock(GeezSmsProvider.class);
         userRepository = mock(PlatformUserRepository.class);
         entryRepository = mock(ConfigurationEntryRepository.class);
         auditService = mock(AuditService.class);
@@ -103,6 +105,7 @@ class MasterMessagingDiagnosticsTest {
                 smsProviderRouter,
                 mockGeezSmsProvider,
                 ethioTelecomSmsProvider,
+                geezSmsProvider,
                 userRepository,
                 entryRepository,
                 auditService,
@@ -152,14 +155,14 @@ class MasterMessagingDiagnosticsTest {
     }
 
     @Test
-    @DisplayName("4. SMS status preserves GeezSMS statutory safety lock (BLOCKED_BY_POLICY)")
-    void testSmsStatusPreservesGeezSmsSafetyLock() {
+    @DisplayName("4. SMS status returns MOCK_ACTIVE when no live provider is configured (dev/test mode)")
+    void testSmsStatusMockActiveWhenNotConfigured() {
         var smsStatus = diagnosticsService.getSmsStatus("dave.admin");
 
-        assertThat(smsStatus.status()).isEqualTo("BLOCKED_BY_POLICY");
-        assertThat(smsStatus.safetyLockActive()).isTrue();
+        assertThat(smsStatus.status()).isEqualTo("MOCK_ACTIVE");
+        assertThat(smsStatus.safetyLockActive()).isTrue(); // still true in mock mode
         assertThat(smsStatus.activeProvider()).isEqualTo("Mock GeezSMS Provider");
-        assertThat(smsStatus.operationalMessage()).contains("STATUTORY SAFETY LOCK");
+        assertThat(smsStatus.operationalMessage()).contains("SMS_PROVIDER=GEEZSMS");
         assertThat(smsStatus.verifiedAdminPhone()).isEqualTo("+25191***3344");
     }
 

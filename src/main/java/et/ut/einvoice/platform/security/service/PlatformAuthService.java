@@ -17,6 +17,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import et.ut.einvoice.platform.config.dto.ConfigurationDtos.SendStepUpOtpResponse;
+import et.ut.einvoice.platform.config.service.MasterMfaOtpService;
 import et.ut.einvoice.platform.identity.repository.PlatformUserRecoveryCodeRepository;
 import et.ut.einvoice.platform.identity.service.TotpService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +44,7 @@ public class PlatformAuthService {
     private final JwtTokenService jwtTokenService;
     private final TotpService totpService;
     private final PlatformUserRecoveryCodeRepository recoveryCodeRepository;
+    private final MasterMfaOtpService mfaOtpService;
 
     @Autowired
     public PlatformAuthService(
@@ -51,7 +54,8 @@ public class PlatformAuthService {
             PasswordEncoder passwordEncoder,
             JwtTokenService jwtTokenService,
             @Autowired(required = false) TotpService totpService,
-            @Autowired(required = false) PlatformUserRecoveryCodeRepository recoveryCodeRepository
+            @Autowired(required = false) PlatformUserRecoveryCodeRepository recoveryCodeRepository,
+            @Autowired(required = false) MasterMfaOtpService mfaOtpService
     ) {
         this.tenantRepository = tenantRepository;
         this.tenantUserRepository = tenantUserRepository;
@@ -60,6 +64,19 @@ public class PlatformAuthService {
         this.jwtTokenService = jwtTokenService;
         this.totpService = totpService;
         this.recoveryCodeRepository = recoveryCodeRepository;
+        this.mfaOtpService = mfaOtpService;
+    }
+
+    public PlatformAuthService(
+            TenantRepository tenantRepository,
+            TenantUserRepository tenantUserRepository,
+            PlatformUserRepository platformUserRepository,
+            PasswordEncoder passwordEncoder,
+            JwtTokenService jwtTokenService,
+            TotpService totpService,
+            PlatformUserRecoveryCodeRepository recoveryCodeRepository
+    ) {
+        this(tenantRepository, tenantUserRepository, platformUserRepository, passwordEncoder, jwtTokenService, totpService, recoveryCodeRepository, null);
     }
 
     public PlatformAuthService(
@@ -69,7 +86,7 @@ public class PlatformAuthService {
             PasswordEncoder passwordEncoder,
             JwtTokenService jwtTokenService
     ) {
-        this(tenantRepository, tenantUserRepository, platformUserRepository, passwordEncoder, jwtTokenService, null, null);
+        this(tenantRepository, tenantUserRepository, platformUserRepository, passwordEncoder, jwtTokenService, null, null, null);
     }
 
     @Transactional
@@ -193,17 +210,31 @@ public class PlatformAuthService {
             throw new DisabledException("Platform operator account is inactive or suspended.");
         }
 
-        // Validate Hardware / TOTP MFA token only if account has enrolled and set up a registered secret
+        // Validate Hardware / TOTP MFA token only if account has enrolled and set up a registered secret OR has a pending OTP
         boolean hasRegisteredMfa = user.isMfaEnabled() && user.getMfaSecret() != null && !user.getMfaSecret().isBlank();
+        boolean hasPendingOtp = mfaOtpService != null && mfaOtpService.hasPendingOtp(user.getUsername());
 
-        if (hasRegisteredMfa) {
+        if (hasRegisteredMfa || hasPendingOtp) {
             String mfaCode = request.mfaCode() != null ? request.mfaCode().trim() : "";
             if (mfaCode.isEmpty()) {
-                log.warn("Platform operator authentication rejected: MFA code missing for enrolled user '{}'", identifier);
-                throw new BadCredentialsException("MFA is enabled on this account. 6-digit TOTP token is required.");
+                log.warn("Platform operator authentication rejected: MFA code missing for user '{}'", identifier);
+                throw new BadCredentialsException("MFA is enabled on this account. 6-digit TOTP / SMS token is required.");
             }
 
-            boolean valid = totpService != null && totpService.verifyCode(user.getMfaSecret(), mfaCode);
+            boolean valid = false;
+            // 1. Dynamic SMS/Email OTP (if pending)
+            if (mfaOtpService != null && mfaOtpService.hasPendingOtp(user.getUsername())) {
+                if (mfaOtpService.verifyOtp(user.getUsername(), mfaCode)) {
+                    valid = true;
+                }
+            }
+
+            // 2. Authentic TOTP authenticator app code
+            if (!valid && hasRegisteredMfa) {
+                valid = totpService != null && totpService.verifyCode(user.getMfaSecret(), mfaCode);
+            }
+
+            // 3. Emergency backup recovery code
             if (!valid && recoveryCodeRepository != null) {
                 String hash = sha256Hex(mfaCode);
                 var matchingCode = recoveryCodeRepository.findByUserId(user.getId()).stream()
@@ -221,7 +252,7 @@ public class PlatformAuthService {
 
             if (!valid) {
                 log.warn("Platform operator authentication failed: invalid MFA token for '{}'", identifier);
-                throw new BadCredentialsException("Invalid 6-digit MFA / TOTP token. Please check your authenticator app.");
+                throw new BadCredentialsException("Invalid 6-digit MFA / TOTP token. Please check your SMS or authenticator app.");
             }
         }
 
@@ -260,6 +291,28 @@ public class PlatformAuthService {
                 scopes,
                 Instant.now()
         );
+    }
+
+    public SendStepUpOtpResponse sendLoginOtp(String usernameOrEmail, String ipAddress, String correlationId) {
+        if (usernameOrEmail == null || usernameOrEmail.isBlank()) {
+            throw new BadCredentialsException("Username or email is required to dispatch verification code.");
+        }
+        String clean = usernameOrEmail.trim();
+        Optional<PlatformUser> userOpt = platformUserRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(clean, clean);
+        if (userOpt.isEmpty() && (clean.equalsIgnoreCase("saasadmin") || clean.equalsIgnoreCase("saas.admin") || clean.equalsIgnoreCase("saasadmin@utsolutionsplc.com"))) {
+            userOpt = platformUserRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase("saas.admin", "saas.admin@utsolutionsplc.com");
+        }
+        if (userOpt.isEmpty() && (clean.equalsIgnoreCase("admin") || clean.equalsIgnoreCase("masteradmin") || clean.equalsIgnoreCase("master.admin"))) {
+            userOpt = platformUserRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase("platform.admin", "admin@ut-invoice.internal");
+        }
+        if (userOpt.isEmpty()) {
+            log.warn("Failed to dispatch login OTP: user not found for '{}'", clean);
+            throw new BadCredentialsException("Invalid platform credentials.");
+        }
+        if (mfaOtpService == null) {
+            throw new IllegalStateException("MFA OTP dispatch service is unconfigured.");
+        }
+        return mfaOtpService.dispatchStepUpOtp(userOpt.get(), null, ipAddress, correlationId);
     }
 
     private String sha256Hex(String input) {

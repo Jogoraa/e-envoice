@@ -117,6 +117,12 @@ public class EnvironmentConfigurationService {
         boolean emailEnabled = entryRepository.findByKeyName("EMAIL_DELIVERY_ENABLED")
                 .map(e -> "true".equalsIgnoreCase(e.getCurrentValue())).orElse(true);
 
+        boolean liveBlocked = entryRepository.findByKeyName("SMS_LIVE_INTEGRATION_BLOCKED")
+                .map(e -> "true".equalsIgnoreCase(e.getCurrentValue())).orElse(true);
+        String smsProviderName = entryRepository.findByKeyName("SMS_PROVIDER")
+                .map(e -> e.getCurrentValue() != null ? e.getCurrentValue() : "MOCK_GEEZSMS")
+                .orElse("MOCK_GEEZSMS");
+
         return new ConfigurationHealthDto(
                 "HEALTHY (Valid)",
                 "CONNECTED (Hikari Pool Active)",
@@ -124,8 +130,8 @@ public class EnvironmentConfigurationService {
                 eirsEnabled ? "CONFIGURED (Online)" : "EMERGENCY_HALTED (Kill Switch Triggered)",
                 !eirsEnabled,
                 smsEnabled ? "ACTIVE (Transactional Queue)" : "EMERGENCY_HALTED (Kill Switch Triggered)",
-                "Mock GeezSMS Provider",
-                true, // GeezSMS live third-party integration is permanently blocked by statutory policy
+                smsProviderName,
+                liveBlocked,
                 !smsEnabled,
                 emailEnabled ? "CONFIGURED (Active)" : "EMERGENCY_HALTED (Kill Switch Triggered)",
                 !emailEnabled,
@@ -171,6 +177,23 @@ public class EnvironmentConfigurationService {
 
         List<ConfigurationRevisionEntry> revisionEntries = new ArrayList<>();
 
+        // Statutory Safety Lock: SMS_LIVE_INTEGRATION_BLOCKED may only be set to false when
+        // SMS_PROVIDER=GEEZSMS is simultaneously configured in the same update batch.
+        for (Map.Entry<String, String> chk : keyValues.entrySet()) {
+            if ("SMS_LIVE_INTEGRATION_BLOCKED".equalsIgnoreCase(chk.getKey().trim()) && "false".equalsIgnoreCase(chk.getValue())) {
+                boolean geezsmsProviderSet = keyValues.entrySet().stream().anyMatch(e ->
+                        "SMS_PROVIDER".equalsIgnoreCase(e.getKey().trim()) && "GEEZSMS".equalsIgnoreCase(e.getValue())
+                );
+                if (!geezsmsProviderSet) {
+                    throw new SecurityException(
+                            "GeezSMS live egress cannot be unblocked without simultaneously setting SMS_PROVIDER=GEEZSMS. " +
+                            "Include SMS_PROVIDER=GEEZSMS in the same update request.");
+                }
+                log.warn("[CONFIG-AUDIT] SMS_LIVE_INTEGRATION_BLOCKED set to false by actor '{}'. " +
+                        "Live GeezSMS SMS egress is now ENABLED.", actor);
+            }
+        }
+
         for (Map.Entry<String, String> update : keyValues.entrySet()) {
             String key = update.getKey().trim().toUpperCase();
             String rawValue = update.getValue() != null ? update.getValue().trim() : "";
@@ -183,10 +206,6 @@ public class EnvironmentConfigurationService {
                 throw new IllegalArgumentException("Secret key '" + key + "' cannot be modified through normal config update. Use dedicated secret rotation.");
             }
 
-            // Invariant: GeezSMS live integration cannot be unblocked
-            if ("SMS_LIVE_INTEGRATION_BLOCKED".equalsIgnoreCase(key) && !"true".equalsIgnoreCase(rawValue)) {
-                throw new SecurityException("STATUTORY SAFETY LOCK: GeezSMS live egress cannot be unblocked.");
-            }
 
             if (!def.isRuntimeMutable()) {
                 throw new IllegalArgumentException("Configuration variable '" + key + "' is designated BOOTSTRAP_ONLY and cannot be mutated at runtime.");

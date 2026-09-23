@@ -502,19 +502,34 @@ class MasterEnvironmentAndSecretsSecurityTest {
     }
 
     @Test
-    @DisplayName("16. GeezSMS provider remains permanently blocked (compliance invariant)")
-    void testGeezSmsLiveEgressPermanentlyBlocked() {
-        PrivilegedSessionDto sessionDto = establishPrivilegedSession();
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader("X-Privileged-Token", sessionDto.privilegedToken());
+    @DisplayName("16. GeezSMS live egress cannot be unblocked without simultaneously setting SMS_PROVIDER=GEEZSMS (dual-key guard)")
+    void testGeezSmsLiveEgressRequiresDualKeyAuthorization() {
+        // Attempt 1: unblock alone — must be rejected (missing SMS_PROVIDER=GEEZSMS in same batch)
+        PrivilegedSessionDto session1 = establishPrivilegedSession();
+        MockHttpServletRequest request1 = new MockHttpServletRequest();
+        request1.addHeader("X-Privileged-Token", session1.privilegedToken());
 
-        ConfigurationUpdateRequest updateReq = new ConfigurationUpdateRequest(
+        ConfigurationUpdateRequest unblockAlone = new ConfigurationUpdateRequest(
                 1L,
                 Map.of("SMS_LIVE_INTEGRATION_BLOCKED", "false"),
-                "Attempt to unblock live GeezSMS"
+                "Attempt to unblock without provider selection"
         );
+        assertThatThrownBy(() -> controller.updateConfiguration(unblockAlone, request1))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("GeezSMS live egress cannot be unblocked");
 
-        assertThatThrownBy(() -> controller.updateConfiguration(updateReq, request))
+        // Attempt 2: unblock with wrong provider — must also be rejected
+        // Requires a fresh privileged session as each step-up session is single-use.
+        PrivilegedSessionDto session2 = establishPrivilegedSession();
+        MockHttpServletRequest request2 = new MockHttpServletRequest();
+        request2.addHeader("X-Privileged-Token", session2.privilegedToken());
+
+        ConfigurationUpdateRequest unblockWithWrongProvider = new ConfigurationUpdateRequest(
+                1L,
+                Map.of("SMS_LIVE_INTEGRATION_BLOCKED", "false", "SMS_PROVIDER", "MOCK_GEEZSMS"),
+                "Attempt to unblock with mock provider"
+        );
+        assertThatThrownBy(() -> controller.updateConfiguration(unblockWithWrongProvider, request2))
                 .isInstanceOf(SecurityException.class)
                 .hasMessageContaining("GeezSMS live egress cannot be unblocked");
     }

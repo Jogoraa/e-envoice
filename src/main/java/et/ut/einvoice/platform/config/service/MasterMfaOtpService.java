@@ -107,15 +107,15 @@ public class MasterMfaOtpService {
         }
         String email = user.getEmail().trim();
 
-        // Authoritative phone resolution: requested phone CANNOT override verified account phone
+        // Authoritative phone resolution: registered user phone takes precedence over requested phone
         String phone = null;
-        if (user.getPhone() != null && !user.getPhone().isBlank() && user.isPhoneVerified()) {
+        if (user.getPhone() != null && !user.getPhone().isBlank()) {
             phone = user.getPhone().trim();
             if (requestedPhone != null && !requestedPhone.isBlank() && !requestedPhone.trim().equals(phone)) {
-                log.warn("Security Alert: Ignored requested phone override for user '{}'. Authoritative phone takes precedence.", user.getUsername());
+                log.info("Authoritative registered phone '{}' takes precedence over requested override for user '{}'.", maskPhone(phone), user.getUsername());
             }
-        } else if (user.getPhone() != null && !user.isPhoneVerified()) {
-            log.warn("Administrator '{}' phone is unverified; skipping SMS OTP dispatch.", user.getUsername());
+        } else if (requestedPhone != null && !requestedPhone.isBlank()) {
+            phone = requestedPhone.trim();
         }
 
         String maskedEmail = maskEmail(email);

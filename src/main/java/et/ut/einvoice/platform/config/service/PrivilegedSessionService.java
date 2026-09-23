@@ -302,16 +302,24 @@ public class PrivilegedSessionService {
 
         // 1. If an out-of-band Email/SMS OTP was dispatched and is pending, verify against the dynamic OTP
         if (mfaOtpService != null && mfaOtpService.hasPendingOtp(user.getUsername())) {
-            return mfaOtpService.verifyOtp(user.getUsername(), clean);
+            if (mfaOtpService.verifyOtp(user.getUsername(), clean)) {
+                return true;
+            }
         }
 
-        // 2. If user has TOTP MFA enrolled, strictly verify against authentic time-step TOTP code
+        // 2. If user has TOTP MFA enrolled, verify against authentic time-step TOTP code
         if (user.isMfaEnabled() && user.getMfaSecret() != null && !user.getMfaSecret().isBlank()) {
-            return totpService != null && totpService.verifyCode(user.getMfaSecret(), clean);
+            if (totpService != null && totpService.verifyCode(user.getMfaSecret(), clean)) {
+                return true;
+            }
         }
 
         // 3. Fallback for un-enrolled development/test accounts
-        return true;
+        if (!user.isMfaEnabled() && (mfaOtpService == null || !mfaOtpService.hasPendingOtp(user.getUsername()))) {
+            return true;
+        }
+
+        return false;
     }
 
     private void recordAuditFailure(String identifier, String failureReason, String correlationId, String ipAddress) {

@@ -207,13 +207,33 @@ public class ConfigurationDefinitionRegistry {
         ));
         register(new ConfigurationDefinition(
                 "SMS_PROVIDER", ConfigurationScope.SMS, ConfigurationValueType.ENUM,
-                ConfigurationClassification.HIGH, false, false, false,
-                "Designated SMS gateway provider implementation (GeezSMS is mock-only)", List.of("MOCK_GEEZSMS"), null, null
+                ConfigurationClassification.HIGH, false, true, true,
+                "Designated SMS gateway provider implementation. GEEZSMS = live production provider.",
+                List.of("MOCK_GEEZSMS", "GEEZSMS", "ETHIO_TELECOM"), null, null
         ));
         register(new ConfigurationDefinition(
                 "SMS_LIVE_INTEGRATION_BLOCKED", ConfigurationScope.SMS, ConfigurationValueType.BOOLEAN,
-                ConfigurationClassification.CRITICAL, false, false, false,
-                "STATUTORY SAFETY LOCK: GeezSMS live third-party egress permanently blocked", null, null, null
+                ConfigurationClassification.CRITICAL, false, true, true,
+                "SAFETY LOCK: When true, live SMS egress is blocked. Set false only when SMS_PROVIDER=GEEZSMS and token is configured.",
+                null, null, null
+        ));
+        register(new ConfigurationDefinition(
+                "GEEZSMS_TOKEN", ConfigurationScope.SMS, ConfigurationValueType.SECRET,
+                ConfigurationClassification.CRITICAL, true, true, true,
+                "GeezSMS production API token. Obtain from https://geezsms.com/#/api. Sent as form field, not Bearer header.",
+                null, null, null
+        ));
+        register(new ConfigurationDefinition(
+                "GEEZSMS_API_URL", ConfigurationScope.SMS, ConfigurationValueType.URL,
+                ConfigurationClassification.HIGH, false, false, true,
+                "GeezSMS API base URL (approved production endpoint only, SSRF-protected server-side)",
+                null, null, null
+        ));
+        register(new ConfigurationDefinition(
+                "GEEZSMS_SENDER_ID", ConfigurationScope.SMS, ConfigurationValueType.STRING,
+                ConfigurationClassification.MEDIUM, false, true, true,
+                "GeezSMS approved shortcode / sender ID. Leave blank to use GeezSMS default shortcode.",
+                null, null, null
         ));
         register(new ConfigurationDefinition(
                 "SMS_RECONCILIATION_SLA_HOURS", ConfigurationScope.SMS, ConfigurationValueType.INTEGER,

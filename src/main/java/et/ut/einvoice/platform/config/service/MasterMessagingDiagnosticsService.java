@@ -30,6 +30,7 @@ public class MasterMessagingDiagnosticsService {
     private final SmsProviderRouter smsProviderRouter;
     private final MockGeezSmsProvider mockGeezSmsProvider;
     private final EthioTelecomSmsProvider ethioTelecomSmsProvider;
+    private final GeezSmsProvider geezSmsProvider;
     private final PlatformUserRepository userRepository;
     private final ConfigurationEntryRepository entryRepository;
     private final AuditService auditService;
@@ -41,6 +42,7 @@ public class MasterMessagingDiagnosticsService {
             SmsProviderRouter smsProviderRouter,
             MockGeezSmsProvider mockGeezSmsProvider,
             EthioTelecomSmsProvider ethioTelecomSmsProvider,
+            GeezSmsProvider geezSmsProvider,
             PlatformUserRepository userRepository,
             ConfigurationEntryRepository entryRepository,
             AuditService auditService,
@@ -50,6 +52,7 @@ public class MasterMessagingDiagnosticsService {
         this.smsProviderRouter = smsProviderRouter;
         this.mockGeezSmsProvider = mockGeezSmsProvider;
         this.ethioTelecomSmsProvider = ethioTelecomSmsProvider;
+        this.geezSmsProvider = geezSmsProvider;
         this.userRepository = userRepository;
         this.entryRepository = entryRepository;
         this.auditService = auditService;
@@ -148,33 +151,50 @@ public class MasterMessagingDiagnosticsService {
         boolean deliveryEnabled = entryRepository.findByKeyName("SMS_ENABLED")
                 .map(e -> "true".equalsIgnoreCase(e.getCurrentValue())).orElse(true);
 
-        boolean isEthio = "ethio-telecom".equalsIgnoreCase(activeSmsProviderName) || "ethio".equalsIgnoreCase(activeSmsProviderName);
-
-        if (!isEthio) {
-            // GeezSMS safety invariant: permanently blocked by policy
+        // GeezSMS live provider (production)
+        if ("geezsms".equalsIgnoreCase(activeSmsProviderName)) {
+            boolean isConfigured = geezSmsProvider.isConfigured();
             return new SmsDiagnosticStatusDto(
-                    "BLOCKED_BY_POLICY",
-                    "Mock GeezSMS Provider",
-                    "BLOCKED_BY_STATUTORY_POLICY",
-                    "MoR-EIRS",
-                    true,
+                    isConfigured ? "CONFIGURED" : "NOT_CONFIGURED",
+                    "GeezSMS",
+                    "https://api.geezsms.com/api/v1/sms/send",
+                    "GeezSMS shortcode",
+                    false,
                     deliveryEnabled,
                     verifiedPhone != null ? MasterMfaOtpService.maskPhone(verifiedPhone) : "NOT_ENROLLED",
-                    "STATUTORY SAFETY LOCK: GeezSMS live third-party egress is permanently blocked. Deterministic mock transport active for compliance testing.",
+                    isConfigured
+                            ? "GeezSMS live provider configured and ready for transactional dispatch."
+                            : "GeezSMS token not configured. Set GEEZSMS_TOKEN in environment.",
                     Instant.now()
             );
         }
 
-        boolean isConfigured = ethioTelecomSmsProvider.isConfigured();
+        // Ethio Telecom provider
+        if ("ethio-telecom".equalsIgnoreCase(activeSmsProviderName) || "ethio".equalsIgnoreCase(activeSmsProviderName)) {
+            boolean isConfigured = ethioTelecomSmsProvider.isConfigured();
+            return new SmsDiagnosticStatusDto(
+                    isConfigured ? "CONFIGURED" : "NOT_CONFIGURED",
+                    "Ethio Telecom SMS Gateway",
+                    isConfigured ? "https://gateway.ethiotelecom.et/v1/sms" : "NOT_CONFIGURED",
+                    "MoR-EIRS",
+                    false,
+                    deliveryEnabled,
+                    verifiedPhone != null ? MasterMfaOtpService.maskPhone(verifiedPhone) : "NOT_ENROLLED",
+                    isConfigured ? "Ethio Telecom SMS Gateway configured and ready for transactional dispatch." : "Ethio Telecom endpoint (ETHIO_TELECOM_SMS_URL) or API key is not configured.",
+                    Instant.now()
+            );
+        }
+
+        // Mock provider (dev / test)
         return new SmsDiagnosticStatusDto(
-                isConfigured ? "CONFIGURED" : "NOT_CONFIGURED",
-                "Ethio Telecom SMS Gateway",
-                isConfigured ? "https://gateway.ethiotelecom.et/v1/sms" : "NOT_CONFIGURED",
+                "MOCK_ACTIVE",
+                "Mock GeezSMS Provider",
+                "MOCK",
                 "MoR-EIRS",
-                false,
+                true,
                 deliveryEnabled,
                 verifiedPhone != null ? MasterMfaOtpService.maskPhone(verifiedPhone) : "NOT_ENROLLED",
-                isConfigured ? "Ethio Telecom SMS Gateway configured and ready for transactional dispatch." : "Ethio Telecom endpoint (ETHIO_TELECOM_SMS_URL) or API key is not configured.",
+                "Mock SMS provider active. Set SMS_PROVIDER=GEEZSMS and GEEZSMS_TOKEN to enable live dispatch.",
                 Instant.now()
         );
     }

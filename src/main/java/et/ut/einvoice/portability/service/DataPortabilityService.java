@@ -113,6 +113,9 @@ public class DataPortabilityService {
 
     @Async
     public void processExportAsync(UUID jobId, UUID tenantId) {
+        et.ut.einvoice.platform.context.TenantContextHolder.setContext(
+                et.ut.einvoice.platform.context.TenantContext.create(tenantId, "PORTABILITY_SYSTEM", java.util.Set.of("ROLE_TENANT_ADMIN"))
+        );
         try {
             log.info("Generating comprehensive legally exportable ZIP archive for tenant {}...", tenantId);
 
@@ -218,6 +221,8 @@ public class DataPortabilityService {
                 job.fail();
                 exportJobRepository.save(job);
             });
+        } finally {
+            et.ut.einvoice.platform.context.TenantContextHolder.clear();
         }
     }
 

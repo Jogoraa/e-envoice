@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import et.ut.einvoice.government.domain.GovernmentRegistrationProvider;
 import et.ut.einvoice.invoicing.domain.TransactionType;
 import et.ut.einvoice.invoicing.dto.CreateInvoiceRequest;
+import et.ut.einvoice.taxpayer.domain.TaxpayerProfile;
+import et.ut.einvoice.taxpayer.repository.TaxpayerProfileRepository;
 import et.ut.einvoice.tenancy.domain.ApiClient;
 import et.ut.einvoice.tenancy.domain.Tenant;
 import et.ut.einvoice.tenancy.repository.ApiClientRepository;
@@ -47,6 +49,9 @@ public class ApiSecurityAdversarialTestSuite {
     @Autowired
     private ApiClientRepository apiClientRepository;
 
+    @Autowired
+    private TaxpayerProfileRepository taxpayerProfileRepository;
+
     @MockBean
     private GovernmentRegistrationProvider governmentRegistrationProvider;
 
@@ -68,6 +73,7 @@ public class ApiSecurityAdversarialTestSuite {
     @BeforeEach
     void setUp() {
         apiClientRepository.deleteAll();
+        taxpayerProfileRepository.deleteAll();
         tenantRepository.deleteAll();
 
         tenantAId = UUID.randomUUID();
@@ -78,10 +84,20 @@ public class ApiSecurityAdversarialTestSuite {
         tenantA.activate();
         tenantRepository.save(tenantA);
 
+        taxpayerProfileRepository.save(new TaxpayerProfile(
+                tenantAId, "0011223344", "VAT-112233", "Tenant A PLC", "Tenant A",
+                "14", "05", "+251911223344", "tenanta@sec.et", "8EFBBDD7FA", "ERP"
+        ));
+
         // 2. Active Tenant B
         Tenant tenantB = new Tenant(tenantBId, "ORG-B", "Tenant B PLC", "Tenant B", "0055667788", "SME");
         tenantB.activate();
         tenantRepository.save(tenantB);
+
+        Mockito.when(governmentRegistrationProvider.registerInvoice(Mockito.any(), Mockito.any(), Mockito.any()))
+                .thenAnswer(inv -> GovernmentRegistrationProvider.GovernmentRegistrationResult.success(
+                        "IRN-" + UUID.randomUUID(), "RRN-SEC-1", "2026-09-18T12:00:00Z", "qr-sec", "signed-sec"
+                ));
 
         // 3. Suspended Tenant
         UUID suspendedTenantId = UUID.randomUUID();

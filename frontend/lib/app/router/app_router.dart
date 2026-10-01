@@ -52,7 +52,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final delegatedSession = ref.watch(delegatedTenantSessionProvider);
 
   String determineInitialLocation() {
-    const appSurface = String.fromEnvironment('APP_SURFACE', defaultValue: 'tenant');
+    const appSurface = String.fromEnvironment('APP_SURFACE', defaultValue: 'desktop');
     if (delegatedSession != null) return '/dashboard';
     if (tenantSession != null) return '/dashboard';
     if (appSurface == 'tenant') return '/login';
@@ -70,7 +70,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         builder: (context, state) {
-          const appSurface = String.fromEnvironment('APP_SURFACE', defaultValue: 'tenant');
+          const appSurface = String.fromEnvironment('APP_SURFACE', defaultValue: 'desktop');
           if (appSurface == 'tenant') {
             return tenantSession != null || delegatedSession != null
                 ? const DashboardScreen()

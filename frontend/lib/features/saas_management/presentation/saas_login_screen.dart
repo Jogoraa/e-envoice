@@ -191,7 +191,7 @@ class _SaasLoginScreenState extends ConsumerState<SaasLoginScreen> {
                     TextFormField(
                       controller: _emailController,
                       decoration: const InputDecoration(
-                        labelText: 'Operator Username or Email',
+                        labelText: 'Operator Email',
                         hintText: 'email@example.com',
                         prefixIcon: Icon(Icons.person_outline, size: 18),
                       ),
@@ -287,6 +287,22 @@ class _SaasLoginScreenState extends ConsumerState<SaasLoginScreen> {
                                     : 'Access SaaS Portal',
                               ),
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        TextButton(
+                          onPressed: () => context.go('/login'),
+                          child: const Text('Tenant Client'),
+                        ),
+                        const Text('•', style: TextStyle(color: AppColors.rule)),
+                        TextButton(
+                          onPressed: () => context.go('/'),
+                          child: const Text('Workspaces'),
+                        ),
+                      ],
                     ),
                   ],
                 ),

@@ -68,6 +68,7 @@ public class InvoiceService {
     private final et.ut.einvoice.notifications.repository.InvoiceNotificationOutboxRepository notificationOutboxRepository;
     private final et.ut.einvoice.notifications.service.InvoiceNotificationTemplateService notificationTemplateService;
     private final et.ut.einvoice.notifications.metrics.SmsMetrics smsMetrics;
+    private final et.ut.einvoice.government.service.AuthoritativeGovernmentSubmissionService authoritativeGovernmentSubmissionService;
 
     public InvoiceService(
             InvoiceRepository invoiceRepository,
@@ -97,7 +98,9 @@ public class InvoiceService {
             @org.springframework.beans.factory.annotation.Autowired(required = false)
             et.ut.einvoice.notifications.service.InvoiceNotificationTemplateService notificationTemplateService,
             @org.springframework.beans.factory.annotation.Autowired(required = false)
-            et.ut.einvoice.notifications.metrics.SmsMetrics smsMetrics
+            et.ut.einvoice.notifications.metrics.SmsMetrics smsMetrics,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            et.ut.einvoice.government.service.AuthoritativeGovernmentSubmissionService authoritativeGovernmentSubmissionService
     ) {
         this.invoiceRepository = invoiceRepository;
         this.taxpayerProfileRepository = taxpayerProfileRepository;
@@ -120,6 +123,7 @@ public class InvoiceService {
         this.notificationOutboxRepository = notificationOutboxRepository;
         this.notificationTemplateService = notificationTemplateService;
         this.smsMetrics = smsMetrics;
+        this.authoritativeGovernmentSubmissionService = authoritativeGovernmentSubmissionService;
     }
 
     /**
@@ -206,7 +210,13 @@ public class InvoiceService {
         validateBuyerDetails(request);
 
         TaxpayerProfile seller = taxpayerProfileRepository.findById(tenantId)
-                .orElseGet(() -> createDefaultTaxpayerProfile(tenantId));
+                .orElseThrow(() -> new BusinessException(
+                        "TAXPAYER_PROFILE_REQUIRED",
+                        "Tenant " + tenantId + " does not have an active taxpayer profile configured. Please complete taxpayer registration before issuing invoices.",
+                        "የታክስ ከፋይ መረጃ አልተገኘም፤ እባክዎ አስቀድመው ይመዝገቡ።",
+                        HttpStatus.PRECONDITION_FAILED
+                ));
+        validateTaxpayerProfile(seller);
 
         // 3. Atomically persist invoice & outbox event within a clean DB transaction
         PersistedInvoiceBundle bundle = transactionTemplate.execute(status ->
@@ -217,49 +227,18 @@ public class InvoiceService {
         }
 
         // 4. Authoritative EIRS Submission via Single Outbox Dispatcher (Executed outside database transaction)
-        Invoice invoice = bundle.invoice();
-        GovernmentSubmission submission = bundle.submission();
-
-        try {
-            var regResult = governmentRegistrationProvider.registerInvoice(invoice, seller, "AUTO_AUTH");
-
-            if (regResult.success()) {
-                invoice.markRegistered(
-                        regResult.irn(),
-                        regResult.rrn(),
-                        regResult.ackDate(),
-                        regResult.signedQr(),
-                        regResult.signedInvoice()
-                );
-                submission.markAccepted(regResult.irn());
-                saveInvoiceAndSubmission(invoice, submission, seller.getTradeName() != null ? seller.getTradeName() : seller.getLegalName(), bundle.outboxEvent().getId().toString());
-                outboxService.markPublished(bundle.outboxEvent().getId());
-
-                eventPublisher.publish(new InvoiceRegisteredEvent(
-                        invoice.getId(),
-                        tenantId,
-                        invoice.getIrn(),
-                        invoice.getBuyerEmail(),
-                        invoice.getBuyerPhone()
-                ));
-            } else if ("SEQUENCE_MISMATCH".equals(regResult.errorCode()) && regResult.expectedNextDoc() != null) {
-                // Hardened sequence recovery under tenant sequence lock
-                handleSequenceMismatchAndRetry(invoice, submission, bundle.outboxEvent(), seller, regResult);
-            } else {
-                submission.markRejected(regResult.errorCode(), regResult.errorMessage());
-                submissionRepository.save(submission);
-                fallbackToOfflineBuffer(invoice, regResult.errorMessage());
-            }
-        } catch (Exception ex) {
-            log.error("Network or Gateway communication failure connecting to MoR: {}", ex.getMessage());
-            submission.markUnknown("GATEWAY_TIMEOUT", ex.getMessage());
-            submissionRepository.save(submission);
-            fallbackToOfflineBuffer(invoice, ex.getMessage());
+        if (authoritativeGovernmentSubmissionService != null) {
+            authoritativeGovernmentSubmissionService.executeAuthoritativeSubmission(
+                    bundle.invoice().getId(),
+                    bundle.outboxEvent().getId(),
+                    tenantId
+            );
         }
 
-        // 5. Ensure local QR code is generated if not provided by gateway
-        ensureQrCode(invoice, seller);
-        Invoice saved = invoiceRepository.save(invoice);
+        // 5. Reload invoice to capture the authoritative outcome
+        Invoice saved = invoiceRepository.findById(bundle.invoice().getId()).orElse(bundle.invoice());
+        ensureQrCode(saved, seller);
+        saved = invoiceRepository.save(saved);
 
         InvoiceResponseDto response = InvoiceResponseDto.fromEntity(saved);
         idempotencyService.markCompleted(tenantId, clientId, idempotencyKey, saved.getId().toString(), serializeResponse(response));
@@ -400,6 +379,33 @@ public class InvoiceService {
                     payloadJson
             );
 
+            // Same-transaction outbox enqueueing for invoice registration notification
+            if (notificationPolicyService != null && notificationOutboxRepository != null) {
+                var decision = notificationPolicyService.evaluateRegistrationNotification(
+                        savedInvoice,
+                        seller.getTradeName() != null ? seller.getTradeName() : seller.getLegalName(),
+                        idempotencyKey
+                );
+                if (decision.shouldNotify() && decision.outboxRecord() != null) {
+                    notificationOutboxRepository.save(decision.outboxRecord());
+                    if (smsMetrics != null) {
+                        smsMetrics.recordCreated(decision.outboxRecord().getNotificationType());
+                    }
+                    if (auditService != null) {
+                        auditService.recordEvent(
+                                savedInvoice.getTenantId(),
+                                "SMS_NOTIFICATION",
+                                "SYSTEM",
+                                et.ut.einvoice.audit.domain.AuditAction.SMS_NOTIFICATION_CREATED.name(),
+                                "INVOICE",
+                                savedInvoice.getId().toString(),
+                                "outbox_id=" + decision.outboxRecord().getId() + ";party_id=" + decision.outboxRecord().getRecipientPartyId(),
+                                "127.0.0.1"
+                        );
+                    }
+                }
+            }
+
             auditService.recordEvent(
                     tenantId,
                     "INVOICE",
@@ -474,15 +480,15 @@ public class InvoiceService {
             } else {
                 qrPayload = String.format("SELLER:%s|DOC:%s|TOTAL:%s|IRN:%s",
                         seller.getTin(), invoice.getDocumentNumber(), invoice.getGrandTotal(),
-                        invoice.getIrn() != null ? invoice.getIrn() : "OFFLINE");
+                        invoice.getIrn() != null ? invoice.getIrn() : "");
             }
             String qrBase64 = qrCodeService.generateQrCodeBase64(qrPayload, 600, 600);
             if (invoice.getStatus() == InvoiceStatus.OFFLINE_BUFFERED) {
                 invoice.setOfflineQr(qrBase64);
-            } else {
+            } else if (invoice.getIrn() != null) {
                 invoice.markRegistered(
-                        invoice.getIrn() != null ? invoice.getIrn() : "OFFLINE-" + UUID.randomUUID(),
-                        "RRN-" + invoice.getDocumentNumber(),
+                        invoice.getIrn(),
+                        invoice.getRrn() != null ? invoice.getRrn() : "RRN-" + invoice.getDocumentNumber(),
                         invoice.getAckDate() != null ? invoice.getAckDate() : Instant.now().toString(),
                         qrBase64,
                         invoice.getSignedInvoice() != null ? invoice.getSignedInvoice() : ""
@@ -594,23 +600,19 @@ public class InvoiceService {
         }
     }
 
-    private TaxpayerProfile createDefaultTaxpayerProfile(UUID tenantId) {
-        String cleanUuid = tenantId.toString().replace("-", "");
-        String uniqueTin = "9" + cleanUuid.replaceAll("[^0-9]", "1").substring(0, 9);
-        TaxpayerProfile p = new TaxpayerProfile(
-                tenantId,
-                uniqueTin,
-                "VAT-" + cleanUuid.substring(0, 8),
-                "UT Test Enterprise PLC",
-                "UT Retail",
-                "14",
-                "03",
-                "+251911000000",
-                "tax@" + cleanUuid.substring(0, 6) + ".utsystems.et",
-                "8EFBBDD7FF",
-                "ERP"
-        );
-        return taxpayerProfileRepository.save(p);
+    private void validateTaxpayerProfile(TaxpayerProfile profile) {
+        if (profile == null) {
+            throw new BusinessException("TAXPAYER_PROFILE_REQUIRED", "Taxpayer profile is missing.", HttpStatus.PRECONDITION_FAILED);
+        }
+        if (profile.getTin() == null || !profile.getTin().trim().matches("^\\d{10}$") || profile.getTin().trim().equals("0000000000")) {
+            throw new BusinessException("INVALID_TAXPAYER_TIN", "Taxpayer profile TIN is invalid: must be 10 numeric digits.", HttpStatus.PRECONDITION_FAILED);
+        }
+        if (profile.getLegalName() == null || profile.getLegalName().isBlank()) {
+            throw new BusinessException("INVALID_TAXPAYER_NAME", "Taxpayer legal name is required.", HttpStatus.PRECONDITION_FAILED);
+        }
+        if (profile.getSystemNumber() == null || profile.getSystemNumber().isBlank()) {
+            throw new BusinessException("INVALID_TAXPAYER_SYSTEM_NUMBER", "Taxpayer system number is required.", HttpStatus.PRECONDITION_FAILED);
+        }
     }
 
     private String serializePayload(Object obj) {

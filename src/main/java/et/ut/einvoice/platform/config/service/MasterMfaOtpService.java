@@ -119,7 +119,7 @@ public class MasterMfaOtpService {
         }
 
         String maskedEmail = maskEmail(email);
-        String maskedPhone = phone != null ? maskPhone(phone) : "UNVERIFIED";
+        String maskedPhone = (phone != null && user.isPhoneVerified()) ? maskPhone(phone) : "UNVERIFIED";
         Instant expiresAt = now.plusSeconds(OTP_TTL_SECONDS);
 
         // 4. Store digest in memory
@@ -147,7 +147,7 @@ public class MasterMfaOtpService {
         }
 
         // 6. Dispatch via SmsProvider (Ethio Telecom Gateway) only if phone is verified
-        if (phone != null) {
+        if (phone != null && user.isPhoneVerified()) {
             try {
                 String smsText = "[UT-INVOICE] Master Admin verification code: " + plainCode + ". Valid for 5 min.";
                 smsProvider.sendSms(phone, smsText);
@@ -160,7 +160,7 @@ public class MasterMfaOtpService {
         // 7. Audit Logging (Compliant with privacy directives: never log plaintext OTP)
         recordAuditOtpDispatched(user.getUsername(), maskedEmail, maskedPhone, ipAddress, correlationId);
 
-        String dispatchNotice = phone != null
+        String dispatchNotice = (phone != null && user.isPhoneVerified())
                 ? "Verification code successfully dispatched to your registered email (" + maskedEmail + ") and SMS (" + maskedPhone + ")."
                 : "Verification code successfully dispatched to your registered email (" + maskedEmail + ").";
 

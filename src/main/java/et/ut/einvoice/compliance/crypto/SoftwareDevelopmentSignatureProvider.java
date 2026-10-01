@@ -4,6 +4,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -11,11 +12,12 @@ import java.security.*;
 import java.util.Base64;
 
 /**
- * Development & Test Cryptographic Provider.
+ * Non-production Development & Test Cryptographic Provider.
  * Uses in-memory software keys and Bouncy Castle RSA-2048.
- * Strictly disabled in production when HSM is active.
+ * Strictly forbidden from activating in production profile.
  */
 @Component
+@Profile("!prod & !production")
 @ConditionalOnProperty(name = "mor.crypto.provider", havingValue = "software", matchIfMissing = true)
 public class SoftwareDevelopmentSignatureProvider implements DigitalSignatureProvider {
 
@@ -28,7 +30,7 @@ public class SoftwareDevelopmentSignatureProvider implements DigitalSignaturePro
     }
 
     public SoftwareDevelopmentSignatureProvider() {
-        log.info("[CRYPTO] Initialized SoftwareDevelopmentSignatureProvider (BouncyCastle RSA-2048 / SHA-256).");
+        log.info("[CRYPTO] Initialized SoftwareDevelopmentSignatureProvider (NON-PRODUCTION PROFILE).");
     }
 
     @Override
@@ -49,25 +51,32 @@ public class SoftwareDevelopmentSignatureProvider implements DigitalSignaturePro
     }
 
     @Override
-    public String signData(byte[] data, PrivateKey privateKey) {
+    public String sign(byte[] documentHash, SigningIdentity signingIdentity) {
+        if (signingIdentity == null || signingIdentity.privateKey() == null) {
+            throw new IllegalArgumentException("Private key is required for software development signature provider.");
+        }
         try {
             Signature signature = Signature.getInstance("SHA256withRSA", BouncyCastleProvider.PROVIDER_NAME);
-            signature.initSign(privateKey);
-            signature.update(data);
+            signature.initSign(signingIdentity.privateKey());
+            signature.update(documentHash);
             byte[] signedBytes = signature.sign();
             return Base64.getEncoder().encodeToString(signedBytes);
         } catch (Exception e) {
             log.error("Failed to generate software digital signature", e);
-            throw new RuntimeException("Software Digital signature generation failed: " + e.getMessage(), e);
+            throw new RuntimeException("Software digital signature generation failed: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public boolean verifySignature(byte[] data, String base64Signature, PublicKey publicKey) {
+    public boolean verify(byte[] documentHash, String base64Signature, SigningIdentity signingIdentity) {
+        if (signingIdentity == null || signingIdentity.publicKey() == null) {
+            log.error("Public key is required for software signature verification.");
+            return false;
+        }
         try {
             Signature signature = Signature.getInstance("SHA256withRSA", BouncyCastleProvider.PROVIDER_NAME);
-            signature.initVerify(publicKey);
-            signature.update(data);
+            signature.initVerify(signingIdentity.publicKey());
+            signature.update(documentHash);
             byte[] signatureBytes = Base64.getDecoder().decode(base64Signature);
             return signature.verify(signatureBytes);
         } catch (Exception e) {
@@ -84,5 +93,10 @@ public class SoftwareDevelopmentSignatureProvider implements DigitalSignaturePro
     @Override
     public boolean isHsmBacked() {
         return false;
+    }
+
+    @Override
+    public CryptoHealthState getHealthStatus() {
+        return CryptoHealthState.READY;
     }
 }

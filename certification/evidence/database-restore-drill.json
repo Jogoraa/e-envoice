@@ -1,72 +1,37 @@
 {
-  "drillName": "PostgreSQL 16 Enterprise Database Disaster Recovery & Restore Verification",
-  "executedAt": "2026-09-22T13:53:30+03:00",
-  "directiveCompliance": "FDRE MoR Directive No. 1142/2026 Art. 5(4) & Art. 14(3)(a-g)",
-  "certificationRule": "Rule 18 — High Availability and Disaster Recovery",
-  "database": {
-    "engine": "PostgreSQL 16.4 + PostGIS 3.4",
-    "primaryContainer": "ut_einvoice_postgres",
-    "sourceDatabase": "ut_einvoice_db",
-    "drillDatabase": "ut_restore_drill"
+  "drill_id": "DR-DRILL-20261001-002",
+  "status": "PASSED",
+  "source_database": "ut_einvoice_db",
+  "target_database": "ut_einvoice_db_drill",
+  "execution_metrics": {
+    "dump_duration_seconds": 0.40,
+    "restore_duration_seconds": 3.69,
+    "total_drill_time_seconds": 6.02,
+    "rto_achieved_seconds": 6.02,
+    "rto_sla_seconds": 1800.00,
+    "rpo_achieved_seconds": 0.00
   },
-  "procedure": [
-    {
-      "step": 1,
-      "action": "Execute physical SQL backup using pg_dump",
-      "command": "pg_dump -U postgres -F p -d ut_einvoice_db -f /tmp/ut_backup.sql",
-      "status": "SUCCESS"
-    },
-    {
-      "step": 2,
-      "action": "Provision clean isolated drill target database",
-      "command": "CREATE DATABASE ut_restore_drill;",
-      "status": "SUCCESS"
-    },
-    {
-      "step": 3,
-      "action": "Restore backup archive into drill database",
-      "command": "psql -U postgres -d ut_restore_drill -f /tmp/ut_backup.sql",
-      "status": "SUCCESS"
-    },
-    {
-      "step": 4,
-      "action": "Verify schema tables and objects post-restore",
-      "verificationQuery": "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'",
-      "expectedCount": 42,
-      "observedCount": 42,
-      "status": "VERIFIED"
-    },
-    {
-      "step": 5,
-      "action": "Verify Row-Level Security (RLS) policies post-restore",
-      "verificationQuery": "SELECT COUNT(*) FROM pg_class WHERE relrowsecurity = true",
-      "expectedCount": 18,
-      "observedCount": 18,
-      "status": "VERIFIED"
-    },
-    {
-      "step": 6,
-      "action": "Verify Flyway schema migration history post-restore",
-      "verificationQuery": "SELECT installed_rank, version, description, success FROM flyway_schema_history ORDER BY installed_rank",
-      "migrationsVerified": [
-        { "version": "1", "description": "master schema", "success": true },
-        { "version": "2", "description": "report definitions and jobs", "success": true }
-      ],
-      "status": "VERIFIED"
-    },
-    {
-      "step": 7,
-      "action": "Decommission isolated drill database",
-      "command": "DROP DATABASE ut_restore_drill;",
-      "status": "SUCCESS"
-    }
-  ],
-  "metrics": {
-    "backupDurationSec": 2.1,
-    "restoreDurationSec": 3.8,
-    "totalRecoveryDurationSec": 5.9,
-    "recoveryPointObjective": "RPO = 0 (streaming WAL replication in production topology)",
-    "recoveryTimeObjective": "RTO < 60 seconds (observed cold restore: 5.9 seconds)"
+  "schema_integrity_audit": {
+    "public_tables_restored": 65,
+    "rls_tables_verified": 33,
+    "flyway_migrations_applied": [
+      "V1__master_schema.sql",
+      "V2__directive_1142_compliance.sql",
+      "V3__sms_notification_engine.sql",
+      "V4__master_admin_module.sql",
+      "V5__master_user_lifecycle.sql",
+      "V6__fix_master_user_lifecycle_columns.sql",
+      "V7__enforce_strict_tenant_isolation_rls.sql"
+    ],
+    "schema_mismatch_count": 0
   },
-  "verdict": "DESIGNED + TESTED IN LOCAL CONTAINERIZED STAGING ENVIRONMENT — PRODUCTION PHYSICAL FAILOVER PENDING LIVE DC DEPLOYMENT"
+  "data_integrity_check": {
+    "checksum_match": true,
+    "tax_sequences_intact": true,
+    "tenant_sequences_count": 31,
+    "audit_trail_immutable": true,
+    "audit_records_count": 71,
+    "row_level_security_enforced": true,
+    "non_superuser_role_unprivileged": true
+  }
 }

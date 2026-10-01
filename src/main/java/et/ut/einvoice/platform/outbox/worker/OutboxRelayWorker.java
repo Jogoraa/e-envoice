@@ -30,6 +30,7 @@ public class OutboxRelayWorker {
     private final GovernmentRegistrationProvider governmentProvider;
     private final DomainEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    private final et.ut.einvoice.government.service.AuthoritativeGovernmentSubmissionService authoritativeGovernmentSubmissionService;
 
     public OutboxRelayWorker(
             OutboxEventRepository outboxRepository,
@@ -38,7 +39,8 @@ public class OutboxRelayWorker {
             TaxpayerProfileRepository taxpayerProfileRepository,
             GovernmentRegistrationProvider governmentProvider,
             DomainEventPublisher eventPublisher,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            et.ut.einvoice.government.service.AuthoritativeGovernmentSubmissionService authoritativeGovernmentSubmissionService
     ) {
         this.outboxRepository = outboxRepository;
         this.outboxService = outboxService;
@@ -47,6 +49,7 @@ public class OutboxRelayWorker {
         this.governmentProvider = governmentProvider;
         this.eventPublisher = eventPublisher;
         this.objectMapper = objectMapper;
+        this.authoritativeGovernmentSubmissionService = authoritativeGovernmentSubmissionService;
     }
 
     public OutboxEventRepository getOutboxRepository() {
@@ -79,56 +82,11 @@ public class OutboxRelayWorker {
     }
 
     public void processSingleEvent(OutboxEvent event) {
-        et.ut.einvoice.platform.context.TenantContextHolder.setContext(
-                et.ut.einvoice.platform.context.TenantContext.create(event.getTenantId(), "outbox-worker", java.util.Set.of("ROLE_TENANT_ADMIN"))
-        );
-        try {
-            if ("INVOICE_REGISTRATION".equals(event.getEventType())) {
-                UUID invoiceId = UUID.fromString(event.getAggregateId());
-                Invoice invoice = invoiceRepository.findById(invoiceId).orElse(null);
-                if (invoice == null) {
-                    outboxService.markFailed(event.getId(), "Invoice not found: " + invoiceId, event.getAttemptCount() + 1);
-                    return;
-                }
-
-                // Idempotent recovery: do not re-submit if already registered
-                if (invoice.getStatus() == et.ut.einvoice.invoicing.domain.InvoiceStatus.REGISTERED) {
-                    log.info("Invoice {} is already registered with IRN {}. Marking outbox event published.", invoiceId, invoice.getIrn());
-                    outboxService.markPublished(event.getId());
-                    return;
-                }
-
-                TaxpayerProfile seller = taxpayerProfileRepository.findById(event.getTenantId()).orElse(null);
-                if (seller == null) {
-                    outboxService.markFailed(event.getId(), "Taxpayer profile not found for tenant: " + event.getTenantId(), event.getAttemptCount() + 1);
-                    return;
-                }
-
-                // External HTTP call executed outside any database transaction
-                var result = governmentProvider.registerInvoice(invoice, seller, "bearer-token");
-                if (result.success()) {
-                    invoice.markRegistered(result.irn(), result.rrn(), result.ackDate(), result.signedQr(), result.signedInvoice());
-                    invoiceRepository.save(invoice);
-                    outboxService.markPublished(event.getId());
-
-                    // Publish async notification event
-                    eventPublisher.publish(new InvoiceRegisteredEvent(
-                            invoice.getId(),
-                            invoice.getTenantId(),
-                            invoice.getIrn(),
-                            invoice.getBuyerEmail(),
-                            invoice.getBuyerPhone()
-                    ));
-                } else {
-                    log.warn("EIRS registration failed for invoice {}: {}", invoiceId, result.errorMessage());
-                    outboxService.markFailed(event.getId(), result.errorMessage(), event.getAttemptCount() + 1);
-                }
-            } else {
-                // Other generic integration events
-                outboxService.markPublished(event.getId());
-            }
-        } finally {
-            et.ut.einvoice.platform.context.TenantContextHolder.clear();
+        if ("INVOICE_REGISTRATION".equals(event.getEventType())) {
+            UUID invoiceId = UUID.fromString(event.getAggregateId());
+            authoritativeGovernmentSubmissionService.executeAuthoritativeSubmission(invoiceId, event.getId(), event.getTenantId());
+        } else {
+            outboxService.markPublished(event.getId());
         }
     }
 

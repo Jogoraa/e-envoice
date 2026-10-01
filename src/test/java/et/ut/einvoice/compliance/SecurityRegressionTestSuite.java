@@ -52,6 +52,9 @@ public class SecurityRegressionTestSuite {
     private ApiClientRepository apiClientRepository;
 
     @Autowired
+    private et.ut.einvoice.taxpayer.repository.TaxpayerProfileRepository taxpayerProfileRepository;
+
+    @Autowired
     private JwtTokenService jwtTokenService;
 
     @MockBean
@@ -72,6 +75,7 @@ public class SecurityRegressionTestSuite {
     @BeforeEach
     void setUp() {
         apiClientRepository.deleteAll();
+        taxpayerProfileRepository.deleteAll();
         tenantRepository.deleteAll();
 
         tenantAId = UUID.randomUUID();
@@ -81,9 +85,19 @@ public class SecurityRegressionTestSuite {
         tenantA.activate();
         tenantRepository.save(tenantA);
 
+        taxpayerProfileRepository.save(new et.ut.einvoice.taxpayer.domain.TaxpayerProfile(
+                tenantAId, "0011223344", "VAT-112233", "Alpha Logistics PLC", "Alpha",
+                "14", "05", "+251911223344", "alpha@sec.et", "8EFBBDD7FA", "ERP"
+        ));
+
         Tenant tenantB = new Tenant(tenantBId, "ORG-B", "Beta Manufacturing Share Co", "Beta", "0099887766", "SME");
         tenantB.activate();
         tenantRepository.save(tenantB);
+
+        org.mockito.Mockito.when(governmentRegistrationProvider.registerInvoice(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(inv -> GovernmentRegistrationProvider.GovernmentRegistrationResult.success(
+                        "IRN-" + UUID.randomUUID(), "RRN-SEC-1", "2026-09-18T12:00:00Z", "qr-sec", "signed-sec"
+                ));
 
         // Tenant A Full Access Client (includes tenant:admin and exports:read)
         ApiClient clientA = new ApiClient(

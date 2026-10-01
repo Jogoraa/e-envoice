@@ -212,8 +212,8 @@ public class PlatformAuthAndBootstrapSecurityTest {
 
         bootstrapService.run();
 
-        // Verify Platform User created & saved
-        verify(platformUserRepository, times(1)).save(any(PlatformUser.class));
+        // Verify Platform User created & saved (Master Admin and SaaS Admin)
+        verify(platformUserRepository, atLeastOnce()).save(any(PlatformUser.class));
         // Verify Tenant created & saved
         verify(tenantRepository, times(1)).save(any(Tenant.class));
         // Verify Tenant User created & saved

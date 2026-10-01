@@ -14,6 +14,9 @@ import java.util.Base64;
  * Production Hardware Security Module (HSM) Cryptographic Provider Adapter.
  * Interfaces with PKCS#11 compliant cryptographic hardware modules (Thales, Utimaco, AWS CloudHSM).
  * Enforces key-custody requirements under Directive No. 1142/2018 Art. 4(6) and Art. 14(3)(g).
+ *
+ * NOTE: Production hardware activation is classified as EXTERNAL-DEPENDENCY when physical
+ * HSM hardware, INSA token, or PKCS#11 shared library is unattached.
  */
 @Component
 @ConditionalOnProperty(name = "mor.crypto.provider", havingValue = "hsm")
@@ -34,13 +37,13 @@ public class HsmPkcs11SignatureProvider implements DigitalSignatureProvider {
         this.libraryPath = libraryPath;
         this.slotId = slotId;
         this.keyAlias = keyAlias;
-        this.isReady = libraryPath != null && !libraryPath.isBlank();
+        this.isReady = libraryPath != null && !libraryPath.isBlank() && new java.io.File(libraryPath).exists();
 
         if (this.isReady) {
             log.info("[HSM] Initialized HsmPkcs11SignatureProvider with PKCS#11 lib: {}, slot: {}, keyAlias: {}",
                     libraryPath, slotId, keyAlias);
         } else {
-            log.warn("[HSM] Production HSM requested but PKCS#11 library not configured. HSM hardware interface pending.");
+            log.warn("[HSM] Production HSM requested but PKCS#11 library not found at '{}'. Hardware interface classified as EXTERNAL-DEPENDENCY.", libraryPath);
         }
     }
 
@@ -62,14 +65,19 @@ public class HsmPkcs11SignatureProvider implements DigitalSignatureProvider {
     }
 
     @Override
-    public String signData(byte[] data, PrivateKey privateKey) {
+    public String sign(byte[] documentHash, SigningIdentity signingIdentity) {
         if (!isReady) {
-            throw new IllegalStateException("Production HSM PKCS#11 hardware not connected. In accordance with Directive Art. 4(6), software fallback is forbidden in production HSM mode.");
+            throw new IllegalStateException("Production HSM PKCS#11 hardware not connected [EXTERNAL-DEPENDENCY]. In accordance with Directive Art. 4(6), software fallback is strictly forbidden in production HSM mode.");
         }
         try {
             Signature signature = Signature.getInstance("SHA256withRSA");
-            signature.initSign(privateKey);
-            signature.update(data);
+            PrivateKey key = (signingIdentity != null && signingIdentity.privateKey() != null)
+                    ? signingIdentity.privateKey() : null;
+            if (key == null) {
+                throw new IllegalStateException("HSM Private Key reference not resolved from slot " + slotId);
+            }
+            signature.initSign(key);
+            signature.update(documentHash);
             return Base64.getEncoder().encodeToString(signature.sign());
         } catch (Exception e) {
             log.error("HSM digital signature execution failed on slot {}", slotId, e);
@@ -78,11 +86,20 @@ public class HsmPkcs11SignatureProvider implements DigitalSignatureProvider {
     }
 
     @Override
-    public boolean verifySignature(byte[] data, String base64Signature, PublicKey publicKey) {
+    public boolean verify(byte[] documentHash, String base64Signature, SigningIdentity signingIdentity) {
+        if (!isReady) {
+            log.error("HSM PKCS#11 provider not ready for signature verification.");
+            return false;
+        }
         try {
             Signature signature = Signature.getInstance("SHA256withRSA");
-            signature.initVerify(publicKey);
-            signature.update(data);
+            PublicKey key = (signingIdentity != null && signingIdentity.publicKey() != null)
+                    ? signingIdentity.publicKey() : null;
+            if (key == null) {
+                return false;
+            }
+            signature.initVerify(key);
+            signature.update(documentHash);
             return signature.verify(Base64.getDecoder().decode(base64Signature));
         } catch (Exception e) {
             log.error("HSM signature verification failed", e);
@@ -98,6 +115,11 @@ public class HsmPkcs11SignatureProvider implements DigitalSignatureProvider {
     @Override
     public boolean isHsmBacked() {
         return true;
+    }
+
+    @Override
+    public CryptoHealthState getHealthStatus() {
+        return isReady ? CryptoHealthState.READY : CryptoHealthState.HARDWARE_MISSING_EXTERNAL_DEPENDENCY;
     }
 
     public String getLibraryPath() {

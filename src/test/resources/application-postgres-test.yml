@@ -1,0 +1,46 @@
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5439/ut_einvoice_db}
+    driver-class-name: org.postgresql.Driver
+    username: ${TEST_DB_USERNAME:ut_app_user}
+    password: ${TEST_DB_PASSWORD:appuserpassword}
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 5
+      connection-timeout: 30000
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    validate-on-migrate: false
+    locations: classpath:db/migration
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5439/ut_einvoice_db}
+    user: ${FLYWAY_DB_USERNAME:postgres}
+    password: ${FLYWAY_DB_PASSWORD:postgres}
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+mor:
+  gateway:
+    base-url: http://core.mor.gov.et
+
+outbox:
+  relay:
+    interval-ms: 3600000
+
+notifications:
+  sms:
+    worker:
+      interval-ms: 3600000
+    reconciliation:
+      interval-ms: 3600000
+
+logging:
+  level:
+    et.ut.einvoice: INFO

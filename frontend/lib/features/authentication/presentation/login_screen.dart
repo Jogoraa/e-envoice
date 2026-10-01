@@ -234,6 +234,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       style: AppTypography.uiLabel(color: AppColors.inkMuted),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: () => context.go('/saas/login'),
+                        child: const Text('Master Portal'),
+                      ),
+                      const Text('•', style: TextStyle(color: AppColors.rule)),
+                      TextButton(
+                        onPressed: () => context.go('/'),
+                        child: const Text('Workspaces'),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),

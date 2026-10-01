@@ -1,14 +1,16 @@
-
 services:
   postgres:
     image: postgis/postgis:16-3.4
     container_name: ut_einvoice_postgres
     environment:
       POSTGRES_DB: ut_einvoice_db
-      POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-CHANGE_ME_DATABASE_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Database administrator password must be provided}
+      APP_DB_USER: ${DB_USERNAME:-ut_app_user}
+      APP_DB_PASSWORD: ${DB_PASSWORD:?Application database password must be provided}
     ports:
-      - "5435:5432"  # host 5435 → container 5432 (avoids conflict with host postgres on 5432)
+      # Hardened: Bind exclusively to 127.0.0.1 for local administrative debugging; NEVER expose publicly to 0.0.0.0
+      - "127.0.0.1:5435:5432"
     command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     volumes:
       - ./infrastructure/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
@@ -23,14 +25,15 @@ services:
   redis:
     image: redis:7-alpine
     container_name: ut_einvoice_redis
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "${REDIS_PASSWORD:?Redis password must be provided}"]
     ports:
-      - "6380:6379"  # host 6380 → container 6379 (avoids conflict with restaurant-redis on 6379)
+      # Hardened: Bind exclusively to 127.0.0.1 for local debugging; NEVER expose publicly to 0.0.0.0
+      - "127.0.0.1:6380:6379"
     volumes:
       - ./infrastructure/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -46,11 +49,15 @@ services:
     env_file:
       - .env
     environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       DB_URL: jdbc:postgresql://postgres:5432/ut_einvoice_db
-      DB_USERNAME: ${DB_USERNAME:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-CHANGE_ME_DATABASE_PASSWORD}
+      # Application connects strictly as unprivileged non-superuser runtime role ut_app_user (Rule 1 & 6)
+      DB_USERNAME: ${DB_USERNAME:-ut_app_user}
+      DB_PASSWORD: ${DB_PASSWORD:?Application database password must be provided}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Redis password must be provided}
+      JWT_SECRET: ${JWT_SECRET:?JWT secret must be provided externally}
     depends_on:
       postgres:
         condition: service_healthy

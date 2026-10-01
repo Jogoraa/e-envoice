@@ -186,7 +186,8 @@ public class PlatformAuthService {
             throw new BadCredentialsException("Username/email and password must not be empty.");
         }
 
-        Optional<PlatformUser> userOpt = platformUserRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(identifier, identifier);
+        Optional<PlatformUser> userOpt = platformUserRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(identifier, identifier)
+                .or(() -> platformUserRepository.findByUsernameOrEmail(identifier, identifier));
         if (userOpt.isEmpty() && (identifier.equalsIgnoreCase("saasadmin") || identifier.equalsIgnoreCase("saas.admin") || identifier.equalsIgnoreCase("saasadmin@utsolutionsplc.com"))) {
             userOpt = platformUserRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase("saas.admin", "saas.admin@utsolutionsplc.com");
         }

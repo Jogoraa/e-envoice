@@ -148,6 +148,11 @@ public class BackendSecurityHardeningAdversarialTestSuite {
                 UUID.randomUUID(), tenantBId, validKeyB, validSecretB, "Full Access Client B",
                 "invoice:read invoice:create invoice:adjust invoice:cancel receipt:create tenant:admin"
         ));
+
+        org.mockito.Mockito.when(governmentRegistrationProvider.registerInvoice(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(inv -> et.ut.einvoice.government.domain.GovernmentRegistrationProvider.GovernmentRegistrationResult.success(
+                        "IRN-" + UUID.randomUUID(), "RRN-SEC-1", "2026-09-18T12:00:00Z", "qr-sec", "signed-sec"
+                ));
     }
 
     private CreateInvoiceRequest sampleRequest() {

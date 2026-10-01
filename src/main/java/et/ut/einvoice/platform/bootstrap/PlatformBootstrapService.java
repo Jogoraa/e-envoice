@@ -12,6 +12,8 @@ import et.ut.einvoice.taxpayer.domain.TaxpayerProfile;
 import et.ut.einvoice.taxpayer.repository.TaxpayerProfileRepository;
 import et.ut.einvoice.tenancy.domain.ApiClient;
 import et.ut.einvoice.tenancy.domain.Subscription;
+import et.ut.einvoice.platform.context.TenantContext;
+import et.ut.einvoice.platform.context.TenantContextHolder;
 import et.ut.einvoice.tenancy.domain.Tenant;
 import et.ut.einvoice.tenancy.domain.TenantUser;
 import et.ut.einvoice.tenancy.repository.ApiClientRepository;
@@ -34,6 +36,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -94,9 +97,22 @@ public class PlatformBootstrapService implements CommandLineRunner {
     }
 
     @Override
-    @Transactional
     public void run(String... args) {
-        log.info("Starting UT Invoice platform security bootstrap check...");
+        // Establish platform operator context for initial database provisioning
+        TenantContextHolder.setContext(new TenantContext(
+                UUID.fromString("00000000-0000-0000-0000-000000000000"),
+                "PLATFORM",
+                null,
+                "platform-bootstrap",
+                "SYSTEM",
+                Set.of("ROLE_PLATFORM_ADMIN", "ROLE_SAAS_ADMIN"),
+                Set.of("*"),
+                null,
+                "bootstrap-corr"
+        ));
+
+        try {
+            log.info("Starting UT Invoice platform security bootstrap check...");
 
         boolean masterCreated = false;
         String generatedMasterUsername = "platform.admin";
@@ -302,6 +318,9 @@ public class PlatformBootstrapService implements CommandLineRunner {
             );
         } else {
             log.info("UT Invoice platform database is already fully provisioned. Bootstrap complete.");
+        }
+        } finally {
+            TenantContextHolder.clear();
         }
     }
 

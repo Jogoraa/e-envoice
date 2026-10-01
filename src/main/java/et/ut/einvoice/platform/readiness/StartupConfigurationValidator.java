@@ -1,5 +1,6 @@
 package et.ut.einvoice.platform.readiness;
 
+import et.ut.einvoice.compliance.crypto.CryptoHealthState;
 import et.ut.einvoice.compliance.crypto.DigitalSignatureProvider;
 import et.ut.einvoice.notifications.provider.EmailProvider;
 import et.ut.einvoice.notifications.provider.SmsProvider;
@@ -17,15 +18,20 @@ import java.sql.Connection;
 import java.util.*;
 
 /**
- * Startup Configuration Validator mandated by Rule 9.
- * Validates production dependencies upon application startup and enforces fail-closed semantics in production mode.
- * States: READY, MISSING, INVALID, UNREACHABLE, DEGRADED.
- * Strictly avoids leaking secret values in telemetry or logs.
+ * Startup Configuration Validator mandated by Phase 1F.
+ * Validates production dependencies upon application startup and enforces fail-closed semantics in production mode:
+ * - PostgreSQL: non-superuser account, valid connection
+ * - Redis: reachable, secured
+ * - MoR Gateway: HTTPS only in production, no mock URLs
+ * - HSM / PKCS#11: fail-closed in production if hardware is unattached or mock provider is active
+ * - SMS / Email: mock mode forbidden in production
+ * - JWT Secret: non-default, >= 256 bits, strong externally supplied key
  */
 @Component
 public class StartupConfigurationValidator {
 
     private static final Logger log = LoggerFactory.getLogger(StartupConfigurationValidator.class);
+    private static final String DEFAULT_DEV_JWT_SECRET = "default-dev-ut-einvoice-platform-jwt-secret-key-at-least-256-bits-long";
 
     public enum DependencyState {
         READY,
@@ -113,6 +119,7 @@ public class StartupConfigurationValidator {
 
     public Map<String, DependencyStatus> evaluateDependencies() {
         Map<String, DependencyStatus> map = new LinkedHashMap<>();
+        boolean isProd = isProductionProfile();
 
         // 1. PostgreSQL Database & Connection Pool (STARTUP-CRITICAL)
         try (Connection conn = dataSource.getConnection()) {
@@ -144,51 +151,78 @@ public class StartupConfigurationValidator {
                 "Configured endpoint: " + redisHost + ":" + redisPort
         ));
 
-        // 3. EIRS Government Ingress (RUNTIME-DEGRADABLE: Transactional Outbox buffers locally)
+        // 3. EIRS Government Ingress (STARTUP-CRITICAL in production: HTTPS only, no mock/insecure HTTP)
+        boolean morHttpsValid = morGatewayUrl != null && morGatewayUrl.startsWith("https://");
         boolean morConfigured = morClientId != null && !morClientId.isBlank();
+        DependencyState morState;
+        if (isProd) {
+            morState = (morConfigured && morHttpsValid) ? DependencyState.READY : DependencyState.INVALID;
+        } else {
+            morState = morConfigured ? DependencyState.READY : DependencyState.DEGRADED;
+        }
         map.put("MoR_EIRS", new DependencyStatus(
                 "MoR EIRS Gateway",
-                morConfigured ? DependencyState.READY : DependencyState.DEGRADED,
-                morConfigured, morConfigured, morConfigured, false,
-                morConfigured ? ("Base URL: " + morGatewayUrl) : "Pending live credentials; Outbox will queue transactions"
+                morState,
+                morConfigured, morConfigured, !isProd || morHttpsValid, isProd,
+                isProd
+                        ? (morHttpsValid ? "Production HTTPS endpoint active: " + morGatewayUrl : "Insecure HTTP prohibited in production. Requires https://")
+                        : (morConfigured ? ("Base URL: " + morGatewayUrl) : "Pending live credentials; Outbox will queue transactions")
         ));
 
         // 4. HSM Cryptographic Engine (STARTUP-CRITICAL in production)
         boolean isHsm = signatureProvider.isHsmBacked();
-        boolean isProd = isProductionProfile();
-        DependencyState hsmState = isHsm ? DependencyState.READY : (isProd ? DependencyState.INVALID : DependencyState.DEGRADED);
+        boolean isHsmReady = signatureProvider.getHealthStatus() == CryptoHealthState.READY;
+        DependencyState hsmState;
+        if (isProd) {
+            hsmState = (isHsm && isHsmReady) ? DependencyState.READY : DependencyState.INVALID;
+        } else {
+            hsmState = DependencyState.READY;
+        }
         map.put("Cryptographic_Engine", new DependencyStatus(
                 "Digital Signature Engine (HSM)",
                 hsmState,
-                true, true, !isProd || isHsm, true,
-                "Active Provider: " + signatureProvider.getProviderName() + " (HSM Backed: " + isHsm + ")"
+                true, true, !isProd || (isHsm && isHsmReady), true,
+                "Active Provider: " + signatureProvider.getProviderName() + " (HSM: " + isHsm + ", Ready: " + isHsmReady + ")"
         ));
 
-        // 5. Ethio Telecom SMS Gateway (RUNTIME-DEGRADABLE: Fallback to email/WhatsApp/QR)
+        // 5. Ethio Telecom SMS Gateway (Mock forbidden in production)
         boolean smsProd = smsProvider.isConfigured();
+        String activeSmsProvider = environment.getProperty("notifications.sms.active-provider", "mock");
+        boolean smsInvalidInProd = isProd && "mock".equalsIgnoreCase(activeSmsProvider);
+        DependencyState smsState = smsInvalidInProd ? DependencyState.INVALID : (smsProd ? DependencyState.READY : DependencyState.DEGRADED);
         map.put("SMS_Gateway", new DependencyStatus(
                 "Ethio Telecom SMS Gateway",
-                smsProd ? DependencyState.READY : DependencyState.DEGRADED,
-                smsProd, smsProd, smsProd, false,
-                smsProd ? "Production credentials active" : "Operating in simulation/fallback mode (QR/Email active)"
+                smsState,
+                smsProd, smsProd, !smsInvalidInProd, isProd,
+                smsInvalidInProd
+                        ? "Mock SMS provider is strictly prohibited in production."
+                        : (smsProd ? "Production credentials active" : "Operating in simulation/fallback mode")
         ));
 
-        // 6. SMTP Email Gateway (RUNTIME-DEGRADABLE: Fallback to direct receipt download)
+        // 6. SMTP Email Gateway (Mock forbidden in production)
         boolean emailProd = emailProvider.isConfigured();
+        boolean emailInvalidInProd = isProd && !emailProd;
+        DependencyState emailState = emailInvalidInProd ? DependencyState.INVALID : (emailProd ? DependencyState.READY : DependencyState.DEGRADED);
         map.put("SMTP_Gateway", new DependencyStatus(
                 "SMTP Email Notification Gateway",
-                emailProd ? DependencyState.READY : DependencyState.DEGRADED,
-                emailProd, emailProd, emailProd, false,
-                emailProd ? "Production SMTP transport active" : "Operating in simulation/fallback mode"
+                emailState,
+                emailProd, emailProd, !emailInvalidInProd, false,
+                emailInvalidInProd
+                        ? "Production SMTP transport not configured."
+                        : (emailProd ? "Production SMTP transport active" : "Operating in simulation/fallback mode")
         ));
 
-        // 7. JWT Key Configuration (STARTUP-CRITICAL: Authentication security)
-        boolean jwtValid = jwtSecret != null && jwtSecret.length() >= 32;
+        // 7. JWT Key Configuration (STARTUP-CRITICAL: Authentication security, non-default secret)
+        boolean isDefaultSecret = DEFAULT_DEV_JWT_SECRET.equals(jwtSecret);
+        boolean jwtValid = jwtSecret != null && jwtSecret.length() >= 32 && (!isProd || !isDefaultSecret);
+        DependencyState jwtState = jwtValid ? DependencyState.READY : DependencyState.INVALID;
         map.put("JWT_Keys", new DependencyStatus(
                 "JWT Token Signer & Verification",
-                jwtValid ? DependencyState.READY : DependencyState.INVALID,
+                jwtState,
                 true, true, jwtValid, true,
-                "Algorithm: HMAC-SHA256, Secret key size >= 256 bits: " + jwtValid
+                isProd && isDefaultSecret
+                        ? "Default dev JWT secret detected in production profile. Refusing startup."
+                        : "Algorithm: HMAC-SHA256, Secret key size >= 256 bits: " + jwtValid
         ));
 
         // 8. Prometheus & Monitoring (RUNTIME-DEGRADABLE)

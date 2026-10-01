@@ -64,35 +64,39 @@ public class InvoiceNotificationTemplateService {
         String verificationUrl = verificationBaseUrl + "/v/" + verificationToken;
 
         String messageText;
+        String irnText = irn != null ? irn : "";
+        String docNum = documentNumber != null ? documentNumber : "";
+        String seller = sellerName != null ? sellerName : ("en".equals(lang) ? "Seller" : "ሻጭ");
+        String total = grandTotal != null ? grandTotal.toPlainString() : "0.00";
+        String vUrl = verificationUrl != null ? verificationUrl : "";
         if ("en".equals(lang)) {
             messageText = String.format(
                     "Tax Invoice %s from %s. Total: ETB %s. IRN: %s. Verify: %s",
-                    documentNumber,
-                    sellerName != null ? sellerName : "Seller",
-                    grandTotal != null ? grandTotal.toPlainString() : "0.00",
-                    irn,
-                    verificationUrl
+                    docNum,
+                    seller,
+                    total,
+                    irnText,
+                    vUrl
             );
         } else {
             messageText = String.format(
                     "የሽያጭ ደረሰኝ %s ከ%s። ጠቅላላ፡ %s ብር። IRN: %s። ማረጋገጫ፡ %s",
-                    documentNumber,
-                    sellerName != null ? sellerName : "ሻጭ",
-                    grandTotal != null ? grandTotal.toPlainString() : "0.00",
-                    irn,
-                    verificationUrl
+                    docNum,
+                    seller,
+                    total,
+                    irnText,
+                    vUrl
             );
         }
 
         String hash = sha256Hex(messageText);
-        Map<String, Object> params = Map.of(
-                "documentNumber", documentNumber,
-                "sellerName", sellerName != null ? sellerName : "",
-                "grandTotal", grandTotal != null ? grandTotal.toPlainString() : "0.00",
-                "irn", irn,
-                "verificationUrl", verificationUrl,
-                "language", lang
-        );
+        Map<String, Object> params = new java.util.HashMap<>();
+        params.put("documentNumber", docNum);
+        params.put("sellerName", seller);
+        params.put("grandTotal", total);
+        params.put("irn", irnText);
+        params.put("verificationUrl", vUrl);
+        params.put("language", lang);
 
         return new RenderedTemplate(templateId, templateVersion, messageText, hash, params);
     }
@@ -110,29 +114,31 @@ public class InvoiceNotificationTemplateService {
         String lang = (preferredLanguage != null && preferredLanguage.toLowerCase().startsWith("en")) ? "en" : "am";
         String templateId = "INVOICE_CANCELLATION_" + lang.toUpperCase();
         String templateVersion = "v1.0-" + lang;
-        String verificationUrl = verificationBaseUrl + "/v/" + verificationToken;
+        String vUrl = verificationBaseUrl + "/v/" + (verificationToken != null ? verificationToken : "");
+        String docNum = documentNumber != null ? documentNumber : "";
+        String irnText = irn != null ? irn : "";
+        String cancelRef = cancellationRef != null ? cancellationRef : "";
 
         String messageText;
         if ("en".equals(lang)) {
             messageText = String.format(
                     "Notice: Tax Invoice %s (IRN: %s) has been CANCELLED under Ref: %s. Verify: %s",
-                    documentNumber, irn, cancellationRef, verificationUrl
+                    docNum, irnText, cancelRef, vUrl
             );
         } else {
             messageText = String.format(
                     "ማስታወቂያ፡ የደረሰኝ ቁጥር %s (IRN: %s) በማመሳከሪያ %s ተሰርዟል። ማረጋገጫ፡ %s",
-                    documentNumber, irn, cancellationRef, verificationUrl
+                    docNum, irnText, cancelRef, vUrl
             );
         }
 
         String hash = sha256Hex(messageText);
-        Map<String, Object> params = Map.of(
-                "documentNumber", documentNumber,
-                "irn", irn,
-                "cancellationRef", cancellationRef,
-                "verificationUrl", verificationUrl,
-                "language", lang
-        );
+        Map<String, Object> params = new java.util.HashMap<>();
+        params.put("documentNumber", docNum);
+        params.put("irn", irnText);
+        params.put("cancellationRef", cancelRef);
+        params.put("verificationUrl", vUrl);
+        params.put("language", lang);
 
         return new RenderedTemplate(templateId, templateVersion, messageText, hash, params);
     }

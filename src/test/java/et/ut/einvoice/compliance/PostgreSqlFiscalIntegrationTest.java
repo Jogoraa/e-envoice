@@ -409,9 +409,10 @@ public class PostgreSqlFiscalIntegrationTest {
     void test_FiscalSequenceStress_MultipleTiers_1_2_10_50_100() throws Exception {
         int[] tiers = {1, 2, 10, 50, 100};
         UUID stressTenant = UUID.randomUUID();
+        String uniqueTin = "9" + String.format("%09d", Math.abs(stressTenant.hashCode()));
         
         // Seed tenant
-        Tenant t = new Tenant(stressTenant, "ORG-STRESS-" + stressTenant.toString().substring(0, 6), "Stress Test Corp", "Stress", "9999999999");
+        Tenant t = new Tenant(stressTenant, "ORG-STRESS-" + stressTenant.toString().substring(0, 6), "Stress Test Corp", "Stress", uniqueTin);
         t.activate();
         tenantRepository.save(t);
 
@@ -482,7 +483,9 @@ public class PostgreSqlFiscalIntegrationTest {
         invoice = invoiceRepository.save(invoice);
 
         // Mark invoice REGISTERED with authoritative government identity
-        invoice.markRegistered("IRN-IMMUT-001", "RRN-IMMUT-001", "2026-10-01T12:00:00Z", "SIGNED-QR-DATA", "SIGNED-INVOICE-XML");
+        String uniqueIrn = "IRN-IMMUT-" + UUID.randomUUID();
+        String uniqueRrn = "RRN-IMMUT-" + UUID.randomUUID();
+        invoice.markRegistered(uniqueIrn, uniqueRrn, "2026-10-01T12:00:00Z", "SIGNED-QR-DATA", "SIGNED-INVOICE-XML");
         final Invoice registered = invoiceRepository.save(invoice);
         UUID invoiceId = registered.getId();
         UUID lineId = line.getId();

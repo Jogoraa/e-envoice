@@ -54,9 +54,13 @@ services:
       # Application connects strictly as unprivileged non-superuser runtime role ut_app_user (Rule 1 & 6)
       DB_USERNAME: ${DB_USERNAME:-ut_app_user}
       DB_PASSWORD: ${DB_PASSWORD:?Application database password must be provided}
+      # Flyway executes privileged DDL/RLS grants; the application itself remains unprivileged.
+      SPRING_FLYWAY_USER: ${POSTGRES_ADMIN_USER:-postgres}
+      SPRING_FLYWAY_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Database administrator password must be provided}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Redis password must be provided}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?Redis password must be provided}
       JWT_SECRET: ${JWT_SECRET:?JWT secret must be provided externally}
     depends_on:
       postgres:

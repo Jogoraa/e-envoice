@@ -70,6 +70,7 @@ class _MasterAdminLoginScreenState
   bool _isMfaRequired(String message) {
     final normalized = message.toLowerCase();
     return normalized.contains('mfa is enabled') ||
+        normalized.contains('mfa code') ||
         normalized.contains('mfa token is required') ||
         normalized.contains('totp') ||
         normalized.contains('multi-factor authentication');

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme/app_colors.dart';
@@ -41,7 +42,9 @@ class _AuditScreenState extends ConsumerState<AuditScreen> {
       setState(() {
         _events = logs.isNotEmpty
             ? logs
-            : [
+            : (kReleaseMode
+                ? []
+                : [
                 AuditEventModel(
                   id: 'evt-001',
                   tenantId: tenantId,
@@ -81,7 +84,7 @@ class _AuditScreenState extends ConsumerState<AuditScreen> {
                   eventHash: '4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce',
                   createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
                 ),
-              ];
+              ]);
         _isLoading = false;
       });
     } catch (_) {

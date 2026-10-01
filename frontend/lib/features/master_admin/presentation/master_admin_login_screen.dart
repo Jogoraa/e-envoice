@@ -21,6 +21,7 @@ class _MasterAdminLoginScreenState
   final _passwordController = TextEditingController();
   final _mfaController = TextEditingController();
   bool _isLoading = false;
+  bool _requiresMfa = false;
   String? _errorMessage;
 
   @override
@@ -40,7 +41,8 @@ class _MasterAdminLoginScreenState
     });
 
     try {
-      // Authenticate strictly against Master Admin API Gateway with MFA validation
+      // First-time platform accounts are not enrolled in MFA. Send the code only
+      // after the server has explicitly required it for this account.
       await ref
           .read(masterAdminSessionProvider.notifier)
           .login(
@@ -53,12 +55,24 @@ class _MasterAdminLoginScreenState
         context.go('/admin/dashboard');
       }
     } catch (e) {
+      final message = e.toString();
+      final requiresMfa = _isMfaRequired(message);
       setState(() {
-        _errorMessage =
-            'Master Admin Gateway Authentication Failed: ${e.toString()}';
+        _requiresMfa = _requiresMfa || requiresMfa;
+        _errorMessage = requiresMfa
+            ? 'Multi-factor authentication is enabled for this account. Enter your current 6-digit authenticator code and try again.'
+            : 'Master Admin Gateway Authentication Failed: $message';
         _isLoading = false;
       });
     }
+  }
+
+  bool _isMfaRequired(String message) {
+    final normalized = message.toLowerCase();
+    return normalized.contains('mfa is enabled') ||
+        normalized.contains('mfa token is required') ||
+        normalized.contains('totp') ||
+        normalized.contains('multi-factor authentication');
   }
 
   @override
@@ -170,17 +184,22 @@ class _MasterAdminLoginScreenState
                       validator: (v) =>
                           v == null || v.isEmpty ? 'Password required' : null,
                     ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _mfaController,
-                      decoration: const InputDecoration(
-                        labelText: 'Hardware / TOTP MFA Token (6 Digits)',
-                        prefixIcon: Icon(Icons.security, size: 18),
+                    if (_requiresMfa) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _mfaController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        decoration: const InputDecoration(
+                          labelText: 'Authenticator / TOTP Code',
+                          hintText: 'Enter your current 6-digit code',
+                          prefixIcon: Icon(Icons.security, size: 18),
+                        ),
+                        validator: (v) => v == null || v.length != 6
+                            ? '6-digit MFA token required'
+                            : null,
                       ),
-                      validator: (v) => v == null || v.length != 6
-                          ? '6-digit MFA token required'
-                          : null,
-                    ),
+                    ],
                     const SizedBox(height: 24),
 
                     SizedBox(
@@ -196,7 +215,11 @@ class _MasterAdminLoginScreenState
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text('Authenticate with MFA'),
+                            : Text(
+                                _requiresMfa
+                                    ? 'Authenticate with MFA'
+                                    : 'Sign in',
+                              ),
                       ),
                     ),
                     const SizedBox(height: 16),

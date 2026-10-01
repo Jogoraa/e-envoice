@@ -252,4 +252,91 @@ public class ApiSecurityAdversarialTestSuite {
                         .header("X-Client-Secret", validSecretB))
                 .andExpect(status().isNotFound());
     }
+
+    @Autowired
+    private et.ut.einvoice.platform.security.JwtTokenService jwtTokenService;
+
+    @Test
+    @DisplayName("Security 9: Unverified or arbitrary X-Authority-Token is rejected with 401")
+    void test_AuthorityAuditor_ForgedToken_RejectedWith401() throws Exception {
+        mockMvc.perform(get("/api/v1/authority/audit-logs")
+                        .header("X-Authority-Token", "arbitrary-fake-authority-token-12345"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_AUTHORITY_TOKEN"));
+    }
+
+    @Test
+    @DisplayName("Security 10: X-Authority-Token lacking ROLE_AUTHORITY_AUDITOR is rejected with 403")
+    void test_AuthorityAuditor_TokenWithoutRole_RejectedWith403() throws Exception {
+        String token = jwtTokenService.generateToken(
+                tenantAId, "auditor-impostor", java.util.Set.of("ROLE_TENANT_USER"), java.util.Set.of("invoice:read"), 3600
+        );
+
+        mockMvc.perform(get("/api/v1/authority/audit-logs")
+                        .header("X-Authority-Token", token))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("AUTHORITY_TOKEN_INSUFFICIENT_PRIVILEGES"));
+    }
+
+    @Test
+    @DisplayName("Security 11: Cryptographically signed X-Authority-Token with ROLE_AUTHORITY_AUDITOR succeeds")
+    void test_AuthorityAuditor_ValidToken_Success() throws Exception {
+        String token = jwtTokenService.generateToken(
+                UUID.fromString("00000000-0000-0000-0000-000000000000"),
+                "mor-auditor-official",
+                java.util.Set.of("ROLE_AUTHORITY_AUDITOR"),
+                java.util.Set.of("authority:audit"),
+                3600
+        );
+
+        mockMvc.perform(get("/api/v1/authority/audit-logs")
+                        .header("X-Authority-Token", token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Security 12: Tenant user token is forbidden from accessing SaaS Master APIs")
+    void test_TenantUser_CannotAccessSaasAdmin_RejectedWith403() throws Exception {
+        String token = jwtTokenService.generateToken(
+                tenantAId, "tenant-regular-user", java.util.Set.of("ROLE_TENANT_USER"), java.util.Set.of("invoice:read"), 3600
+        );
+
+        mockMvc.perform(get("/api/v1/saas/tenants")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("TENANT_CANNOT_ACCESS_MASTER_API"));
+    }
+
+    @Test
+    @DisplayName("Security 13: SaaS Admin master token successfully accesses SaaS endpoints without ROLE_ROLE bug")
+    void test_SaasAdmin_CanAccessSaasEndpoints_Success() throws Exception {
+        String token = jwtTokenService.generateMasterToken(
+                "saas-admin-user", java.util.Set.of("ROLE_SAAS_ADMIN"), java.util.Set.of("saas:manage"), 3600
+        );
+
+        mockMvc.perform(get("/api/v1/saas/tenants")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Security 14: Platform Admin master token successfully accesses Master endpoints")
+    void test_PlatformAdmin_CanAccessMasterEndpoints_Success() throws Exception {
+        String token = jwtTokenService.generateMasterToken(
+                "platform-admin-user", java.util.Set.of("ROLE_PLATFORM_ADMIN"), java.util.Set.of("platform:admin"), 3600
+        );
+
+        mockMvc.perform(get("/api/v1/master/webhooks/subscriptions")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Security 15: Tenant Admin configuration endpoint succeeds without double ROLE_ prefix error")
+    void test_TenantAdmin_CanAccessConfiguration_Success() throws Exception {
+        mockMvc.perform(get("/api/v1/tenant/configuration")
+                        .header("X-API-Key", validKeyA)
+                        .header("X-Client-Secret", validSecretA))
+                .andExpect(status().isOk());
+    }
 }

@@ -29,7 +29,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/v1/master/api-clients")
 @Tag(name = "Master API Management", description = "Platform control plane for managing external ERP API clients, client credentials, scopes, and quotas")
-@PreAuthorize("hasAnyRole('ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_ADMIN')")
+@PreAuthorize("hasAnyRole('PLATFORM_ADMIN', 'SAAS_ADMIN')")
 public class MasterApiClientController {
 
     private static final Logger log = LoggerFactory.getLogger(MasterApiClientController.class);

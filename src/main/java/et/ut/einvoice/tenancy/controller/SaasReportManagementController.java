@@ -37,14 +37,14 @@ public class SaasReportManagementController {
     ) {}
 
     @GetMapping("/definitions")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN', 'SAAS_OPERATOR')")
     @Operation(summary = "List all report definitions for platform administration")
     public ResponseEntity<List<ReportDefinition>> listAllDefinitions() {
         return ResponseEntity.ok(reportGenerationService.getAllDefinitions());
     }
 
     @PostMapping("/definitions")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN')")
     @Operation(summary = "Create a new database report definition")
     public ResponseEntity<ReportDefinition> createDefinition(@RequestBody ReportDefinitionDto dto) {
         if (dto.id() == null || dto.id().isBlank()) {
@@ -72,7 +72,7 @@ public class SaasReportManagementController {
     }
 
     @PutMapping("/definitions/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN')")
     @Operation(summary = "Update an existing report definition")
     public ResponseEntity<ReportDefinition> updateDefinition(@PathVariable("id") String id, @RequestBody ReportDefinitionDto dto) {
         ReportDefinition def = reportGenerationService.getAllDefinitions().stream()
@@ -93,7 +93,7 @@ public class SaasReportManagementController {
     }
 
     @DeleteMapping("/definitions/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN')")
     @Operation(summary = "Delete a report definition")
     public ResponseEntity<Map<String, Object>> deleteDefinition(@PathVariable("id") String id) {
         reportGenerationService.deleteDefinition(id);
@@ -101,7 +101,7 @@ public class SaasReportManagementController {
     }
 
     @PatchMapping("/definitions/{id}/toggle")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN')")
     @Operation(summary = "Toggle active/inactive status of a report definition")
     public ResponseEntity<ReportDefinition> toggleActive(@PathVariable("id") String id) {
         ReportDefinition def = reportGenerationService.getAllDefinitions().stream()

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:drift/drift.dart';
 import '../../core/networking/api_client.dart';
 import '../../domain/catalog/models/catalog_models.dart';
@@ -65,6 +66,10 @@ class CatalogRepositoryImpl implements CatalogRepository {
   }
 
   void _initSeedData() {
+    if (kReleaseMode) {
+      // Production runtime must never seed mock catalog items
+      return;
+    }
     const tenantId = '00000000-0000-0000-0000-000000000001';
     const branchHeadOffice = '00000000-0000-0000-0000-000000000010';
     const branchBole = '00000000-0000-0000-0000-000000000020';
@@ -227,6 +232,10 @@ class CatalogRepositoryImpl implements CatalogRepository {
       // Fallback to local memory cache
     }
 
+    if (kReleaseMode) {
+      return [];
+    }
+
     return _mockProducts.where((p) {
       if (p.tenantId != tenantId && p.tenantId != '00000000-0000-0000-0000-000000000001') return false;
       if (isActive != null && p.isActive != isActive) return false;
@@ -361,6 +370,10 @@ class CatalogRepositoryImpl implements CatalogRepository {
       }
     } catch (_) {
       // Fallback
+    }
+
+    if (kReleaseMode) {
+      return [];
     }
 
     return _mockServices.where((s) {

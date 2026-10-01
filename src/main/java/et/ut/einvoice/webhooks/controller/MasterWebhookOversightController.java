@@ -23,7 +23,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/v1/master/webhooks")
 @Tag(name = "Master Webhook Oversight", description = "Platform control plane for monitoring merchant webhook endpoints and delivery pipelines")
-@PreAuthorize("hasAnyRole('ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_ADMIN')")
+@PreAuthorize("hasAnyRole('PLATFORM_ADMIN', 'SAAS_ADMIN')")
 public class MasterWebhookOversightController {
 
     private final WebhookSubscriptionRepository subscriptionRepository;

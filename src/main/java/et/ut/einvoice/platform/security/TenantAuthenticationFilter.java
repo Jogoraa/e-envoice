@@ -323,13 +323,29 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
                     roles.add("ROLE_TENANT_USER");
                 }
             }
-            // 3. Authority Auditor Header / Role
+            // 3. Authority Auditor Header / Role (Directive No. 1142/2026 Art. 4(2)(c))
             else if (request.getHeader("X-Authority-Token") != null) {
+                String authorityToken = request.getHeader("X-Authority-Token").trim();
+                Optional<JwtTokenService.ValidatedJwtClaims> authClaimsOpt = jwtTokenService.validateAndExtract(authorityToken);
+                if (authClaimsOpt.isEmpty()) {
+                    writeError(response, HttpStatus.UNAUTHORIZED, "INVALID_AUTHORITY_TOKEN",
+                            "The provided X-Authority-Token is invalid, expired, or untrusted.", correlationId);
+                    return;
+                }
+                JwtTokenService.ValidatedJwtClaims authClaims = authClaimsOpt.get();
+                boolean isAuthorityAuditor = authClaims.roles().stream()
+                        .anyMatch(r -> "ROLE_AUTHORITY_AUDITOR".equalsIgnoreCase(r) || "AUTHORITY_AUDITOR".equalsIgnoreCase(r));
+                if (!isAuthorityAuditor) {
+                    writeError(response, HttpStatus.FORBIDDEN, "AUTHORITY_TOKEN_INSUFFICIENT_PRIVILEGES",
+                            "The provided authority token lacks ROLE_AUTHORITY_AUDITOR authority.", correlationId);
+                    return;
+                }
                 roles.add("ROLE_AUTHORITY_AUDITOR");
+                scopes.addAll(authClaims.scopes());
                 scopes.add("authority:audit");
                 tenantId = UUID.fromString("00000000-0000-0000-0000-000000000000"); // Authority scope
-                clientId = "AUTHORITY_AUDITOR";
-                userId = "AUTHORITY_AUDITOR";
+                clientId = authClaims.subject();
+                userId = authClaims.subject();
             }
 
             // Reject if no valid identity could be established on protected /api/v1 routes

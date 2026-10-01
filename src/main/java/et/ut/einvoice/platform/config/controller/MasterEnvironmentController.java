@@ -23,7 +23,7 @@ import java.util.*;
 @RestController
 @RequestMapping({"/api/v1/admin/environment", "/api/v1/master/environment"})
 @Tag(name = "Master Admin Environment & Secrets Management", description = "High-security privileged configuration subsystem with step-up MFA")
-@PreAuthorize("hasAnyRole('ROLE_PLATFORM_ADMIN', 'PLATFORM_ADMIN')")
+@PreAuthorize("hasRole('PLATFORM_ADMIN')")
 public class MasterEnvironmentController {
 
     private final PrivilegedSessionService privilegedSessionService;

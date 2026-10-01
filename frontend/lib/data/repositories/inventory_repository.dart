@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/networking/api_client.dart';
 import '../../domain/inventory/models/inventory_models.dart';
@@ -47,6 +48,10 @@ class InventoryRepositoryImpl implements InventoryRepository {
   }
 
   void _initSeedData() {
+    if (kReleaseMode) {
+      // Production runtime must never seed mock inventory
+      return;
+    }
     const tenantId = '00000000-0000-0000-0000-000000000001';
     const branchHeadOffice = '00000000-0000-0000-0000-000000000010';
     final now = DateTime.now();

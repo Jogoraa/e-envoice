@@ -71,7 +71,7 @@ public class SaasSubscriptionController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN', 'SAAS_OPERATOR')")
     @Operation(summary = "List all commercial tenant subscriptions with taxpayer identity details")
     public ResponseEntity<List<SubscriptionDetailDto>> listSubscriptions() {
         List<Subscription> subs = subscriptionRepository.findAll();
@@ -113,7 +113,7 @@ public class SaasSubscriptionController {
     }
 
     @GetMapping("/{tenantId}")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN', 'SAAS_OPERATOR')")
     @Operation(summary = "Get subscription details for a specific tenant")
     public ResponseEntity<Subscription> getSubscription(@PathVariable("tenantId") UUID tenantId) {
         return subscriptionRepository.findByTenantId(tenantId)
@@ -122,7 +122,7 @@ public class SaasSubscriptionController {
     }
 
     @PutMapping("/{tenantId}")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN')")
     @Operation(summary = "Update commercial subscription plan, limits, and allowances")
     public ResponseEntity<Subscription> updateSubscription(
             @PathVariable("tenantId") UUID tenantId,

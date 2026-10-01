@@ -21,7 +21,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/v1/master/readiness")
 @Tag(name = "Deployment Readiness", description = "Live system readiness probes verifying infrastructure, cryptographic HSM, and external services")
-@PreAuthorize("hasAnyRole('ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_ADMIN')")
+@PreAuthorize("hasAnyRole('PLATFORM_ADMIN', 'SAAS_ADMIN')")
 public class PlatformReadinessController {
 
     private final DataSource dataSource;

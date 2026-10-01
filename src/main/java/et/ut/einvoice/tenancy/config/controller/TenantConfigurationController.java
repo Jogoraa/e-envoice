@@ -27,7 +27,7 @@ public class TenantConfigurationController {
     }
 
     @GetMapping("/configuration")
-    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_TENANT_USER', 'ROLE_API_CLIENT')")
+    @PreAuthorize("hasAnyRole('TENANT_ADMIN', 'TENANT_USER', 'API_CLIENT')")
     @Operation(summary = "Get Effective Tenant Configuration", description = "Resolves effective configuration merging global defaults with tenant overrides")
     public ResponseEntity<Map<String, String>> getEffectiveConfiguration() {
         TenantContext ctx = TenantContextHolder.getRequiredContext();
@@ -36,7 +36,7 @@ public class TenantConfigurationController {
     }
 
     @PatchMapping("/configuration")
-    @PreAuthorize("hasRole('ROLE_TENANT_ADMIN')")
+    @PreAuthorize("hasRole('TENANT_ADMIN')")
     @Operation(summary = "Update Tenant Configuration Override", description = "Sets or updates a tenant-specific configuration override. Rejects IMMUTABLE_REGULATORY controls.")
     public ResponseEntity<TenantConfigurationOverride> updateConfigurationOverride(@Valid @RequestBody UpdateConfigOverrideRequest request) {
         TenantContext ctx = TenantContextHolder.getRequiredContext();
@@ -51,7 +51,7 @@ public class TenantConfigurationController {
     }
 
     @GetMapping("/features/{featureKey}/enabled")
-    @PreAuthorize("hasAnyRole('ROLE_TENANT_ADMIN', 'ROLE_TENANT_USER', 'ROLE_API_CLIENT')")
+    @PreAuthorize("hasAnyRole('TENANT_ADMIN', 'TENANT_USER', 'API_CLIENT')")
     @Operation(summary = "Check Feature Flag Status", description = "Evaluates server-side whether a feature is active for the current tenant")
     public ResponseEntity<FeatureStatusResponse> isFeatureEnabled(@PathVariable String featureKey) {
         TenantContext ctx = TenantContextHolder.getRequiredContext();
@@ -60,7 +60,7 @@ public class TenantConfigurationController {
     }
 
     @PatchMapping("/features")
-    @PreAuthorize("hasRole('ROLE_TENANT_ADMIN')")
+    @PreAuthorize("hasRole('TENANT_ADMIN')")
     @Operation(summary = "Update Tenant Feature Flag", description = "Updates a tenant-level feature flag. Rejects disabling SECURITY_CONTROL or REGULATORY_FEATURE flags.")
     public ResponseEntity<TenantFeatureFlag> updateFeatureFlag(@Valid @RequestBody UpdateFeatureFlagRequest request) {
         TenantContext ctx = TenantContextHolder.getRequiredContext();

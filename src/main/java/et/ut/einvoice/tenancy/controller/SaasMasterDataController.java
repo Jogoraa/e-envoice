@@ -319,7 +319,7 @@ public class SaasMasterDataController {
     ) {}
 
     @GetMapping("/saas/telemetry")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN', 'SAAS_OPERATOR')")
     @Operation(summary = "Get aggregated live SaaS platform telemetry directly from the database")
     @Transactional(readOnly = true)
     public ResponseEntity<SaasTelemetryDto> getSaasTelemetry() {
@@ -402,7 +402,7 @@ public class SaasMasterDataController {
     ) {}
 
     @GetMapping("/saas/usage")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN', 'SAAS_OPERATOR')")
     @Operation(summary = "Get real live tenant usage and quota consumption from the database")
     @Transactional(readOnly = true)
     public ResponseEntity<List<TenantUsageDto>> getSaasUsage() {
@@ -460,7 +460,7 @@ public class SaasMasterDataController {
     ) {}
 
     @GetMapping("/saas/diagnostics")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN', 'SAAS_OPERATOR')")
     @Operation(summary = "Get live operational traces and audit events from the database")
     @Transactional(readOnly = true)
     public ResponseEntity<List<DiagnosticTraceDto>> getSaasDiagnostics() {
@@ -515,7 +515,7 @@ public class SaasMasterDataController {
     }
 
     @PostMapping({"/saas/tenants/onboard", "/saas/tenants/wizard-onboard"})
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN')")
     @Operation(summary = "Complete atomic tenant onboarding wizard creating real DB entities")
     @Transactional
     public ResponseEntity<Map<String, Object>> onboardTenantFull(@RequestBody FullOnboardTenantRequest request) {
@@ -636,7 +636,7 @@ public class SaasMasterDataController {
     ) {}
 
     @GetMapping("/master/telemetry")
-    @PreAuthorize("hasAnyRole('ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_ADMIN')")
+    @PreAuthorize("hasAnyRole('PLATFORM_ADMIN', 'SAAS_ADMIN')")
     @Operation(summary = "Get live Master Admin infrastructure and regulatory telemetry")
     @Transactional(readOnly = true)
     public ResponseEntity<MasterTelemetryDto> getMasterTelemetry() {
@@ -700,7 +700,7 @@ public class SaasMasterDataController {
     ) {}
 
     @GetMapping("/master/tenants-oversight")
-    @PreAuthorize("hasAnyRole('ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_ADMIN', 'ROLE_SAAS_OPERATOR')")
+    @PreAuthorize("hasAnyRole('PLATFORM_ADMIN', 'SAAS_ADMIN', 'SAAS_OPERATOR')")
     @Operation(summary = "Get live taxpayer oversight records directly from database")
     @Transactional(readOnly = true)
     public ResponseEntity<List<TenantOversightDto>> getTenantsOversight() {
@@ -764,7 +764,7 @@ public class SaasMasterDataController {
     ) {}
 
     @GetMapping("/master/audit-logs")
-    @PreAuthorize("hasAnyRole('ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_ADMIN')")
+    @PreAuthorize("hasAnyRole('PLATFORM_ADMIN', 'SAAS_ADMIN')")
     @Operation(summary = "Get live cryptographic SHA-256 HMAC audit log chain from database")
     @Transactional(readOnly = true)
     public ResponseEntity<List<CryptographicAuditDto>> getMasterAuditLogs() {
@@ -791,7 +791,7 @@ public class SaasMasterDataController {
     }
 
     @GetMapping("/master/config")
-    @PreAuthorize("hasAnyRole('ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_ADMIN')")
+    @PreAuthorize("hasAnyRole('PLATFORM_ADMIN', 'SAAS_ADMIN')")
     @Operation(summary = "Get live platform runtime parameters and statutory compliance switches")
     public ResponseEntity<Map<String, Object>> getMasterConfig() {
         Map<String, Object> config = new LinkedHashMap<>();
@@ -848,7 +848,7 @@ public class SaasMasterDataController {
     }
 
     @GetMapping("/master/gateway-status")
-    @PreAuthorize("hasAnyRole('ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_ADMIN')")
+    @PreAuthorize("hasAnyRole('PLATFORM_ADMIN', 'SAAS_ADMIN')")
     @Operation(summary = "Get live MoR gateway channels and performance metrics")
     public ResponseEntity<Map<String, Object>> getGatewayStatus() {
         GatewayProbeResult probe = probeMorGateway();

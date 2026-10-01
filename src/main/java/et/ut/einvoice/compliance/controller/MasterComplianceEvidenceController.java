@@ -21,7 +21,7 @@ import java.util.zip.ZipOutputStream;
 @RestController
 @RequestMapping("/api/v1/master/compliance-evidence")
 @Tag(name = "Master Compliance Evidence Export", description = "Generates authoritative non-secret regulatory evidence package for MoR and INSA accreditation audits")
-@PreAuthorize("hasAnyRole('ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_ADMIN')")
+@PreAuthorize("hasAnyRole('PLATFORM_ADMIN', 'SAAS_ADMIN')")
 public class MasterComplianceEvidenceController {
 
     @GetMapping("/export")

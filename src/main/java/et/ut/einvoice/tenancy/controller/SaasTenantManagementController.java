@@ -43,21 +43,21 @@ public class SaasTenantManagementController {
     }
 
     @GetMapping("/tenants")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN', 'SAAS_OPERATOR')")
     @Operation(summary = "List all registered tenants for SaaS platform administration")
     public ResponseEntity<List<SaasTenantService.TenantSummaryDto>> listTenants() {
         return ResponseEntity.ok(saasTenantService.listTenants());
     }
 
     @GetMapping("/tenants/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN', 'SAAS_OPERATOR')")
     @Operation(summary = "Get detailed information for a specific tenant")
     public ResponseEntity<SaasTenantService.TenantSummaryDto> getTenant(@PathVariable("id") UUID id) {
         return ResponseEntity.ok(saasTenantService.getTenantDetails(id));
     }
 
     @PostMapping("/tenants")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN')")
     @Operation(summary = "Onboard and register a new enterprise tenant")
     public ResponseEntity<SaasTenantService.TenantSummaryDto> onboardTenant(
             @Valid @RequestBody SaasTenantService.OnboardTenantRequest request
@@ -68,7 +68,7 @@ public class SaasTenantManagementController {
     }
 
     @PostMapping("/tenants/{id}/lifecycle-transition")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN')")
     @Operation(summary = "Transition tenant lifecycle state (ACTIVE, SUSPENDED, DEACTIVATED)")
     public ResponseEntity<SaasTenantService.TenantSummaryDto> transitionLifecycle(
             @PathVariable("id") UUID id,
@@ -79,7 +79,7 @@ public class SaasTenantManagementController {
     }
 
     @PostMapping("/tenants/{id}/support-session")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN', 'SAAS_OPERATOR')")
     @Operation(summary = "Issue a controlled, short-lived delegated tenant token for testing or support")
     public ResponseEntity<DelegatedTenantSessionService.DelegatedSessionResult> createSupportSession(
             @PathVariable("id") UUID targetTenantId,
@@ -103,7 +103,7 @@ public class SaasTenantManagementController {
     }
 
     @PostMapping("/support-session/{sessionId}/terminate")
-    @PreAuthorize("hasAnyRole('ROLE_SAAS_ADMIN', 'ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_OPERATOR', 'ROLE_DELEGATED_OPERATOR')")
+    @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN', 'SAAS_OPERATOR', 'DELEGATED_OPERATOR')")
     @Operation(summary = "Terminate and revoke an active delegated support session")
     public ResponseEntity<Void> terminateSupportSession(@PathVariable("sessionId") UUID sessionId) {
         String operatorId = resolveOperatorId();

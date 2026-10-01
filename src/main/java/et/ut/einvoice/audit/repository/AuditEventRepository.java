@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -36,12 +37,12 @@ public interface AuditEventRepository extends JpaRepository<AuditEvent, UUID> {
 
     // Repository-level deletion protection
     @Override
-    default void delete(AuditEvent entity) {
+    default void delete(@NonNull AuditEvent entity) {
         throw new BusinessException("AUDIT_TRAIL_IMMUTABLE", "Repository delete is strictly forbidden on audit ledger.", HttpStatus.FORBIDDEN);
     }
 
     @Override
-    default void deleteById(UUID id) {
+    default void deleteById(@NonNull UUID id) {
         throw new BusinessException("AUDIT_TRAIL_IMMUTABLE", "Repository deleteById is strictly forbidden on audit ledger.", HttpStatus.FORBIDDEN);
     }
 
@@ -51,12 +52,12 @@ public interface AuditEventRepository extends JpaRepository<AuditEvent, UUID> {
     }
 
     @Override
-    default void deleteAll(Iterable<? extends AuditEvent> entities) {
+    default void deleteAll(@NonNull Iterable<? extends AuditEvent> entities) {
         throw new BusinessException("AUDIT_TRAIL_IMMUTABLE", "Repository deleteAll is strictly forbidden on audit ledger.", HttpStatus.FORBIDDEN);
     }
 
     @Override
-    default void deleteAllById(Iterable<? extends UUID> ids) {
+    default void deleteAllById(@NonNull Iterable<? extends UUID> ids) {
         throw new BusinessException("AUDIT_TRAIL_IMMUTABLE", "Repository deleteAllById is strictly forbidden on audit ledger.", HttpStatus.FORBIDDEN);
     }
 }

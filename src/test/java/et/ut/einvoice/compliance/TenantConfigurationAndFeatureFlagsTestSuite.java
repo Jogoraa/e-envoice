@@ -2,11 +2,8 @@ package et.ut.einvoice.compliance;
 
 import et.ut.einvoice.audit.domain.AuditEvent;
 import et.ut.einvoice.audit.repository.AuditEventRepository;
-import et.ut.einvoice.platform.context.TenantContext;
-import et.ut.einvoice.platform.context.TenantContextHolder;
 import et.ut.einvoice.platform.exception.BusinessException;
 import et.ut.einvoice.tenancy.config.domain.TenantConfigurationOverride;
-import et.ut.einvoice.tenancy.config.domain.TenantFeatureFlag;
 import et.ut.einvoice.tenancy.config.repository.TenantConfigurationOverrideRepository;
 import et.ut.einvoice.tenancy.config.repository.TenantFeatureFlagRepository;
 import et.ut.einvoice.tenancy.config.service.TenantConfigurationService;
@@ -21,7 +18,6 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;

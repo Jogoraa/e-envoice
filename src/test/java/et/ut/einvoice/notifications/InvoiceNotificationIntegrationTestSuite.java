@@ -272,6 +272,7 @@ class InvoiceNotificationIntegrationTestSuite {
         assertTrue(verifyResponse.getBody() instanceof PublicInvoiceVerificationDto);
 
         PublicInvoiceVerificationDto dto = (PublicInvoiceVerificationDto) verifyResponse.getBody();
+        assertNotNull(dto);
         assertEquals(invoice.getIrn(), dto.irn(), "Must expose unmasked authoritative IRN");
         assertEquals("INV-SMS-VERIFY", dto.documentNumber());
         assertEquals("VALID_REGISTERED", dto.verificationStatus());

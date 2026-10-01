@@ -59,6 +59,10 @@ public class MasterMessagingDiagnosticsService {
         this.activeSmsProviderName = activeSmsProviderName;
     }
 
+    public MockGeezSmsProvider getMockGeezSmsProvider() {
+        return mockGeezSmsProvider;
+    }
+
     public EmailDiagnosticStatusDto getEmailStatus(String adminUsername) {
         String verifiedEmail = resolveAdminEmail(adminUsername);
         boolean deliveryEnabled = entryRepository.findByKeyName("EMAIL_DELIVERY_ENABLED")

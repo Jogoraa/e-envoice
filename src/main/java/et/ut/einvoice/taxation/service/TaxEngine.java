@@ -13,7 +13,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Independent, versioned tax calculation engine for Ethiopian tax compliance (Directive No. 1142/2026).

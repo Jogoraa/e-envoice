@@ -17,7 +17,6 @@ import et.ut.einvoice.tenancy.domain.GovernmentStatus;
 import et.ut.einvoice.tenancy.domain.Tenant;
 import et.ut.einvoice.tenancy.repository.ApiClientRepository;
 import et.ut.einvoice.tenancy.repository.TenantRepository;
-import et.ut.einvoice.tenancy.domain.TenantStatus;
 import et.ut.einvoice.invoicing.domain.Invoice;
 import et.ut.einvoice.webhooks.domain.OutboundWebhookDelivery;
 import et.ut.einvoice.webhooks.service.WebhookService;

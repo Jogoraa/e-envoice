@@ -1,5 +1,4 @@
 package et.ut.einvoice.platform.config;
-
 import et.ut.einvoice.audit.service.AuditService;
 import et.ut.einvoice.platform.config.controller.MasterEnvironmentController;
 import et.ut.einvoice.platform.config.domain.*;
@@ -25,9 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -305,7 +301,7 @@ class MasterEnvironmentAndSecretsSecurityTest {
         var response = controller.getAllConfigurations(request);
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
 
-        var items = response.getBody();
+        var items = Objects.requireNonNull(response.getBody());
         assertThat(items).isNotEmpty();
 
         var jwtItem = items.stream().filter(i -> "JWT_SECRET".equals(i.keyName())).findFirst().orElseThrow();
@@ -551,7 +547,7 @@ class MasterEnvironmentAndSecretsSecurityTest {
         controller.updateConfiguration(updateReq, request);
 
         var healthRes = controller.getHealth(request);
-        var health = healthRes.getBody();
+        var health = Objects.requireNonNull(healthRes.getBody());
         assertThat(health).isNotNull();
         assertThat(health.smsKillSwitchActive()).isTrue();
         assertThat(health.smsStatus()).contains("EMERGENCY_HALTED");
@@ -583,8 +579,9 @@ class MasterEnvironmentAndSecretsSecurityTest {
 
         var res = controller.rollback(1L, request);
         assertThat(res.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(res.getBody().getRevisionNumber()).isEqualTo(3L);
-        assertThat(res.getBody().getRollbackFromRevision()).isEqualTo(1L);
+        var rollBody = Objects.requireNonNull(res.getBody());
+        assertThat(rollBody.getRevisionNumber()).isEqualTo(3L);
+        assertThat(rollBody.getRollbackFromRevision()).isEqualTo(1L);
     }
 
     @Test
@@ -599,7 +596,7 @@ class MasterEnvironmentAndSecretsSecurityTest {
         );
 
         assertThat(sendResponse.getStatusCode().is2xxSuccessful()).isTrue();
-        var otpBody = sendResponse.getBody();
+        var otpBody = Objects.requireNonNull(sendResponse.getBody());
         assertThat(otpBody).isNotNull();
         assertThat(otpBody.dispatched()).isTrue();
         assertThat(otpBody.maskedEmail()).isEqualTo("ad***@utsolutionsplc.com");
@@ -626,9 +623,8 @@ class MasterEnvironmentAndSecretsSecurityTest {
         );
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        var body = response.getBody();
-        assertThat(body).isNotNull();
-        assertThat(body.privilegedToken()).isNotBlank();
-        assertThat(body.durationSeconds()).isEqualTo(900L);
+        var stepUpBody = Objects.requireNonNull(response.getBody());
+        assertThat(stepUpBody.privilegedToken()).isNotBlank();
+        assertThat(stepUpBody.durationSeconds()).isEqualTo(900L);
     }
 }

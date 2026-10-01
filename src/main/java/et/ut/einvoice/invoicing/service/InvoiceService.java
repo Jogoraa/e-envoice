@@ -6,7 +6,6 @@ import et.ut.einvoice.compliance.service.InsaDigitalSignatureService;
 import et.ut.einvoice.documents.service.QrCodeService;
 import et.ut.einvoice.government.domain.GovernmentRegistrationProvider;
 import et.ut.einvoice.government.domain.GovernmentSubmission;
-import et.ut.einvoice.government.domain.GovernmentSubmissionStatus;
 import et.ut.einvoice.government.repository.GovernmentSubmissionRepository;
 import et.ut.einvoice.invoicing.domain.Invoice;
 import et.ut.einvoice.invoicing.domain.InvoiceLine;
@@ -23,7 +22,6 @@ import et.ut.einvoice.platform.idempotency.domain.IdempotencyRecord;
 import et.ut.einvoice.platform.idempotency.service.IdempotencyService;
 import et.ut.einvoice.platform.outbox.domain.OutboxEvent;
 import et.ut.einvoice.platform.outbox.service.OutboxService;
-import et.ut.einvoice.platform.outbox.worker.OutboxRelayWorker;
 import et.ut.einvoice.taxation.domain.TaxCode;
 import et.ut.einvoice.taxation.service.TaxEngine;
 import et.ut.einvoice.taxpayer.domain.TaxpayerProfile;
@@ -38,11 +36,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -216,6 +212,9 @@ public class InvoiceService {
         PersistedInvoiceBundle bundle = transactionTemplate.execute(status ->
                 persistInvoiceAndOutbox(request, idempotencyKey, tenantId, clientId, seller, payloadJson)
         );
+        if (bundle == null) {
+            throw new IllegalStateException("Transaction execution failed to produce invoice bundle");
+        }
 
         // 4. Authoritative EIRS Submission via Single Outbox Dispatcher (Executed outside database transaction)
         Invoice invoice = bundle.invoice();

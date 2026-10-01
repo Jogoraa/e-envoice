@@ -1,7 +1,6 @@
 package et.ut.einvoice.compliance;
 
 import et.ut.einvoice.audit.domain.AuditEvent;
-import et.ut.einvoice.audit.repository.AuditEventRepository;
 import et.ut.einvoice.audit.service.AuditService;
 import et.ut.einvoice.government.domain.GovernmentRegistrationProvider;
 import et.ut.einvoice.government.domain.GovernmentSubmission;
@@ -90,9 +89,6 @@ public class ProductionHardeningTestSuite {
 
     @Autowired
     private AuditService auditService;
-
-    @Autowired
-    private AuditEventRepository auditEventRepository;
 
     @MockBean
     private GovernmentRegistrationProvider governmentRegistrationProvider;

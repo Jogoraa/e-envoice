@@ -4,7 +4,6 @@ import et.ut.einvoice.audit.service.AuditService;
 import et.ut.einvoice.notifications.provider.EmailProvider;
 import et.ut.einvoice.notifications.provider.SmsProvider;
 import et.ut.einvoice.platform.config.service.MasterMfaOtpService;
-import et.ut.einvoice.platform.identity.domain.PlatformAccountVerification;
 import et.ut.einvoice.platform.identity.dto.IdentityDtos.*;
 import et.ut.einvoice.platform.identity.repository.PlatformAccountVerificationRepository;
 import et.ut.einvoice.platform.identity.repository.PlatformUserRecoveryCodeRepository;
@@ -17,7 +16,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -106,6 +104,7 @@ class MasterAccountServiceTest {
         UpdateProfileRequest req = new UpdateProfileRequest("Updated Admin Name", "Africa/Addis_Ababa", "YYYY-MM-DD");
         MasterProfileResponse updated = service.updateProfile("platform.admin", req);
 
+        assertThat(updated.fullName()).isEqualTo("Updated Admin Name");
         assertThat(testUser.getFullName()).isEqualTo("Updated Admin Name");
         verify(userRepository).save(testUser);
         verify(auditService).recordEvent(any(), eq("platform.admin"), eq("PROFILE_UPDATED"), eq("IDENTITY_ACCOUNT"), any(), any());

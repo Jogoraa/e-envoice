@@ -5,14 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,7 +26,6 @@ import java.util.regex.Pattern;
 @Component
 public class AuditPayloadSanitizer {
 
-    private static final Logger log = LoggerFactory.getLogger(AuditPayloadSanitizer.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     // Default server-held salt for development HMAC fingerprinting; production injects KMS key

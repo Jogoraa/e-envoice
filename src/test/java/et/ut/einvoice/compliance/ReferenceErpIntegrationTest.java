@@ -164,6 +164,6 @@ public class ReferenceErpIntegrationTest {
                         .header("X-API-Key", apiKey)
                         .header("X-Client-Secret", clientSecret))
                 .andExpect(status().isAccepted())
-                .andExpect(jsonPath("$.status").value(org.hamcrest.Matchers.isOneOf("REQUESTED", "COMPLETED")));
+                .andExpect(jsonPath("$.status").value(org.hamcrest.Matchers.oneOf("REQUESTED", "COMPLETED")));
     }
 }

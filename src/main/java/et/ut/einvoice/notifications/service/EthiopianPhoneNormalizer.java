@@ -3,7 +3,6 @@ package et.ut.einvoice.notifications.service;
 import et.ut.einvoice.platform.exception.BusinessException;
 import org.springframework.http.HttpStatus;
 
-import java.util.Collections;
 import java.util.Set;
 
 /**

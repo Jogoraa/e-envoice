@@ -5,14 +5,11 @@ import et.ut.einvoice.audit.export.AuditExportPackage;
 import et.ut.einvoice.audit.export.AuditExportService;
 import et.ut.einvoice.audit.export.AuditExportVerifier;
 import et.ut.einvoice.audit.h2.AuditDatabaseImmutabilityInitializer;
-import et.ut.einvoice.audit.repository.AuditCheckpointRepository;
 import et.ut.einvoice.audit.repository.AuditEventRepository;
 import et.ut.einvoice.audit.repository.AuditOutboxEventRepository;
-import et.ut.einvoice.audit.repository.EvidenceManifestRepository;
 import et.ut.einvoice.audit.service.*;
 import et.ut.einvoice.audit.signature.DevKeyCheckpointSigner;
 import et.ut.einvoice.government.domain.GovernmentRegistrationProvider;
-import et.ut.einvoice.platform.context.TenantContext;
 import et.ut.einvoice.platform.context.TenantContextHolder;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,11 +28,9 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -58,13 +53,7 @@ public class ImmutableAuditAdversarialTestSuite {
     private AuditEventRepository auditEventRepository;
 
     @Autowired
-    private AuditCheckpointRepository auditCheckpointRepository;
-
-    @Autowired
     private AuditOutboxEventRepository auditOutboxRepository;
-
-    @Autowired
-    private EvidenceManifestRepository manifestRepository;
 
     @Autowired
     private AuditChainVerifier chainVerifier;

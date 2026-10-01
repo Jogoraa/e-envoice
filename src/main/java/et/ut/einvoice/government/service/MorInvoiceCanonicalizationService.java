@@ -50,6 +50,10 @@ public class MorInvoiceCanonicalizationService {
         this.qrCodeService = qrCodeService;
     }
 
+    public QrCodeService getQrCodeService() {
+        return qrCodeService;
+    }
+
     /**
      * Constructs the official registration payload submitted to MoR Gateway (/v1/register).
      */
@@ -162,9 +166,9 @@ public class MorInvoiceCanonicalizationService {
                 sellerWoreda
         );
 
-        String sysNum = seller.getSystemNumber() != null && !seller.getSystemNumber().isBlank()
+        String sysNum = seller != null && seller.getSystemNumber() != null && !seller.getSystemNumber().isBlank()
                 ? seller.getSystemNumber() : defaultSystemNumber;
-        String sysType = seller.getSystemType() != null && !seller.getSystemType().isBlank()
+        String sysType = seller != null && seller.getSystemType() != null && !seller.getSystemType().isBlank()
                 ? seller.getSystemType() : defaultSystemType;
 
         var sourceSystem = new MorRegisterPayload.SourceSystem(
@@ -331,7 +335,7 @@ public class MorInvoiceCanonicalizationService {
                 buyerName,
                 buyerPhone,
                 buyerEmail,
-                "Addis Ababa (101)",
+                buyerRegion,
                 "N/A",
                 buyerWoreda,
                 "03",

@@ -1,7 +1,6 @@
 package et.ut.einvoice.platform.outbox.repository;
 
 import et.ut.einvoice.platform.outbox.domain.OutboxEvent;
-import et.ut.einvoice.platform.outbox.domain.OutboxStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

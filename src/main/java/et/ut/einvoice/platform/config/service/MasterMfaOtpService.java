@@ -170,7 +170,7 @@ public class MasterMfaOtpService {
                 maskedPhone,
                 expiresAt,
                 OTP_COOLDOWN_SECONDS,
-                "Verification code successfully dispatched to your registered email (" + maskedEmail + ") and SMS (" + maskedPhone + ")."
+                dispatchNotice
         );
     }
 

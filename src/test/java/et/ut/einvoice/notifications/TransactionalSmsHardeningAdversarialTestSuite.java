@@ -174,14 +174,16 @@ class TransactionalSmsHardeningAdversarialTestSuite {
                 var response = registerInvoice("INV-CAS-01", "IDEM-CAS-01-" + UUID.randomUUID(), "0911000001");
                 var outbox = outboxRepository.findAllByTenantIdAndInvoiceId(tenantId, response.id()).get(0);
 
-                int first = transactionTemplate.execute(
+                Integer first = transactionTemplate.execute(
                                 status -> outboxRepository.claimLeaseAtomic(outbox.getId(), "worker-A", Instant.now()));
 
-                int second = transactionTemplate.execute(
+                Integer second = transactionTemplate.execute(
                                 status -> outboxRepository.claimLeaseAtomic(outbox.getId(), "worker-B", Instant.now()));
 
-                assertEquals(1, first, "First claim must succeed (return 1)");
-                assertEquals(0, second, "Concurrent claim on IN_FLIGHT record must be rejected (return 0)");
+                assertNotNull(first);
+                assertNotNull(second);
+                assertEquals(1, first.intValue(), "First claim must succeed (return 1)");
+                assertEquals(0, second.intValue(), "Concurrent claim on IN_FLIGHT record must be rejected (return 0)");
         }
 
         // =========================================================================
@@ -204,9 +206,10 @@ class TransactionalSmsHardeningAdversarialTestSuite {
 
                 // Simulate that the lock is stale (threshold is in future = all locks older
                 // than "now" are stale)
-                int released = transactionTemplate.execute(
+                Integer released = transactionTemplate.execute(
                                 status -> outboxRepository.releaseStaleLeases(Instant.now().plus(1, ChronoUnit.HOURS)));
 
+                assertNotNull(released);
                 assertTrue(released >= 1, "Stale lease recovery must release at least 1 stale record (our abandoned record)");
 
                 var recovered = outboxRepository.findById(outbox.getId()).orElseThrow();
@@ -469,10 +472,11 @@ class TransactionalSmsHardeningAdversarialTestSuite {
                                 "real-worker", Instant.now()));
 
                 // Impostor worker attempts completion — must return 0
-                int updatedByImpostor = transactionTemplate.execute(status -> outboxRepository.completeSubmissionAtomic(
+                Integer updatedByImpostor = transactionTemplate.execute(status -> outboxRepository.completeSubmissionAtomic(
                                 outbox.getId(), "stale-worker", "FAKE-MSG-ID", Instant.now()));
 
-                assertEquals(0, updatedByImpostor,
+                assertNotNull(updatedByImpostor);
+                assertEquals(0, updatedByImpostor.intValue(),
                                 "completeSubmissionAtomic must return 0 when workerId does not match lockedBy (lost lease)");
 
                 var current = outboxRepository.findById(outbox.getId()).orElseThrow();
@@ -491,12 +495,13 @@ class TransactionalSmsHardeningAdversarialTestSuite {
                 transactionTemplate.executeWithoutResult(status -> outboxRepository.claimLeaseAtomic(outbox.getId(),
                                 "real-worker-2", Instant.now()));
 
-                int rowsUpdated = transactionTemplate.execute(status -> outboxRepository.completePermanentFailureAtomic(
+                Integer rowsUpdated = transactionTemplate.execute(status -> outboxRepository.completePermanentFailureAtomic(
                                 outbox.getId(), "impostor-worker",
                                 "ERR_CODE", "Impostor message",
                                 FailureClassification.MESSAGE_FAILURE, Instant.now()));
 
-                assertEquals(0, rowsUpdated,
+                assertNotNull(rowsUpdated);
+                assertEquals(0, rowsUpdated.intValue(),
                                 "completePermanentFailureAtomic must return 0 when workerId does not match lockedBy");
         }
 
@@ -509,12 +514,13 @@ class TransactionalSmsHardeningAdversarialTestSuite {
                 transactionTemplate.executeWithoutResult(status -> outboxRepository.claimLeaseAtomic(outbox.getId(),
                                 "real-worker-3", Instant.now()));
 
-                int rowsUpdated = transactionTemplate.execute(status -> outboxRepository.completeRetryScheduledAtomic(
+                Integer rowsUpdated = transactionTemplate.execute(status -> outboxRepository.completeRetryScheduledAtomic(
                                 outbox.getId(), "impostor-worker-3",
                                 Instant.now().plusSeconds(60),
                                 "ERR", "Impostor retry", FailureClassification.PROVIDER_NETWORK_FAILURE));
 
-                assertEquals(0, rowsUpdated,
+                assertNotNull(rowsUpdated);
+                assertEquals(0, rowsUpdated.intValue(),
                                 "completeRetryScheduledAtomic must return 0 when workerId does not match lockedBy");
         }
 
@@ -726,9 +732,9 @@ class TransactionalSmsHardeningAdversarialTestSuite {
                 for (int attempt = 0; attempt < outbox.getMaxAttempts(); attempt++) {
                         transactionTemplate.executeWithoutResult(status -> outboxRepository
                                         .releaseStaleLeases(Instant.now().plus(1, ChronoUnit.HOURS)));
-                        int claimed = transactionTemplate.execute(status -> outboxRepository
+                        Integer claimed = transactionTemplate.execute(status -> outboxRepository
                                         .claimLeaseAtomic(outbox.getId(), outboxWorker.getWorkerId(), Instant.now()));
-                        if (claimed == 0) break;
+                        if (claimed == null || claimed == 0) break;
                         transactionTemplate.executeWithoutResult(status -> outboxRepository.completeRetryScheduledAtomic(
                                         outbox.getId(), outboxWorker.getWorkerId(), Instant.now(),
                                         "SERVER_ERROR", "Exhaustion test failure",
@@ -738,9 +744,9 @@ class TransactionalSmsHardeningAdversarialTestSuite {
                 // Final claim → permanent failure
                 transactionTemplate.executeWithoutResult(status -> outboxRepository
                                 .releaseStaleLeases(Instant.now().plus(1, ChronoUnit.HOURS)));
-                int claimResult = transactionTemplate.execute(status -> outboxRepository
+                Integer claimResult = transactionTemplate.execute(status -> outboxRepository
                                 .claimLeaseAtomic(outbox.getId(), outboxWorker.getWorkerId(), Instant.now()));
-                if (claimResult > 0) {
+                if (claimResult != null && claimResult > 0) {
                         transactionTemplate.executeWithoutResult(status -> outboxRepository.completePermanentFailureAtomic(
                                         outbox.getId(), outboxWorker.getWorkerId(),
                                         "MAX_RETRIES_EXCEEDED", "Exhausted all retry attempts",

@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,7 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -25,17 +23,6 @@ import java.util.zip.ZipOutputStream;
 @Tag(name = "Master Compliance Evidence Export", description = "Generates authoritative non-secret regulatory evidence package for MoR and INSA accreditation audits")
 @PreAuthorize("hasAnyRole('ROLE_PLATFORM_ADMIN', 'ROLE_SAAS_ADMIN')")
 public class MasterComplianceEvidenceController {
-
-    private String calculateChecksum(byte[] data) {
-        try {
-            byte[] hash = MessageDigest.getInstance("SHA-256").digest(data);
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) sb.append(String.format("%02x", b));
-            return sb.toString();
-        } catch (Exception e) {
-            return "UNKNOWN";
-        }
-    }
 
     @GetMapping("/export")
     @Operation(summary = "Stream authoritative non-secret Compliance Evidence ZIP archive for regulatory inspection")

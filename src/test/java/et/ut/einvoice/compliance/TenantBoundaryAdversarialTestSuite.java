@@ -1,6 +1,5 @@
 package et.ut.einvoice.compliance;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import et.ut.einvoice.government.domain.GovernmentRegistrationProvider;
 import et.ut.einvoice.invoicing.domain.TransactionType;
 import et.ut.einvoice.invoicing.dto.CreateInvoiceRequest;
@@ -15,7 +14,6 @@ import et.ut.einvoice.taxpayer.repository.TaxpayerProfileRepository;
 import et.ut.einvoice.tenancy.domain.GovernmentStatus;
 import et.ut.einvoice.tenancy.domain.SubscriptionStatus;
 import et.ut.einvoice.tenancy.domain.Tenant;
-import et.ut.einvoice.tenancy.domain.TenantStatus;
 import et.ut.einvoice.tenancy.repository.TenantRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -70,9 +68,6 @@ public class TenantBoundaryAdversarialTestSuite {
 
     @Autowired
     private InvoiceRepository invoiceRepository;
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     @MockBean
     private GovernmentRegistrationProvider governmentRegistrationProvider;

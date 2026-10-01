@@ -10,12 +10,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
-
-/**
- * Asynchronous Notification Service fulfilling Master Compliance Checklist ADD-N001 and Directive No. 1142/2018 Art. 4(1)(i).
- * Dispatches Email and SMS delivery via pluggable provider adapters within 5 minutes of transaction events.
- */
 @Service
 public class NotificationService {
 
@@ -27,6 +21,10 @@ public class NotificationService {
     public NotificationService(SmsProvider smsProvider, EmailProvider emailProvider) {
         this.smsProvider = smsProvider;
         this.emailProvider = emailProvider;
+    }
+
+    public SmsProvider getSmsProvider() {
+        return smsProvider;
     }
 
     @Async

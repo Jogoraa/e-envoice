@@ -1,7 +1,6 @@
 package et.ut.einvoice.compliance;
 
 import et.ut.einvoice.government.domain.GovernmentRegistrationProvider;
-import et.ut.einvoice.invoicing.domain.Invoice;
 import et.ut.einvoice.invoicing.domain.TransactionType;
 import et.ut.einvoice.invoicing.dto.CreateInvoiceRequest;
 import et.ut.einvoice.invoicing.dto.InvoiceResponseDto;

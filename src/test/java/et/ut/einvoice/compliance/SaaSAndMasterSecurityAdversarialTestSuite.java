@@ -81,7 +81,6 @@ public class SaaSAndMasterSecurityAdversarialTestSuite {
     private UUID tenantBId;
     private String masterUserId = "master-operator-007";
     private String tenantTokenA;
-    private String tenantTokenB;
     private String masterToken;
 
     @BeforeEach
@@ -126,14 +125,8 @@ public class SaaSAndMasterSecurityAdversarialTestSuite {
         );
         subscriptionRepository.save(subB);
 
-        // 3. Issue Tokens
         tenantTokenA = jwtTokenService.generateToken(
                 tenantAId, "user-alpha", Set.of("ROLE_TENANT_USER", "ROLE_TENANT_ADMIN"),
-                Set.of("invoice:create", "invoice:read", "customer:read", "customer:create"), 3600
-        );
-
-        tenantTokenB = jwtTokenService.generateToken(
-                tenantBId, "user-beta", Set.of("ROLE_TENANT_USER", "ROLE_TENANT_ADMIN"),
                 Set.of("invoice:create", "invoice:read", "customer:read", "customer:create"), 3600
         );
 
@@ -297,6 +290,7 @@ public class SaaSAndMasterSecurityAdversarialTestSuite {
         var sessionResult = delegatedTenantSessionService.requestSupportSession(
                 masterUserId, tenantAId, null, "TESTING", "Forensic Inspection", 1800L
         );
+        assertNotNull(sessionResult.token());
 
         List<AuditEvent> events = auditEventRepository.findByTenantIdOrderBySequenceNumberAsc(tenantAId);
         assertFalse(events.isEmpty());

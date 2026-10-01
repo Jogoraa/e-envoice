@@ -100,6 +100,7 @@ public class SmtpEmailProvider implements EmailProvider {
             rawSocket.connect(new InetSocketAddress(host, port), 5000);
             rawSocket.setSoTimeout(5000);
 
+            @SuppressWarnings("resource")
             Socket activeSocket = rawSocket;
             if (port == 465) {
                 SSLSocketFactory sf = (SSLSocketFactory) SSLSocketFactory.getDefault();
@@ -228,6 +229,7 @@ public class SmtpEmailProvider implements EmailProvider {
             rawSocket.connect(new InetSocketAddress(host, port), 4000);
             rawSocket.setSoTimeout(4000);
 
+            @SuppressWarnings("resource")
             Socket activeSocket = rawSocket;
             if (port == 465) {
                 SSLSocketFactory sf = (SSLSocketFactory) SSLSocketFactory.getDefault();

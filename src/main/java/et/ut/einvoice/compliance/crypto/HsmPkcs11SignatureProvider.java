@@ -99,4 +99,16 @@ public class HsmPkcs11SignatureProvider implements DigitalSignatureProvider {
     public boolean isHsmBacked() {
         return true;
     }
+
+    public String getLibraryPath() {
+        return libraryPath;
+    }
+
+    public String getSlotId() {
+        return slotId;
+    }
+
+    public String getKeyAlias() {
+        return keyAlias;
+    }
 }

@@ -16,8 +16,6 @@ import et.ut.einvoice.tenancy.repository.TenantRepository;
 import et.ut.einvoice.tenancy.repository.TenantUserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -47,7 +45,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import javax.sql.DataSource;
-import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
@@ -60,8 +57,6 @@ import java.util.*;
 @RequestMapping("/api/v1")
 @Tag(name = "SaaS & Master Authoritative Data APIs", description = "Live database-backed endpoints for SaaS platform and Master Admin")
 public class SaasMasterDataController {
-
-    private static final Logger log = LoggerFactory.getLogger(SaasMasterDataController.class);
 
     private final TenantRepository tenantRepository;
     private final SubscriptionRepository subscriptionRepository;
@@ -663,7 +658,6 @@ public class SaasMasterDataController {
                         .count()
                 : 0L;
 
-        long uptimeSeconds = ManagementFactory.getRuntimeMXBean().getUptime() / 1000;
         String uptimeStr = stats.totalSubmissions() > 0 
                 ? String.format(Locale.US, "%.2f%%", Math.max(0.0, 100.0 - stats.errorRatePercent()))
                 : (probe.online() ? "99.98% (Nominal SLA)" : "98.50% (Degraded)");

@@ -12,11 +12,9 @@ import et.ut.einvoice.taxpayer.domain.TaxpayerProfile;
 import et.ut.einvoice.taxpayer.repository.TaxpayerProfileRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,6 +47,14 @@ public class OutboxRelayWorker {
         this.governmentProvider = governmentProvider;
         this.eventPublisher = eventPublisher;
         this.objectMapper = objectMapper;
+    }
+
+    public OutboxEventRepository getOutboxRepository() {
+        return outboxRepository;
+    }
+
+    public ObjectMapper getObjectMapper() {
+        return objectMapper;
     }
 
     @Scheduled(fixedDelayString = "${outbox.relay.interval-ms:2000}")

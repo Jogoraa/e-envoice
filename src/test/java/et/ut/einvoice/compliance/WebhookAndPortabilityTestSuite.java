@@ -1,8 +1,5 @@
 package et.ut.einvoice.compliance;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import et.ut.einvoice.compliance.service.InsaDigitalSignatureService;
 import et.ut.einvoice.invoicing.domain.Invoice;
 import et.ut.einvoice.invoicing.domain.InvoiceLine;
 import et.ut.einvoice.invoicing.domain.TransactionType;
@@ -55,12 +52,6 @@ public class WebhookAndPortabilityTestSuite {
 
     @Autowired
     private TaxpayerProfileRepository taxpayerProfileRepository;
-
-    @Autowired
-    private InsaDigitalSignatureService signatureService;
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     private UUID tenantId;
 

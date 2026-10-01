@@ -7,8 +7,6 @@ import et.ut.einvoice.audit.repository.AuditEventRepository;
 import et.ut.einvoice.audit.service.AuditChainVerifier;
 import et.ut.einvoice.audit.service.AuditCheckpointVerifier;
 import et.ut.einvoice.audit.service.AuditService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
@@ -25,8 +23,6 @@ import java.util.UUID;
 @Component
 @Primary
 public class LocalImmutableAuditLedgerAdapter implements ImmutableAuditLedger {
-
-    private static final Logger log = LoggerFactory.getLogger(LocalImmutableAuditLedgerAdapter.class);
 
     private final AuditService auditService;
     private final AuditEventRepository auditEventRepository;

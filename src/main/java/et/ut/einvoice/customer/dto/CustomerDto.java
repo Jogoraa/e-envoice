@@ -1,9 +1,6 @@
 package et.ut.einvoice.customer.dto;
 
 import et.ut.einvoice.customer.domain.Customer;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 import java.util.UUID;

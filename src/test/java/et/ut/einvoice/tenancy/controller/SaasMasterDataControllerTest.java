@@ -1,9 +1,7 @@
 package et.ut.einvoice.tenancy.controller;
 
-import et.ut.einvoice.audit.domain.AuditEvent;
 import et.ut.einvoice.audit.repository.AuditEventRepository;
 import et.ut.einvoice.audit.service.AuditService;
-import et.ut.einvoice.invoicing.domain.Invoice;
 import et.ut.einvoice.invoicing.repository.InvoiceRepository;
 import et.ut.einvoice.tenancy.domain.Subscription;
 import et.ut.einvoice.tenancy.domain.Tenant;
@@ -15,16 +13,13 @@ import et.ut.einvoice.tenancy.repository.TenantUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -82,10 +77,10 @@ public class SaasMasterDataControllerTest {
 
         ResponseEntity<SaasMasterDataController.SaasTelemetryDto> response = controller.getSaasTelemetry();
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().totalTenants());
-        assertEquals(1, response.getBody().activeTenants());
-        assertEquals(1, response.getBody().planDistribution().get("ENTERPRISE"));
+        var body = Objects.requireNonNull(response.getBody());
+        assertEquals(1, body.totalTenants());
+        assertEquals(1, body.activeTenants());
+        assertEquals(1, body.planDistribution().get("ENTERPRISE"));
     }
 
     @Test
@@ -99,11 +94,11 @@ public class SaasMasterDataControllerTest {
 
         ResponseEntity<List<SaasMasterDataController.TenantUsageDto>> response = controller.getSaasUsage();
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().size());
-        assertEquals("0011223344", response.getBody().get(0).tin());
-        assertEquals("ENTERPRISE", response.getBody().get(0).plan());
-        assertEquals(100000, response.getBody().get(0).invoiceQuota());
+        var body = Objects.requireNonNull(response.getBody());
+        assertEquals(1, body.size());
+        assertEquals("0011223344", body.get(0).tin());
+        assertEquals("ENTERPRISE", body.get(0).plan());
+        assertEquals(100000, body.get(0).invoiceQuota());
     }
 
     @Test
@@ -121,9 +116,9 @@ public class SaasMasterDataControllerTest {
 
         ResponseEntity<Map<String, Object>> response = controller.onboardTenantFull(request);
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals("0099887766", response.getBody().get("tin"));
-        assertEquals("ACTIVE", response.getBody().get("status"));
+        var body = Objects.requireNonNull(response.getBody());
+        assertEquals("0099887766", body.get("tin"));
+        assertEquals("ACTIVE", body.get("status"));
 
         verify(tenantRepository, times(1)).save(any(Tenant.class));
         verify(subscriptionRepository, times(1)).save(any(Subscription.class));
@@ -137,8 +132,8 @@ public class SaasMasterDataControllerTest {
 
         ResponseEntity<SaasMasterDataController.MasterTelemetryDto> response = controller.getMasterTelemetry();
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals("ONLINE", response.getBody().gatewayStatus());
-        assertEquals("ONLINE", response.getBody().hsmStatus());
+        var body = Objects.requireNonNull(response.getBody());
+        assertEquals("ONLINE", body.gatewayStatus());
+        assertEquals("ONLINE", body.hsmStatus());
     }
 }

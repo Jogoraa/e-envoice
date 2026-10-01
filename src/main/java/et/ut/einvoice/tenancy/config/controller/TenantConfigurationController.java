@@ -2,7 +2,6 @@ package et.ut.einvoice.tenancy.config.controller;
 
 import et.ut.einvoice.platform.context.TenantContext;
 import et.ut.einvoice.platform.context.TenantContextHolder;
-import et.ut.einvoice.platform.exception.BusinessException;
 import et.ut.einvoice.tenancy.config.domain.TenantConfigurationOverride;
 import et.ut.einvoice.tenancy.config.domain.TenantFeatureFlag;
 import et.ut.einvoice.tenancy.config.service.TenantConfigurationService;
@@ -10,13 +9,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/tenant")

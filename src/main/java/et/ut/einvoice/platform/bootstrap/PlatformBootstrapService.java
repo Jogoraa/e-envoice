@@ -13,7 +13,6 @@ import et.ut.einvoice.taxpayer.repository.TaxpayerProfileRepository;
 import et.ut.einvoice.tenancy.domain.ApiClient;
 import et.ut.einvoice.tenancy.domain.Subscription;
 import et.ut.einvoice.tenancy.domain.Tenant;
-import et.ut.einvoice.tenancy.domain.TenantStatus;
 import et.ut.einvoice.tenancy.domain.TenantUser;
 import et.ut.einvoice.tenancy.repository.ApiClientRepository;
 import et.ut.einvoice.tenancy.repository.SubscriptionRepository;

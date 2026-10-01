@@ -40,9 +40,9 @@ public class EthioTelecomSmsProvider implements SmsProvider {
         this.activeProfile = activeProfile;
         this.isConfigured = endpointUrl != null && !endpointUrl.isBlank() && apiKey != null && !apiKey.isBlank();
 
-        if (this.isConfigured) {
+        if (this.isConfigured && endpointUrl != null && apiKey != null) {
             this.webClient = webClientBuilder
-                    .baseUrl(endpointUrl)
+                    .baseUrl(java.util.Objects.requireNonNull(endpointUrl))
                     .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
                     .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                     .build();
@@ -51,6 +51,14 @@ public class EthioTelecomSmsProvider implements SmsProvider {
             this.webClient = null;
             log.info("EthioTelecomSmsProvider unconfigured (ETHIO_TELECOM_SMS_URL/KEY not present). Operating in development simulation mode.");
         }
+    }
+
+    public String getEndpointUrl() {
+        return endpointUrl;
+    }
+
+    public String getApiKey() {
+        return apiKey;
     }
 
     @Override

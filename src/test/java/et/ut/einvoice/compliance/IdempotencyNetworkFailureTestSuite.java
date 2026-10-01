@@ -1,7 +1,6 @@
 package et.ut.einvoice.compliance;
 
 import et.ut.einvoice.government.domain.GovernmentRegistrationProvider;
-import et.ut.einvoice.invoicing.domain.Invoice;
 import et.ut.einvoice.invoicing.domain.TransactionType;
 import et.ut.einvoice.invoicing.dto.CreateInvoiceRequest;
 import et.ut.einvoice.invoicing.dto.InvoiceResponseDto;
@@ -10,10 +9,7 @@ import et.ut.einvoice.invoicing.service.InvoiceService;
 import et.ut.einvoice.platform.context.TenantContext;
 import et.ut.einvoice.platform.context.TenantContextHolder;
 import et.ut.einvoice.platform.exception.BusinessException;
-import et.ut.einvoice.platform.idempotency.domain.IdempotencyRecord;
-import et.ut.einvoice.platform.idempotency.domain.IdempotencyStatus;
 import et.ut.einvoice.platform.idempotency.repository.IdempotencyRecordRepository;
-import et.ut.einvoice.platform.idempotency.service.IdempotencyService;
 import et.ut.einvoice.taxpayer.domain.TaxpayerProfile;
 import et.ut.einvoice.taxpayer.repository.TaxpayerProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,9 +41,6 @@ public class IdempotencyNetworkFailureTestSuite {
 
     @Autowired
     private InvoiceRepository invoiceRepository;
-
-    @Autowired
-    private IdempotencyService idempotencyService;
 
     @Autowired
     private IdempotencyRecordRepository idempotencyRecordRepository;

@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import et.ut.einvoice.invoicing.domain.Invoice;
 import et.ut.einvoice.invoicing.domain.InvoiceLine;
 import et.ut.einvoice.invoicing.repository.InvoiceRepository;
-import et.ut.einvoice.platform.exception.BusinessException;
 import et.ut.einvoice.reports.domain.ReportDefinition;
 import et.ut.einvoice.reports.domain.ReportJob;
 import et.ut.einvoice.reports.repository.ReportDefinitionRepository;
@@ -13,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

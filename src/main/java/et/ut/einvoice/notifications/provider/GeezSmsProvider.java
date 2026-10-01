@@ -6,7 +6,6 @@ import et.ut.einvoice.notifications.domain.FailureClassification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
@@ -51,7 +50,6 @@ public class GeezSmsProvider implements SmsProvider {
     static final String SEND_PATH = "/api/v1/sms/send";
     private static final String PROVIDER_NAME = "GeezSMS";
 
-    private static final int CONNECT_TIMEOUT_SECONDS = 8;
     private static final int READ_TIMEOUT_SECONDS = 12;
 
     private final WebClient webClient;
@@ -78,9 +76,9 @@ public class GeezSmsProvider implements SmsProvider {
                 .codecs(c -> c.defaultCodecs().maxInMemorySize(256 * 1024))
                 .build();
 
-        if (this.isConfigured) {
+        if (this.isConfigured && token != null) {
             log.info("GeezSmsProvider initialized. Token: CONFIGURED (length={}), Base URL: {}, SenderID: {}",
-                    token.length(), safeBase, senderId.isBlank() ? "(GeezSMS default)" : senderId);
+                    token.length(), safeBase, this.senderId.isBlank() ? "(GeezSMS default)" : this.senderId);
         } else {
             log.info("GeezSmsProvider: GEEZSMS_TOKEN not configured. Provider inactive.");
         }

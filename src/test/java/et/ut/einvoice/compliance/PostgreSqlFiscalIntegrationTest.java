@@ -106,6 +106,12 @@ public class PostgreSqlFiscalIntegrationTest {
     @Autowired
     private AuditEventRepository auditEventRepository;
 
+    @Autowired
+    private et.ut.einvoice.audit.service.AuditChainVerifier chainVerifier;
+
+    @Autowired
+    private et.ut.einvoice.audit.service.AuditHashService hashService;
+
     private UUID tenantA;
     private UUID tenantB;
     private UUID platformAdminId;
@@ -399,21 +405,193 @@ public class PostgreSqlFiscalIntegrationTest {
     // =========================================================================
 
     @Test
-    @DisplayName("Immutability: PostgreSQL trigger blocks UPDATE and DELETE on audit_events table")
-    void test_PostgreSQL_AuditEvent_ImmutabilityTrigger() {
+    @DisplayName("Sequence Concurrency: 1, 2, 10, 50, 100 concurrent issuers yield zero duplicate sequences")
+    void test_FiscalSequenceStress_MultipleTiers_1_2_10_50_100() throws Exception {
+        int[] tiers = {1, 2, 10, 50, 100};
+        UUID stressTenant = UUID.randomUUID();
+        
+        // Seed tenant
+        Tenant t = new Tenant(stressTenant, "ORG-STRESS-" + stressTenant.toString().substring(0, 6), "Stress Test Corp", "Stress", "9999999999");
+        t.activate();
+        tenantRepository.save(t);
+
+        long expectedCounter = 1L;
+        for (int tier : tiers) {
+            ExecutorService executor = Executors.newFixedThreadPool(Math.min(tier, 25));
+            CountDownLatch latch = new CountDownLatch(1);
+            List<Future<Long>> futures = new ArrayList<>();
+
+            for (int i = 0; i < tier; i++) {
+                futures.add(executor.submit(() -> {
+                    latch.await();
+                    TenantContextHolder.setContext(TenantContext.createWithClient(stressTenant, "CLIENT-STRESS", Set.of("ROLE_TENANT_ADMIN"), Set.of("invoice:create"), "stress"));
+                    try {
+                        return sequenceService.allocateNextCounter(stressTenant);
+                    } finally {
+                        TenantContextHolder.clear();
+                    }
+                }));
+            }
+
+            latch.countDown();
+            Set<Long> tierAllocated = ConcurrentHashMap.newKeySet();
+            List<Long> tierList = new ArrayList<>();
+            for (Future<Long> f : futures) {
+                Long val = f.get();
+                tierAllocated.add(val);
+                tierList.add(val);
+            }
+
+            executor.shutdown();
+            executor.awaitTermination(15, TimeUnit.SECONDS);
+
+            int duplicates = tierList.size() - tierAllocated.size();
+            long minVal = tierAllocated.stream().min(Long::compare).orElse(0L);
+            long maxVal = tierAllocated.stream().max(Long::compare).orElse(0L);
+
+            System.out.printf("SEQUENCE STRESS TIER %d: Generated range [%d - %d], count=%d, duplicates=%d%n",
+                    tier, minVal, maxVal, tierAllocated.size(), duplicates);
+
+            assertEquals(0, duplicates, "Tier " + tier + " must have exactly ZERO duplicates");
+            assertEquals(tier, tierAllocated.size(), "Tier " + tier + " must allocate exactly " + tier + " unique counters");
+            assertEquals(expectedCounter, minVal, "Tier " + tier + " minimum counter mismatch");
+            assertEquals(expectedCounter + tier - 1, maxVal, "Tier " + tier + " maximum counter mismatch");
+
+            expectedCounter += tier;
+        }
+    }
+
+    // =========================================================================
+    // 4. DATABASE IMMUTABILITY TRIGGERS & AUDIT HASH CHAIN
+    // =========================================================================
+
+    @Test
+    @DisplayName("Immutability: Registered invoice rejects mutation of EVERY fiscal field independently (JPA & SQL)")
+    void test_RegisteredInvoice_Immutability_EveryFiscalFieldProhibited() {
+        TenantContextHolder.setContext(TenantContext.createWithClient(tenantA, "CLIENT-A", Set.of("ROLE_TENANT_ADMIN"), Set.of("invoice:create"), "corr"));
+
+        Invoice invoice = new Invoice(UUID.randomUUID(), tenantA, "DOC-IMMUT-" + System.currentTimeMillis(), 500L, Instant.now(), TransactionType.B2C, "CASH", "IMMEDIATE");
+        invoice.setBuyerLegalName("Original Buyer");
+        invoice.setBuyerTin("1234567890");
+
+        InvoiceLine line = new InvoiceLine(UUID.randomUUID(), tenantA, 1, "ITEM-01", "Product 1", "GOODS", "PCS",
+                BigDecimal.ONE, new BigDecimal("100.00"), BigDecimal.ZERO, new BigDecimal("100.00"), "VAT15",
+                new BigDecimal("0.1500"), new BigDecimal("15.00"), BigDecimal.ZERO, new BigDecimal("115.00"));
+        invoice.addLine(line);
+        invoice.recalculateTotals();
+        invoice = invoiceRepository.save(invoice);
+
+        // Mark invoice REGISTERED with authoritative government identity
+        invoice.markRegistered("IRN-IMMUT-001", "RRN-IMMUT-001", "2026-10-01T12:00:00Z", "SIGNED-QR-DATA", "SIGNED-INVOICE-XML");
+        final Invoice registered = invoiceRepository.save(invoice);
+        UUID invoiceId = registered.getId();
+        UUID lineId = line.getId();
+
+        // 1. Verify JPA-level setter immutability
+        assertThrows(BusinessException.class, () -> registered.setGrandTotal(new BigDecimal("999.00")), "JPA: mutating grandTotal must fail");
+        assertThrows(BusinessException.class, () -> registered.setDocumentNumber("FORGED-DOC"), "JPA: mutating documentNumber must fail");
+        assertThrows(BusinessException.class, () -> registered.setInvoiceCounter(9999L), "JPA: mutating invoiceCounter must fail");
+        assertThrows(BusinessException.class, () -> registered.setBuyerLegalName("Hacked Buyer"), "JPA: mutating buyerLegalName must fail");
+        assertThrows(BusinessException.class, () -> registered.setBuyerTin("0000000000"), "JPA: mutating buyerTin must fail");
+        assertThrows(BusinessException.class, () -> registered.addLine(new InvoiceLine()), "JPA: adding line to registered invoice must fail");
+
+        // 2. Verify Database Trigger / SQL Level Immutability under application role
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoices SET grand_total = 999.00 WHERE id = ?", invoiceId), "SQL: mutating grand_total must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoices SET document_number = 'FORGED-DOC' WHERE id = ?", invoiceId), "SQL: mutating document_number must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoices SET invoice_counter = 9999 WHERE id = ?", invoiceId), "SQL: mutating invoice_counter must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoices SET invoice_date = NOW() - interval '30 days' WHERE id = ?", invoiceId), "SQL: mutating invoice_date must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoices SET currency = 'USD' WHERE id = ?", invoiceId), "SQL: mutating currency must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoices SET pre_tax_total = 500.00 WHERE id = ?", invoiceId), "SQL: mutating pre_tax_total must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoices SET tax_total = 50.00 WHERE id = ?", invoiceId), "SQL: mutating tax_total must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoices SET excise_total = 25.00 WHERE id = ?", invoiceId), "SQL: mutating excise_total must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoices SET buyer_legal_name = 'Forged Name' WHERE id = ?", invoiceId), "SQL: mutating buyer_legal_name must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoices SET buyer_tin = '9999999999' WHERE id = ?", invoiceId), "SQL: mutating buyer_tin must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoices SET signed_qr = 'FORGED-QR' WHERE id = ?", invoiceId), "SQL: mutating signed_qr must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoices SET irn = 'FORGED-IRN' WHERE id = ?", invoiceId), "SQL: mutating irn must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoices SET signed_invoice = 'FORGED-SIG' WHERE id = ?", invoiceId), "SQL: mutating signed_invoice must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoices SET ack_date = '2099-01-01' WHERE id = ?", invoiceId), "SQL: mutating ack_date must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("DELETE FROM invoices WHERE id = ?", invoiceId), "SQL: deleting registered invoice must fail");
+
+        // 3. Verify invoice_lines table trigger immutability
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoice_lines SET unit_price = 999.00 WHERE id = ?", lineId), "SQL: mutating invoice_lines unit_price must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoice_lines SET quantity = 50.00 WHERE id = ?", lineId), "SQL: mutating invoice_lines quantity must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("UPDATE invoice_lines SET product_description = 'Forged Item' WHERE id = ?", lineId), "SQL: mutating invoice_lines description must fail");
+        assertThrows(Exception.class, () -> jdbcTemplate.update("DELETE FROM invoice_lines WHERE id = ?", lineId), "SQL: deleting registered invoice_line must fail");
+
+        TenantContextHolder.clear();
+    }
+
+    @Test
+    @DisplayName("Audit Hash Chain: Verifies cryptographic chaining, detects historical payload and sequence tampering")
+    void test_AuditHashChain_TamperingDetection() {
         TenantContextHolder.setContext(TenantContext.createWithClient(tenantA, "CLIENT-A", Set.of("ROLE_TENANT_ADMIN"), Set.of("audit:record"), "corr"));
-        AuditEvent evt = auditService.recordEvent(tenantA, "INVOICE", "USER-1", "TEST_IMMUTABLE", "DOC", "123", "DETAIL", "127.0.0.1");
 
-        assertNotNull(evt.getId());
+        String streamId = "INVOICE";
+        // 1. Generate chain of 5 valid events
+        for (int i = 1; i <= 5; i++) {
+            auditService.recordEvent(tenantA, streamId, "OPERATOR-1", "ACTION-" + i, "DOC", "ID-" + i, "PAYLOAD-" + i, "127.0.0.1");
+        }
 
-        // Attempt direct UPDATE via SQL
+        List<AuditEvent> events = auditEventRepository.findByTenantIdAndStreamIdOrderBySequenceNumberAsc(tenantA, streamId);
+        assertEquals(5, events.size());
+
+        // 2. Verify initial chain is valid
+        var initialResult = chainVerifier.verifyStreamChain(tenantA, streamId, events);
+        assertTrue(initialResult.isValid(), "Initial audit chain must be valid");
+        assertEquals(5, initialResult.verifiedEventCount());
+
+        // 3. Verify single event cryptographic consistency
+        for (AuditEvent evt : events) {
+            assertTrue(chainVerifier.verifySingleEvent(evt), "Event hash must match calculated hash");
+        }
+
+        // 4. Verify detection of payload tampering
+        AuditEvent evt2 = events.get(2);
+        AuditEvent tamperedPayloadEvent = new AuditEvent(
+                evt2.getId(),
+                evt2.getTenantId(),
+                evt2.getStreamId(),
+                evt2.getSequenceNumber(),
+                evt2.getActorId(),
+                evt2.getActorType(),
+                evt2.getClientId(),
+                evt2.getDeviceId(),
+                evt2.getAction(),
+                evt2.getResourceType(),
+                evt2.getResourceId(),
+                evt2.getClientIp(),
+                evt2.getUserAgent(),
+                "FORGED_PAYLOAD_HASH", // Corrupted payload hash
+                evt2.getPreviousEventHash(),
+                evt2.getEventHash(),
+                evt2.getCorrelationId(),
+                evt2.getTraceId(),
+                evt2.getApplicationVersion(),
+                evt2.getSchemaVersion(),
+                evt2.getTimestamp()
+        );
+        assertFalse(chainVerifier.verifySingleEvent(tamperedPayloadEvent), "Tampered event payload must fail hash verification");
+
+        List<AuditEvent> tamperedList = new ArrayList<>(events);
+        tamperedList.set(2, tamperedPayloadEvent);
+        var tamperedChainResult = chainVerifier.verifyStreamChain(tenantA, streamId, tamperedList);
+        assertFalse(tamperedChainResult.isValid(), "Chain verifier must reject tampered event payload");
+        assertEquals(et.ut.einvoice.audit.service.AuditChainVerifier.VerificationStatus.TAMPERED_EVENT_HASH, tamperedChainResult.status());
+
+        // 5. Verify detection of sequence gap / deletion
+        List<AuditEvent> deletedEventList = new ArrayList<>(events);
+        deletedEventList.remove(2); // Remove sequence 3
+        var gapResult = chainVerifier.verifyStreamChain(tenantA, streamId, deletedEventList);
+        assertFalse(gapResult.isValid(), "Chain verifier must reject missing/deleted event");
+        assertEquals(et.ut.einvoice.audit.service.AuditChainVerifier.VerificationStatus.SEQUENCE_GAP, gapResult.status());
+
+        // 6. Ordinary application role immutability: UPDATE and DELETE blocked by database trigger
         assertThrows(Exception.class, () -> {
-            jdbcTemplate.update("UPDATE audit_events SET event_action = 'FORGED' WHERE id = ?", evt.getId());
+            jdbcTemplate.update("UPDATE audit_events SET action = 'FORGED' WHERE id = ?", events.get(0).getId());
         }, "Database trigger trg_audit_events_immutability must reject UPDATE statements");
 
-        // Attempt direct DELETE via SQL
         assertThrows(Exception.class, () -> {
-            jdbcTemplate.update("DELETE FROM audit_events WHERE id = ?", evt.getId());
+            jdbcTemplate.update("DELETE FROM audit_events WHERE id = ?", events.get(0).getId());
         }, "Database trigger trg_audit_events_immutability must reject DELETE statements");
 
         TenantContextHolder.clear();

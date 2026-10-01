@@ -257,9 +257,15 @@ public class Invoice {
     public UUID getDeviceId() { return deviceId; }
     public void setDeviceId(UUID deviceId) { this.deviceId = deviceId; }
     public String getDocumentNumber() { return documentNumber; }
-    public void setDocumentNumber(String documentNumber) { this.documentNumber = documentNumber; }
+    public void setDocumentNumber(String documentNumber) {
+        checkNotRegistered();
+        this.documentNumber = documentNumber;
+    }
     public Long getInvoiceCounter() { return invoiceCounter; }
-    public void setInvoiceCounter(Long invoiceCounter) { this.invoiceCounter = invoiceCounter; }
+    public void setInvoiceCounter(Long invoiceCounter) {
+        checkNotRegistered();
+        this.invoiceCounter = invoiceCounter;
+    }
     public Instant getInvoiceDate() { return invoiceDate; }
     public TransactionType getTransactionType() { return transactionType; }
     public String getPaymentMode() { return paymentMode; }
@@ -276,19 +282,40 @@ public class Invoice {
     }
     public String getCurrency() { return currency; }
     public String getBuyerLegalName() { return buyerLegalName; }
-    public void setBuyerLegalName(String buyerLegalName) { this.buyerLegalName = buyerLegalName; }
+    public void setBuyerLegalName(String buyerLegalName) {
+        checkNotRegistered();
+        this.buyerLegalName = buyerLegalName;
+    }
     public String getBuyerTin() { return buyerTin; }
-    public void setBuyerTin(String buyerTin) { this.buyerTin = buyerTin; }
+    public void setBuyerTin(String buyerTin) {
+        checkNotRegistered();
+        this.buyerTin = buyerTin;
+    }
     public String getBuyerVatNumber() { return buyerVatNumber; }
-    public void setBuyerVatNumber(String buyerVatNumber) { this.buyerVatNumber = buyerVatNumber; }
+    public void setBuyerVatNumber(String buyerVatNumber) {
+        checkNotRegistered();
+        this.buyerVatNumber = buyerVatNumber;
+    }
     public String getBuyerIdNumber() { return buyerIdNumber; }
-    public void setBuyerIdNumber(String buyerIdNumber) { this.buyerIdNumber = buyerIdNumber; }
+    public void setBuyerIdNumber(String buyerIdNumber) {
+        checkNotRegistered();
+        this.buyerIdNumber = buyerIdNumber;
+    }
     public String getBuyerIdType() { return buyerIdType; }
-    public void setBuyerIdType(String buyerIdType) { this.buyerIdType = buyerIdType; }
+    public void setBuyerIdType(String buyerIdType) {
+        checkNotRegistered();
+        this.buyerIdType = buyerIdType;
+    }
     public String getBuyerPhone() { return buyerPhone; }
-    public void setBuyerPhone(String buyerPhone) { this.buyerPhone = buyerPhone; }
+    public void setBuyerPhone(String buyerPhone) {
+        checkNotRegistered();
+        this.buyerPhone = buyerPhone;
+    }
     public String getBuyerEmail() { return buyerEmail; }
-    public void setBuyerEmail(String buyerEmail) { this.buyerEmail = buyerEmail; }
+    public void setBuyerEmail(String buyerEmail) {
+        checkNotRegistered();
+        this.buyerEmail = buyerEmail;
+    }
     public String getBuyerCountry() { return buyerCountry; }
     public void setBuyerCountry(String buyerCountry) { this.buyerCountry = buyerCountry; }
     public String getBuyerRegion() { return buyerRegion; }

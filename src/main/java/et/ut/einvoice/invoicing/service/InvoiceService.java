@@ -420,55 +420,6 @@ public class InvoiceService {
             return new PersistedInvoiceBundle(savedInvoice, savedSubmission, outboxEvent);
     }
 
-    /**
-     * Hardened sequence recovery: acquires tenant database sequence lock, verifies state, logs audit, and retries.
-     */
-    private void handleSequenceMismatchAndRetry(
-            Invoice invoice,
-            GovernmentSubmission submission,
-            OutboxEvent outboxEvent,
-            TaxpayerProfile seller,
-            GovernmentRegistrationProvider.GovernmentRegistrationResult regResult
-    ) {
-        UUID tenantId = invoice.getTenantId();
-        sequenceService.adjustCounterIfHigher(tenantId, regResult.expectedNextCounter());
-
-        log.warn("Acquired sequence lock for tenant {}: adjusting docNumber from {} to {}, counter from {} to {}",
-                tenantId, invoice.getDocumentNumber(), regResult.expectedNextDoc(), invoice.getInvoiceCounter(), regResult.expectedNextCounter());
-
-        auditService.recordEvent(
-                tenantId,
-                "SEQUENCE",
-                "SYSTEM",
-                "SEQUENCE_RECOVERY_ADJUST",
-                "INVOICE",
-                invoice.getId().toString(),
-                String.format("oldDoc=%s, newDoc=%s, oldCounter=%d, newCounter=%d",
-                        invoice.getDocumentNumber(), regResult.expectedNextDoc(), invoice.getInvoiceCounter(), regResult.expectedNextCounter()),
-                "127.0.0.1"
-        );
-
-        invoice.setDocumentNumber(String.valueOf(regResult.expectedNextDoc()));
-        invoice.setInvoiceCounter(regResult.expectedNextCounter());
-
-        var retryResult = governmentRegistrationProvider.registerInvoice(invoice, seller, "AUTO_AUTH");
-        if (retryResult.success()) {
-            invoice.markRegistered(
-                    retryResult.irn(),
-                    retryResult.rrn(),
-                    retryResult.ackDate(),
-                    retryResult.signedQr(),
-                    retryResult.signedInvoice()
-            );
-            submission.markAccepted(retryResult.irn());
-            saveInvoiceAndSubmission(invoice, submission);
-            outboxService.markPublished(outboxEvent.getId());
-        } else {
-            submission.markRejected(retryResult.errorCode(), retryResult.errorMessage());
-            submissionRepository.save(submission);
-            fallbackToOfflineBuffer(invoice, retryResult.errorMessage());
-        }
-    }
 
     private void ensureQrCode(Invoice invoice, TaxpayerProfile seller) {
         if (invoice.getSignedQr() == null || invoice.getSignedQr().isBlank()) {

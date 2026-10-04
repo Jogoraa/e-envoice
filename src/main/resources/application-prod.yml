@@ -54,6 +54,9 @@ platform:
       secret: ${JWT_SECRET}
       issuer: ${JWT_ISSUER:ut-einvoice-platform}
       audience: ${JWT_AUDIENCE:ut-einvoice-api}
+    request-signing:
+      enabled: ${REQUEST_SIGNING_ENABLED:true}
+      shared-secret: ${REQUEST_SIGNING_SHARED_SECRET}
 
 management:
   endpoints:

@@ -15,8 +15,10 @@ public record CreateCategoryRequest(
         @Size(min = 2, max = 128, message = "Category name must be between 2 and 128 characters")
         String name,
 
+        @Pattern(regexp = "^$|^(PRODUCT|SERVICE|ALL)$", message = "Category type must be PRODUCT, SERVICE, or ALL")
         String categoryType, // 'PRODUCT', 'SERVICE', 'ALL'
 
+        @Size(max = 1000)
         String description,
 
         UUID parentId

@@ -1,10 +1,14 @@
 package et.ut.einvoice.platform.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import et.ut.einvoice.platform.api.ApiVersionNegotiationFilter;
 import et.ut.einvoice.platform.exception.ErrorEnvelope;
+import et.ut.einvoice.platform.ratelimit.RequestRateTrackingService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
@@ -48,7 +52,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, RequestRateTrackingFilter requestRateTrackingFilter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -110,28 +114,80 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/actuator/health/**",
                                 "/actuator/prometheus",
-                                "/api/v1/public/**",
+                                "/api/*/public/**",
                                 "/v/**",
-                                "/api/v1/auth/**",
-                                "/api/v1/saas/auth/**",
-                                "/api/v1/master/auth/**"
+                                "/api/*/auth/**",
+                                "/api/*/saas/auth/**",
+                                "/api/*/master/auth/**"
                         ).permitAll()
-                        .requestMatchers("/api/v1/authority/**").hasAuthority("ROLE_AUTHORITY_AUDITOR")
+                        .requestMatchers("/api/*/authority/**").hasAuthority("ROLE_AUTHORITY_AUDITOR")
                         .requestMatchers(
-                                "/api/v1/admin/environment/**",
-                                "/api/v1/master/environment/**",
-                                "/api/v1/master/account/**",
-                                "/api/v1/master/users/**",
-                                "/api/v1/master/rbac/**",
-                                "/api/v1/master/access-reviews/**"
+                                "/api/*/admin/environment/**",
+                                "/api/*/master/environment/**",
+                                "/api/*/master/account/**",
+                                "/api/*/master/users/**",
+                                "/api/*/master/rbac/**",
+                                "/api/*/master/access-reviews/**"
                         ).hasAuthority("ROLE_PLATFORM_ADMIN")
-                        .requestMatchers("/api/v1/saas/**", "/api/v1/master/**", "/api/v1/admin/**").hasAnyAuthority("ROLE_SAAS_ADMIN", "ROLE_PLATFORM_ADMIN", "ROLE_SAAS_OPERATOR", "ROLE_DELEGATED_OPERATOR")
+                        .requestMatchers("/api/*/saas/**", "/api/*/master/**", "/api/*/admin/**").hasAnyAuthority("ROLE_SAAS_ADMIN", "ROLE_PLATFORM_ADMIN", "ROLE_SAAS_OPERATOR", "ROLE_DELEGATED_OPERATOR")
                         .requestMatchers("/actuator/**").hasRole("PLATFORM_ADMIN")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(tenantAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(tenantAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(requestRateTrackingFilter, TenantAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public RequestRateTrackingFilter requestRateTrackingFilter(
+            RequestRateTrackingService requestRateTrackingService,
+            @Value("${platform.security.rate-tracking.authenticated-requests-per-second:20}") int authenticatedRequestsPerSecond,
+            @Value("${platform.security.rate-tracking.anonymous-requests-per-second:10}") int anonymousRequestsPerSecond
+    ) {
+        return new RequestRateTrackingFilter(
+                requestRateTrackingService,
+                objectMapper,
+                authenticatedRequestsPerSecond,
+                anonymousRequestsPerSecond
+        );
+    }
+
+    @Bean
+    public RequestSignatureVerifier requestSignatureVerifier(
+            @Value("${platform.security.request-signing.shared-secret:}") String sharedSecret,
+            @Value("${platform.security.request-signing.max-clock-skew-seconds:300}") long maxClockSkewSeconds
+    ) {
+        return new RequestSignatureVerifier(sharedSecret, maxClockSkewSeconds);
+    }
+
+    @Bean
+    public FilterRegistrationBean<ApiVersionNegotiationFilter> apiVersionNegotiationFilterRegistration(
+            et.ut.einvoice.platform.api.ApiVersionProperties apiVersionProperties
+    ) {
+        FilterRegistrationBean<ApiVersionNegotiationFilter> registration = new FilterRegistrationBean<>(
+                new ApiVersionNegotiationFilter(apiVersionProperties.getSupportedVersions(), objectMapper)
+        );
+        registration.setName("apiVersionNegotiationFilter");
+        registration.addUrlPatterns("/api", "/api/*");
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<RequestSigningFilter> requestSigningFilterRegistration(
+            RequestSignatureVerifier requestSignatureVerifier,
+            @Value("${platform.security.request-signing.enabled:true}") boolean enabled,
+            @Value("${platform.security.request-signing.max-body-bytes:10485760}") long maxBodyBytes
+    ) {
+        RequestSigningFilter requestSigningFilter = new RequestSigningFilter(
+                requestSignatureVerifier, objectMapper, enabled, maxBodyBytes
+        );
+        FilterRegistrationBean<RequestSigningFilter> registration = new FilterRegistrationBean<>(requestSigningFilter);
+        registration.setName("requestSigningFilter");
+        registration.addUrlPatterns("/api/*", "/v/*");
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 10);
+        return registration;
     }
 
     @Bean
@@ -144,8 +200,13 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-API-Key", "X-Client-Secret", "X-Tenant-ID", "X-Authority-Token", "Idempotency-Key", "X-Correlation-ID", "X-Privileged-Token"));
-        configuration.setExposedHeaders(List.of("X-Correlation-ID", "X-Reprint-Count", "X-Privileged-Token"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-API-Key", "X-Client-Secret", "X-Tenant-ID", "X-Authority-Token", "Idempotency-Key", "X-Correlation-ID", "X-Privileged-Token", ApiVersionNegotiationFilter.VERSION_HEADER, RequestSignatureVerifier.SIGNATURE_HEADER, RequestSignatureVerifier.TIMESTAMP_HEADER));
+        configuration.setExposedHeaders(List.of(
+                "X-Correlation-ID", "X-Reprint-Count", "X-Privileged-Token",
+                "X-RateLimit-Limit", "X-RateLimit-Remaining", "Retry-After",
+                ApiVersionNegotiationFilter.VERSION_HEADER,
+                ApiVersionNegotiationFilter.SUPPORTED_VERSIONS_HEADER
+        ));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 

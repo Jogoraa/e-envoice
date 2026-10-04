@@ -152,7 +152,6 @@ class MasterUserLifecycleServiceTest {
 
         assertThat(result).isNotNull();
         assertThat(result.email()).isEqualTo("newops@utsolutionsplc.com");
-        assertThat(result.phone()).isEqualTo("+251925970827");
 
         verify(emailProvider).sendEmail(eq("newops@utsolutionsplc.com"), anyString(), contains("Invitation Token:"));
         verify(smsProvider).sendSms(eq("+251925970827"), contains("Invitation Token:"));

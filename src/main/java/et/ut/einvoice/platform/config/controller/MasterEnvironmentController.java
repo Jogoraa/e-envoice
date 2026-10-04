@@ -1,7 +1,7 @@
 package et.ut.einvoice.platform.config.controller;
 
-import et.ut.einvoice.platform.config.domain.ConfigurationRevision;
 import et.ut.einvoice.platform.config.domain.ConfigurationScope;
+import et.ut.einvoice.platform.config.domain.ConfigurationRevision;
 import et.ut.einvoice.platform.config.domain.PrivilegedConfigurationSession;
 import et.ut.einvoice.platform.config.dto.ConfigurationDtos.*;
 import et.ut.einvoice.platform.config.service.EnvironmentConfigurationService;
@@ -67,6 +67,17 @@ public class MasterEnvironmentController {
         return privilegedSessionService.validatePrivilegedSession(token);
     }
 
+    private ConfigurationRevisionResultDto toRevisionResult(
+            et.ut.einvoice.platform.config.domain.ConfigurationRevision revision
+    ) {
+        return new ConfigurationRevisionResultDto(
+                revision.getRevisionNumber(),
+                revision.getRollbackFromRevision(),
+                revision.getStatus(),
+                revision.getCreatedAt()
+        );
+    }
+
     // =========================================================================
     // 1. STEP-UP MFA AUTHENTICATION CEREMONY
     // =========================================================================
@@ -74,7 +85,7 @@ public class MasterEnvironmentController {
     @PostMapping("/send-otp")
     @Operation(summary = "Dispatch out-of-band MFA verification code to administrator Email and SMS")
     public ResponseEntity<SendStepUpOtpResponse> sendStepUpOtp(
-            @RequestBody(required = false) SendStepUpOtpRequest request,
+            @Valid @RequestBody(required = false) SendStepUpOtpRequest request,
             HttpServletRequest httpRequest
     ) {
         String username = resolveCurrentUsername();
@@ -194,7 +205,7 @@ public class MasterEnvironmentController {
 
     @PutMapping("/configuration")
     @Operation(summary = "Update non-secret configuration variables with optimistic locking")
-    public ResponseEntity<ConfigurationRevision> updateConfiguration(
+    public ResponseEntity<ConfigurationRevisionResultDto> updateConfiguration(
             @Valid @RequestBody ConfigurationUpdateRequest request,
             HttpServletRequest httpRequest
     ) {
@@ -209,12 +220,12 @@ public class MasterEnvironmentController {
                 correlationId
         );
 
-        return ResponseEntity.ok(revision);
+        return ResponseEntity.ok(toRevisionResult(revision));
     }
 
     @PostMapping("/secrets/rotate")
     @Operation(summary = "Rotate encrypted secret (plaintext is never returned or logged)")
-    public ResponseEntity<ConfigurationRevision> rotateSecret(
+    public ResponseEntity<ConfigurationRevisionResultDto> rotateSecret(
             @Valid @RequestBody SecretRotationRequest request,
             HttpServletRequest httpRequest
     ) {
@@ -228,7 +239,7 @@ public class MasterEnvironmentController {
                 correlationId
         );
 
-        return ResponseEntity.ok(revision);
+        return ResponseEntity.ok(toRevisionResult(revision));
     }
 
     // =========================================================================
@@ -246,7 +257,7 @@ public class MasterEnvironmentController {
 
     @PostMapping("/revisions/{revisionNumber}/rollback")
     @Operation(summary = "Rollback non-secret configurations to a designated revision")
-    public ResponseEntity<ConfigurationRevision> rollback(
+    public ResponseEntity<ConfigurationRevisionResultDto> rollback(
             @PathVariable long revisionNumber,
             HttpServletRequest httpRequest
     ) {
@@ -259,7 +270,7 @@ public class MasterEnvironmentController {
                 correlationId
         );
 
-        return ResponseEntity.ok(revision);
+        return ResponseEntity.ok(toRevisionResult(revision));
     }
 
     // =========================================================================
@@ -315,4 +326,3 @@ public class MasterEnvironmentController {
         return ResponseEntity.ok(messagingDiagnosticsService.sendTestSms(adminUsername, ip, corrId));
     }
 }
-

@@ -4,9 +4,14 @@ import et.ut.einvoice.platform.context.TenantContextHolder;
 import et.ut.einvoice.platform.exception.BusinessException;
 import et.ut.einvoice.reports.domain.ReportDefinition;
 import et.ut.einvoice.reports.domain.ReportJob;
+import et.ut.einvoice.reports.dto.ReportDefinitionResponseDto;
+import et.ut.einvoice.reports.dto.ReportJobResponseDto;
 import et.ut.einvoice.reports.service.ReportGenerationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -30,7 +35,11 @@ public class ReportApiController {
     }
 
     public record GenerateReportRequest(
+            @NotBlank(message = "Report definition ID is required")
+            @Size(max = 64)
             String reportId,
+            @Size(max = 16)
+            @jakarta.validation.constraints.Pattern(regexp = "^$|^(CSV|EXCEL|JSON|PDF)$", message = "Unsupported report format")
             String format,
             Instant startDate,
             Instant endDate
@@ -39,25 +48,22 @@ public class ReportApiController {
     @GetMapping("/definitions")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get active report definitions catalog from database")
-    public ResponseEntity<List<ReportDefinition>> getActiveDefinitions() {
-        return ResponseEntity.ok(reportGenerationService.getActiveDefinitions());
+    public ResponseEntity<List<ReportDefinitionResponseDto>> getActiveDefinitions() {
+        return ResponseEntity.ok(reportGenerationService.getActiveDefinitions().stream().map(ReportDefinitionResponseDto::fromEntity).toList());
     }
 
     @GetMapping("/jobs")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "List report generation jobs for the current active tenant")
-    public ResponseEntity<List<ReportJob>> getTenantJobs() {
+    public ResponseEntity<List<ReportJobResponseDto>> getTenantJobs() {
         UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
-        return ResponseEntity.ok(reportGenerationService.getTenantJobs(tenantId));
+        return ResponseEntity.ok(reportGenerationService.getTenantJobs(tenantId).stream().map(ReportJobResponseDto::fromEntity).toList());
     }
 
     @PostMapping("/jobs")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Generate a compliance report job from live database records")
-    public ResponseEntity<ReportJob> generateReport(@RequestBody GenerateReportRequest request) {
-        if (request.reportId() == null || request.reportId().isBlank()) {
-            throw new BusinessException("INVALID_REPORT_ID", "Report definition ID is required.", HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<ReportJobResponseDto> generateReport(@Valid @RequestBody GenerateReportRequest request) {
         UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
         ReportJob job = reportGenerationService.generateReport(
                 tenantId,
@@ -66,13 +72,13 @@ public class ReportApiController {
                 request.startDate(),
                 request.endDate()
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(job);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ReportJobResponseDto.fromEntity(job));
     }
 
     @GetMapping("/jobs/{id}")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get report generation job details by ID")
-    public ResponseEntity<ReportJob> getJobDetails(@PathVariable("id") UUID id) {
+    public ResponseEntity<ReportJobResponseDto> getJobDetails(@PathVariable("id") UUID id) {
         UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
         ReportJob job = reportGenerationService.getJob(id)
                 .orElseThrow(() -> new BusinessException("JOB_NOT_FOUND", "Report job not found.", HttpStatus.NOT_FOUND));
@@ -80,7 +86,7 @@ public class ReportApiController {
         if (!tenantId.equals(job.getTenantId())) {
             throw new BusinessException("ACCESS_DENIED", "Access to this report job is prohibited.", HttpStatus.FORBIDDEN);
         }
-        return ResponseEntity.ok(job);
+        return ResponseEntity.ok(ReportJobResponseDto.fromEntity(job));
     }
 
     @GetMapping("/jobs/{id}/download")

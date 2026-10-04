@@ -13,6 +13,8 @@
 All fiscal endpoints, request/response DTO schemas, error envelopes, and cryptographic verification contracts documented herein are **FROZEN**.  
 Frontend applications (Web POS, Mobile Billing, Desktop Client, ERP Connectors) can build directly against this specification with guaranteed wire compatibility.
 
+This is the current `v1` public contract (`/api/v1/**`, release `1.0.0-RELEASE`). Breaking changes must be released as a new major under `/api/v2/**` or later; see the [Public API Major-Version Release Playbook](major-version-release-playbook.md) for the controlled publication and client-migration process.
+
 ### Standard Request Ingress Headers
 
 Every authenticated M2M or user-facing request to `/api/v1/*` (except public verification routes) must provide:

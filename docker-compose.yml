@@ -55,6 +55,7 @@ services:
       DB_USERNAME: ${DB_USERNAME:-ut_app_user}
       DB_PASSWORD: ${DB_PASSWORD:?Application database password must be provided}
       # Flyway executes privileged DDL/RLS grants; the application itself remains unprivileged.
+      SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/ut_einvoice_db
       SPRING_FLYWAY_USER: ${POSTGRES_ADMIN_USER:-postgres}
       SPRING_FLYWAY_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Database administrator password must be provided}
       REDIS_HOST: redis

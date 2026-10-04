@@ -3,6 +3,7 @@ package et.ut.einvoice.adjustments.controller;
 import et.ut.einvoice.adjustments.domain.NoteType;
 import et.ut.einvoice.adjustments.domain.TaxAdjustment;
 import et.ut.einvoice.adjustments.dto.CreateAdjustmentRequest;
+import et.ut.einvoice.adjustments.dto.TaxAdjustmentResponse;
 import et.ut.einvoice.adjustments.repository.TaxAdjustmentRepository;
 import et.ut.einvoice.adjustments.service.AdjustmentService;
 import et.ut.einvoice.platform.context.TenantContextHolder;
@@ -35,24 +36,24 @@ public class AdjustmentController {
     @PostMapping("/credit-notes")
     @PreAuthorize("hasAuthority('SCOPE_invoice:adjust') or hasAuthority('SCOPE_adjustment:create') or hasRole('TENANT_ADMIN') or hasRole('CASHIER')")
     @Operation(summary = "Issue Tax Credit Note", description = "Issues a Credit Note against an existing registered invoice.")
-    public ResponseEntity<TaxAdjustment> issueCreditNote(@Valid @RequestBody CreateAdjustmentRequest request) {
+    public ResponseEntity<TaxAdjustmentResponse> issueCreditNote(@Valid @RequestBody CreateAdjustmentRequest request) {
         TaxAdjustment adjustment = adjustmentService.createAdjustment(NoteType.CREDIT_NOTE, request);
-        return new ResponseEntity<>(adjustment, HttpStatus.CREATED);
+        return new ResponseEntity<>(TaxAdjustmentResponse.fromEntity(adjustment), HttpStatus.CREATED);
     }
 
     @PostMapping("/debit-notes")
     @PreAuthorize("hasAuthority('SCOPE_invoice:adjust') or hasAuthority('SCOPE_adjustment:create') or hasRole('TENANT_ADMIN') or hasRole('CASHIER')")
     @Operation(summary = "Issue Tax Debit Note", description = "Issues a Debit Note for upward price adjustments.")
-    public ResponseEntity<TaxAdjustment> issueDebitNote(@Valid @RequestBody CreateAdjustmentRequest request) {
+    public ResponseEntity<TaxAdjustmentResponse> issueDebitNote(@Valid @RequestBody CreateAdjustmentRequest request) {
         TaxAdjustment adjustment = adjustmentService.createAdjustment(NoteType.DEBIT_NOTE, request);
-        return new ResponseEntity<>(adjustment, HttpStatus.CREATED);
+        return new ResponseEntity<>(TaxAdjustmentResponse.fromEntity(adjustment), HttpStatus.CREATED);
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('SCOPE_invoice:read') or hasAuthority('SCOPE_adjustment:read') or hasRole('TENANT_ADMIN') or hasRole('CASHIER')")
     @Operation(summary = "List Tax Adjustments")
-    public ResponseEntity<Page<TaxAdjustment>> listAdjustments(@PageableDefault(size = 20) Pageable pageable) {
+    public ResponseEntity<Page<TaxAdjustmentResponse>> listAdjustments(@PageableDefault(size = 20) Pageable pageable) {
         UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
-        return ResponseEntity.ok(adjustmentRepository.findAllByTenantId(tenantId, pageable));
+        return ResponseEntity.ok(adjustmentRepository.findAllByTenantId(tenantId, pageable).map(TaxAdjustmentResponse::fromEntity));
     }
 }

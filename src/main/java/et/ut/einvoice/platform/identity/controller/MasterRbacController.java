@@ -2,6 +2,7 @@ package et.ut.einvoice.platform.identity.controller;
 
 import et.ut.einvoice.platform.identity.dto.IdentityDtos.*;
 import et.ut.einvoice.platform.identity.service.MasterRbacService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -35,7 +36,7 @@ public class MasterRbacController {
     @PostMapping("/roles")
     public ResponseEntity<SystemRoleDto> createRole(
             Authentication auth,
-            @RequestBody CreateRoleRequest req
+            @Valid @RequestBody CreateRoleRequest req
     ) {
         String adminUsername = resolveUsername(auth);
         return ResponseEntity.ok(rbacService.createRole(adminUsername, req));
@@ -45,7 +46,7 @@ public class MasterRbacController {
     public ResponseEntity<SystemRoleDto> updateRole(
             Authentication auth,
             @PathVariable String code,
-            @RequestBody UpdateRoleRequest req
+            @Valid @RequestBody UpdateRoleRequest req
     ) {
         String adminUsername = resolveUsername(auth);
         return ResponseEntity.ok(rbacService.updateRole(adminUsername, code, req));

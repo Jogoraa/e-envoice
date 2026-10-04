@@ -4,6 +4,7 @@ import et.ut.einvoice.platform.identity.dto.IdentityDtos.*;
 import et.ut.einvoice.platform.identity.service.MasterAccountService;
 import et.ut.einvoice.platform.identity.service.MasterSessionService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -41,7 +42,7 @@ public class MasterAccountSettingsController {
     @PutMapping("/profile")
     public ResponseEntity<MasterProfileResponse> updateProfile(
             Authentication auth,
-            @RequestBody UpdateProfileRequest req
+            @Valid @RequestBody UpdateProfileRequest req
     ) {
         String username = resolveUsername(auth);
         return ResponseEntity.ok(accountService.updateProfile(username, req));
@@ -50,7 +51,7 @@ public class MasterAccountSettingsController {
     @PostMapping("/email/initiate")
     public ResponseEntity<Map<String, Object>> initiateEmailChange(
             Authentication auth,
-            @RequestBody InitiateEmailChangeRequest req
+            @Valid @RequestBody InitiateEmailChangeRequest req
     ) {
         String username = resolveUsername(auth);
         accountService.initiateEmailChange(username, req.newEmail());
@@ -63,7 +64,7 @@ public class MasterAccountSettingsController {
     @PostMapping("/email/confirm")
     public ResponseEntity<Map<String, Object>> confirmEmailChange(
             Authentication auth,
-            @RequestBody ConfirmEmailChangeRequest req
+            @Valid @RequestBody ConfirmEmailChangeRequest req
     ) {
         String username = resolveUsername(auth);
         accountService.confirmEmailChange(username, req);
@@ -76,7 +77,7 @@ public class MasterAccountSettingsController {
     @PostMapping("/phone/initiate")
     public ResponseEntity<Map<String, Object>> initiatePhoneVerification(
             Authentication auth,
-            @RequestBody InitiatePhoneVerificationRequest req
+            @Valid @RequestBody InitiatePhoneVerificationRequest req
     ) {
         String username = resolveUsername(auth);
         accountService.initiatePhoneVerification(username, req.phone());
@@ -89,7 +90,7 @@ public class MasterAccountSettingsController {
     @PostMapping("/phone/confirm")
     public ResponseEntity<Map<String, Object>> confirmPhoneVerification(
             Authentication auth,
-            @RequestBody ConfirmPhoneVerificationRequest req
+            @Valid @RequestBody ConfirmPhoneVerificationRequest req
     ) {
         String username = resolveUsername(auth);
         accountService.confirmPhoneVerification(username, req);
@@ -102,7 +103,7 @@ public class MasterAccountSettingsController {
     @PostMapping("/password/change")
     public ResponseEntity<Map<String, Object>> changePassword(
             Authentication auth,
-            @RequestBody ChangePasswordRequest req
+            @Valid @RequestBody ChangePasswordRequest req
     ) {
         String username = resolveUsername(auth);
         accountService.changePassword(username, req);
@@ -135,7 +136,7 @@ public class MasterAccountSettingsController {
     @PostMapping("/mfa/verify")
     public ResponseEntity<Map<String, Object>> verifyMfaSetup(
             Authentication auth,
-            @RequestBody VerifyMfaSetupRequest req
+            @Valid @RequestBody VerifyMfaSetupRequest req
     ) {
         String username = resolveUsername(auth);
         accountService.verifyMfaSetup(username, req.code());
@@ -148,7 +149,7 @@ public class MasterAccountSettingsController {
     @PostMapping("/mfa/disable")
     public ResponseEntity<Map<String, Object>> disableMfa(
             Authentication auth,
-            @RequestBody DisableMfaRequest req
+            @Valid @RequestBody DisableMfaRequest req
     ) {
         String username = resolveUsername(auth);
         accountService.disableMfa(username, req.password(), req.code());
@@ -178,7 +179,7 @@ public class MasterAccountSettingsController {
     public ResponseEntity<Map<String, Object>> revokeSession(
             Authentication auth,
             @PathVariable UUID sessionId,
-            @RequestBody(required = false) RevokeSessionRequest req
+            @Valid @RequestBody(required = false) RevokeSessionRequest req
     ) {
         String username = resolveUsername(auth);
         String reason = req != null && req.reason() != null ? req.reason() : "Operator terminated session";

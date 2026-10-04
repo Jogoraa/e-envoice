@@ -31,11 +31,13 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.*;
+import java.util.regex.Pattern;
 
 @Component
 public class TenantAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(TenantAuthenticationFilter.class);
+    private static final Pattern VERSIONED_API_PATH = Pattern.compile("^/api/v[1-9][0-9]*(?:/|$)");
 
     private final ApiClientRepository apiClientRepository;
     private final TenantRepository tenantRepository;
@@ -77,8 +79,8 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
 
         // Allow public/open endpoints including login and authentication routes
         if (path.startsWith("/actuator") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") ||
-            path.startsWith("/api/v1/public/") || path.startsWith("/api/v1/auth/") ||
-            path.startsWith("/api/v1/saas/auth/") || path.startsWith("/api/v1/master/auth/") ||
+            isVersionedApiPath(path, "public") || isVersionedApiPath(path, "auth") ||
+            isVersionedApiPath(path, "saas/auth") || isVersionedApiPath(path, "master/auth") ||
             path.contains("/saas/auth/") || path.contains("/master/auth/") || path.contains("/auth/login")) {
             filterChain.doFilter(request, response);
             MDC.clear();
@@ -91,7 +93,9 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
             String authHeader = request.getHeader("Authorization");
             String tenantHeader = request.getHeader("X-Tenant-ID");
 
-            boolean isSaasOrMasterPath = path.startsWith("/api/v1/saas") || path.startsWith("/api/v1/master") || path.startsWith("/api/v1/admin");
+            boolean isSaasOrMasterPath = isVersionedApiPath(path, "saas")
+                    || isVersionedApiPath(path, "master")
+                    || isVersionedApiPath(path, "admin");
 
             // =========================================================================
             // A. SAAS / MASTER ADMIN GATEWAY ENDPOINT PROTECTION
@@ -348,8 +352,8 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
                 userId = authClaims.subject();
             }
 
-            // Reject if no valid identity could be established on protected /api/v1 routes
-            if (tenantId == null && path.startsWith("/api/v1")) {
+            // Reject if no valid identity could be established on protected versioned API routes.
+            if (tenantId == null && VERSIONED_API_PATH.matcher(path).find()) {
                 writeError(response, HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED",
                         "Authentication credentials (X-API-Key / Bearer token) are required.", correlationId);
                 return;
@@ -400,5 +404,8 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
         ErrorEnvelope envelope = ErrorEnvelope.of(status.value(), code, message, message, correlationId, null);
         response.getWriter().write(objectMapper.writeValueAsString(envelope));
     }
-}
 
+    private static boolean isVersionedApiPath(String path, String route) {
+        return path.matches("^/api/v[1-9][0-9]*/" + Pattern.quote(route) + "(?:/|$)");
+    }
+}

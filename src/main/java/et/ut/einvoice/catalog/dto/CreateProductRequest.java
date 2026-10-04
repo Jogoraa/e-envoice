@@ -18,6 +18,7 @@ public record CreateProductRequest(
         @Size(min = 1, max = 64)
         String sku,
 
+        @Size(max = 128)
         String barcode,
 
         @NotBlank(message = "Product description is mandatory")
@@ -26,17 +27,21 @@ public record CreateProductRequest(
 
         UUID categoryId,
 
+        @Size(max = 64)
         String categoryCode,
 
+        @Size(max = 32)
         String unit,
 
         @NotNull(message = "Unit price is mandatory")
         @PositiveOrZero(message = "Unit price cannot be negative")
         BigDecimal unitPrice,
 
+        @Size(max = 32)
         String taxClassification,
 
         Boolean trackStock,
 
+        @PositiveOrZero(message = "Stock quantity cannot be negative")
         BigDecimal stockQuantity
 ) {}

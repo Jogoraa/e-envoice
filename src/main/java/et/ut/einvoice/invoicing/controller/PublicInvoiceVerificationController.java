@@ -15,18 +15,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 import java.util.Optional;
 
 /**
- * Public Verification Controller providing the statutory invoice verification capability
- * referenced in Directive No. 1142/2018 EC (2026 GC) Art. 20(3)(g) and Art. 4(2)(c).
- * Note: The REST endpoint structure (/api/v1/public/verify/{irn}) is an engineering implementation choice;
- * the underlying legal requirement is the publicly accessible verification capability.
- * Provides open verification of issued electronic invoices via IRN or QR code scan.
- * Enforces IP-based rate limiting to prevent enumeration attacks without leaking buyer PII or platform secrets.
+ * Public statutory invoice verification by IRN or QR-token.
+ * Responses intentionally avoid buyer PII, tenant identifiers, and searched-reference echoing.
  */
 @RestController
 @RequestMapping("/api/v1/public")
@@ -34,7 +33,7 @@ import java.util.Optional;
 public class PublicInvoiceVerificationController {
 
     private static final Logger log = LoggerFactory.getLogger(PublicInvoiceVerificationController.class);
-    private static final int RATE_LIMIT_PER_MINUTE = 60;
+    private static final int RATE_LIMIT_PER_MINUTE = 20;
 
     private final InvoiceRepository invoiceRepository;
     private final TaxpayerProfileRepository taxpayerProfileRepository;
@@ -60,16 +59,9 @@ public class PublicInvoiceVerificationController {
     @ApiResponse(responseCode = "429", description = "Rate limit exceeded")
     public ResponseEntity<?> verifyInvoiceByIrn(@PathVariable("irn") String irn, HttpServletRequest request) {
         String clientIp = extractClientIp(request);
-
-        // 1. IP-based rate limiting
-        boolean allowed = rateLimitingService.tryAcquireKey("public_verify:" + clientIp, RATE_LIMIT_PER_MINUTE);
-        if (!allowed) {
+        if (!rateLimitingService.tryAcquireKey("public_verify:" + clientIp, RATE_LIMIT_PER_MINUTE)) {
             log.warn("Rate limit exceeded for public invoice verification from IP: {}", clientIp);
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of(
-                    "error", "RATE_LIMIT_EXCEEDED",
-                    "message", "Rate limit exceeded. Maximum 60 verification requests per minute.",
-                    "amharicMessage", "የማረጋገጫ ጥያቄ ገደብ አልፏል። እባክዎ ከጥቂት ደቂቃዎች በኋላ እንደገና ይሞክሩ።"
-            ));
+            return tooManyRequests();
         }
 
         if (irn == null || irn.isBlank()) {
@@ -79,22 +71,15 @@ public class PublicInvoiceVerificationController {
             ));
         }
 
-        // 2. Lookup invoice by IRN
         Optional<Invoice> invoiceOpt = invoiceRepository.findByIrn(irn.trim());
         if (invoiceOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
                     "error", "INVOICE_NOT_FOUND",
-                    "message", "No registered invoice found matching IRN: " + irn.trim(),
-                    "amharicMessage", "የተጠቀሰው የደረሰኝ ማመሳከሪያ ቁጥር (IRN) አልተገኘም።",
-                    "irn", irn.trim()
+                    "message", "No registered invoice found for the supplied reference."
             ));
         }
 
-        Invoice invoice = invoiceOpt.get();
-        TaxpayerProfile seller = taxpayerProfileRepository.findById(invoice.getTenantId()).orElse(null);
-        PublicInvoiceVerificationDto response = PublicInvoiceVerificationDto.fromEntity(invoice, seller);
-
-        return ResponseEntity.ok(response);
+        return publicVerificationResponse(invoiceOpt.get());
     }
 
     @Operation(summary = "Verify invoice by public verification token",
@@ -110,11 +95,7 @@ public class PublicInvoiceVerificationController {
 
         String clientIp = extractClientIp(request);
         if (!rateLimitingService.tryAcquireKey("public_verify:" + clientIp, RATE_LIMIT_PER_MINUTE)) {
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                    .body(Map.of(
-                            "error", "RATE_LIMIT_EXCEEDED",
-                            "message", "Too many verification requests. Please try again later."
-                    ));
+            return tooManyRequests();
         }
 
         Optional<Invoice> invoiceOpt = invoiceRepository.findByPublicVerificationToken(token);
@@ -122,15 +103,16 @@ public class PublicInvoiceVerificationController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of(
                             "error", "TOKEN_NOT_FOUND",
-                            "message", "No registered invoice found matching verification token.",
-                            "amharicMessage", "የተጠቀሰው የማረጋገጫ መለያ አልተገኘም።"
+                            "message", "No registered invoice found for the supplied verification token."
                     ));
         }
 
-        Invoice invoice = invoiceOpt.get();
+        return publicVerificationResponse(invoiceOpt.get());
+    }
+
+    private ResponseEntity<?> publicVerificationResponse(Invoice invoice) {
         TaxpayerProfile seller = taxpayerProfileRepository.findById(invoice.getTenantId()).orElse(null);
         PublicInvoiceVerificationDto response = PublicInvoiceVerificationDto.fromEntity(invoice, seller);
-
         return ResponseEntity.ok()
                 .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate")
                 .header("X-Robots-Tag", "noindex, nofollow, noarchive")
@@ -138,11 +120,14 @@ public class PublicInvoiceVerificationController {
                 .body(response);
     }
 
+    private ResponseEntity<?> tooManyRequests() {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of(
+                "error", "RATE_LIMIT_EXCEEDED",
+                "message", "Too many verification requests. Please try again later."
+        ));
+    }
+
     private String extractClientIp(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
-            return xForwardedFor.split(",")[0].trim();
-        }
         return request.getRemoteAddr() != null ? request.getRemoteAddr() : "0.0.0.0";
     }
 }

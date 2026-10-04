@@ -1,11 +1,14 @@
 package et.ut.einvoice.platform.security.controller;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import et.ut.einvoice.platform.security.dto.PlatformAuthResponse;
 import et.ut.einvoice.platform.security.dto.PlatformLoginRequest;
 import et.ut.einvoice.platform.security.dto.TenantAuthResponse;
 import et.ut.einvoice.platform.security.dto.TenantLoginRequest;
 import et.ut.einvoice.platform.security.service.PlatformAuthService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -45,19 +48,12 @@ public class PlatformAuthController {
      */
     @PostMapping({"/saas/auth/send-otp", "/master/auth/send-otp", "/public/saas/auth/send-otp"})
     public ResponseEntity<java.util.Map<String, Object>> sendLoginOtp(
-            @RequestBody java.util.Map<String, String> body,
+            @Valid @RequestBody SendLoginOtpRequest body,
             jakarta.servlet.http.HttpServletRequest request
     ) {
-        String usernameOrEmail = body.get("usernameOrEmail");
-        if (usernameOrEmail == null || usernameOrEmail.isBlank()) {
-            usernameOrEmail = body.get("username");
-        }
-        if (usernameOrEmail == null || usernameOrEmail.isBlank()) {
-            usernameOrEmail = body.get("email");
-        }
         String ipAddress = request.getRemoteAddr();
         String correlationId = java.util.UUID.randomUUID().toString();
-        var resp = platformAuthService.sendLoginOtp(usernameOrEmail, ipAddress, correlationId);
+        var resp = platformAuthService.sendLoginOtp(body.usernameOrEmail(), ipAddress, correlationId);
         return ResponseEntity.ok(java.util.Map.of(
                 "success", true,
                 "message", resp.message(),
@@ -67,4 +63,12 @@ public class PlatformAuthController {
                 "cooldownSeconds", resp.cooldownSeconds()
         ));
     }
+
+    /** Accepts the two documented legacy property names without accepting a free-form map. */
+    public record SendLoginOtpRequest(
+            @JsonAlias({"username", "email"})
+            @NotBlank(message = "Username or email is required")
+            @Size(max = 128)
+            String usernameOrEmail
+    ) {}
 }

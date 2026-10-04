@@ -1,8 +1,10 @@
 package et.ut.einvoice.audit.controller;
 
 import et.ut.einvoice.audit.domain.AuditEvent;
+import et.ut.einvoice.audit.dto.AuthorityAuditEventDto;
 import et.ut.einvoice.audit.repository.AuditEventRepository;
 import et.ut.einvoice.invoicing.domain.Invoice;
+import et.ut.einvoice.invoicing.dto.InvoiceListItemDto;
 import et.ut.einvoice.invoicing.dto.InvoiceResponseDto;
 import et.ut.einvoice.invoicing.repository.InvoiceRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,25 +38,25 @@ public class AuthorityAuditController {
     @GetMapping("/audit-logs")
     @PreAuthorize("hasAuthority('ROLE_AUTHORITY_AUDITOR')")
     @Operation(summary = "Query Operation Audit Logs (Auditors Only)")
-    public ResponseEntity<Page<AuditEvent>> getAuditLogs(
+    public ResponseEntity<Page<AuthorityAuditEventDto>> getAuditLogs(
             @RequestParam(required = false) UUID tenantId,
             @PageableDefault(size = 50) Pageable pageable
     ) {
         Page<AuditEvent> logs = (tenantId != null)
                 ? auditRepository.findAllByTenantId(tenantId, pageable)
                 : auditRepository.findAll(pageable);
-        return ResponseEntity.ok(logs);
+        return ResponseEntity.ok(logs.map(AuthorityAuditEventDto::fromEntity));
     }
 
     @GetMapping("/invoices")
     @PreAuthorize("hasAuthority('ROLE_AUTHORITY_AUDITOR')")
     @Operation(summary = "Query Invoices Across Taxpayers (Auditors Only)")
-    public ResponseEntity<Page<InvoiceResponseDto>> getInvoicesByDateRange(
+    public ResponseEntity<Page<InvoiceListItemDto>> getInvoicesByDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @PageableDefault(size = 50) Pageable pageable
     ) {
         Page<Invoice> invoices = invoiceRepository.findAllByInvoiceDateBetween(from, to, pageable);
-        return ResponseEntity.ok(invoices.map(InvoiceResponseDto::fromEntity));
+        return ResponseEntity.ok(invoices.map(InvoiceResponseDto::fromEntity).map(InvoiceListItemDto::fromInvoiceResponse));
     }
 }

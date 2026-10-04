@@ -2,9 +2,14 @@ package et.ut.einvoice.tenancy.controller;
 
 import et.ut.einvoice.platform.exception.BusinessException;
 import et.ut.einvoice.reports.domain.ReportDefinition;
+import et.ut.einvoice.reports.dto.ReportDefinitionResponseDto;
 import et.ut.einvoice.reports.service.ReportGenerationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,36 +29,56 @@ public class SaasReportManagementController {
         this.reportGenerationService = reportGenerationService;
     }
 
-    public record ReportDefinitionDto(
+    public record CreateReportDefinitionRequest(
+            @NotBlank(message = "Report definition ID is required")
+            @Pattern(regexp = "^[a-z0-9_]{1,64}$", message = "Report definition ID may contain only lowercase letters, digits, and underscores")
             String id,
+            @NotBlank(message = "Report definition title is required")
+            @Size(max = 255)
             String title,
+            @Size(max = 255)
             String amharicTitle,
+            @Size(max = 2000)
             String description,
+            @Size(max = 64)
             String iconName,
+            @Pattern(regexp = "^$|^[A-Z_]{1,64}$", message = "Report category is invalid")
             String category,
+            @Pattern(regexp = "^$|^[A-Z,]{1,64}$", message = "Report export formats are invalid")
             String exportFormats,
             Boolean isActive,
+            @jakarta.validation.constraints.PositiveOrZero
             Integer displayOrder
     ) {}
+
+    public record UpdateReportDefinitionRequest(
+            @Size(max = 255) String title,
+            @Size(max = 255) String amharicTitle,
+            @Size(max = 2000) String description,
+            @Size(max = 64) String iconName,
+            @Pattern(regexp = "^$|^[A-Z_]{1,64}$", message = "Report category is invalid") String category,
+            @Pattern(regexp = "^$|^[A-Z,]{1,64}$", message = "Report export formats are invalid") String exportFormats,
+            Boolean isActive,
+            @jakarta.validation.constraints.PositiveOrZero Integer displayOrder
+    ) {
+        @jakarta.validation.constraints.AssertTrue(message = "At least one report definition field must be provided")
+        public boolean hasUpdate() {
+            return title != null || amharicTitle != null || description != null || iconName != null
+                    || category != null || exportFormats != null || isActive != null || displayOrder != null;
+        }
+    }
 
     @GetMapping("/definitions")
     @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN', 'SAAS_OPERATOR')")
     @Operation(summary = "List all report definitions for platform administration")
-    public ResponseEntity<List<ReportDefinition>> listAllDefinitions() {
-        return ResponseEntity.ok(reportGenerationService.getAllDefinitions());
+    public ResponseEntity<List<ReportDefinitionResponseDto>> listAllDefinitions() {
+        return ResponseEntity.ok(reportGenerationService.getAllDefinitions().stream().map(ReportDefinitionResponseDto::fromEntity).toList());
     }
 
     @PostMapping("/definitions")
     @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN')")
     @Operation(summary = "Create a new database report definition")
-    public ResponseEntity<ReportDefinition> createDefinition(@RequestBody ReportDefinitionDto dto) {
-        if (dto.id() == null || dto.id().isBlank()) {
-            throw new BusinessException("INVALID_ID", "Report definition ID is required.", HttpStatus.BAD_REQUEST);
-        }
-        if (dto.title() == null || dto.title().isBlank()) {
-            throw new BusinessException("INVALID_TITLE", "Report definition title is required.", HttpStatus.BAD_REQUEST);
-        }
-
+    public ResponseEntity<ReportDefinitionResponseDto> createDefinition(@Valid @RequestBody CreateReportDefinitionRequest dto) {
         String id = dto.id().trim().toLowerCase().replaceAll("[^a-z0-9_]", "_");
         ReportDefinition def = new ReportDefinition(
                 id,
@@ -68,13 +93,13 @@ public class SaasReportManagementController {
         );
 
         ReportDefinition saved = reportGenerationService.saveDefinition(def);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ReportDefinitionResponseDto.fromEntity(saved));
     }
 
     @PutMapping("/definitions/{id}")
     @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN')")
     @Operation(summary = "Update an existing report definition")
-    public ResponseEntity<ReportDefinition> updateDefinition(@PathVariable("id") String id, @RequestBody ReportDefinitionDto dto) {
+    public ResponseEntity<ReportDefinitionResponseDto> updateDefinition(@PathVariable("id") String id, @Valid @RequestBody UpdateReportDefinitionRequest dto) {
         ReportDefinition def = reportGenerationService.getAllDefinitions().stream()
                 .filter(d -> d.getId().equalsIgnoreCase(id))
                 .findFirst()
@@ -89,7 +114,7 @@ public class SaasReportManagementController {
         if (dto.isActive() != null) def.setActive(dto.isActive());
         if (dto.displayOrder() != null) def.setDisplayOrder(dto.displayOrder());
 
-        return ResponseEntity.ok(reportGenerationService.saveDefinition(def));
+        return ResponseEntity.ok(ReportDefinitionResponseDto.fromEntity(reportGenerationService.saveDefinition(def)));
     }
 
     @DeleteMapping("/definitions/{id}")
@@ -103,13 +128,13 @@ public class SaasReportManagementController {
     @PatchMapping("/definitions/{id}/toggle")
     @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN')")
     @Operation(summary = "Toggle active/inactive status of a report definition")
-    public ResponseEntity<ReportDefinition> toggleActive(@PathVariable("id") String id) {
+    public ResponseEntity<ReportDefinitionResponseDto> toggleActive(@PathVariable("id") String id) {
         ReportDefinition def = reportGenerationService.getAllDefinitions().stream()
                 .filter(d -> d.getId().equalsIgnoreCase(id))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException("NOT_FOUND", "Report definition not found: " + id, HttpStatus.NOT_FOUND));
 
         def.setActive(!def.isActive());
-        return ResponseEntity.ok(reportGenerationService.saveDefinition(def));
+        return ResponseEntity.ok(ReportDefinitionResponseDto.fromEntity(reportGenerationService.saveDefinition(def)));
     }
 }

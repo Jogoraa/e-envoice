@@ -1,6 +1,11 @@
 package et.ut.einvoice.platform.config.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -12,6 +17,7 @@ public class ConfigurationDtos {
             String password,
 
             @NotBlank(message = "6-digit MFA verification code is required")
+            @jakarta.validation.constraints.Pattern(regexp = "^\\d{6}$", message = "MFA verification code must contain six digits")
             String mfaCode
     ) {}
 
@@ -25,7 +31,9 @@ public class ConfigurationDtos {
     ) {}
 
     public record SendStepUpOtpRequest(
+            @Size(max = 128)
             String username,
+            @jakarta.validation.constraints.Pattern(regexp = "^$|^(\\+251|0)(9|7)\\d{8}$|^(\\+251|0)[1-5]\\d{7,8}$", message = "Invalid Ethiopian phone number")
             String phone
     ) {}
 
@@ -39,23 +47,33 @@ public class ConfigurationDtos {
     ) {}
 
     public record ConfigurationUpdateRequest(
-            long expectedRevisionNumber,
-            Map<String, String> configurations,
+            @NotNull(message = "Expected revision number is required")
+            @PositiveOrZero(message = "Expected revision number cannot be negative")
+            Long expectedRevisionNumber,
+            @NotEmpty(message = "At least one configuration value is required")
+            @Size(max = 100, message = "No more than 100 configuration values may be changed at once")
+            Map<@NotBlank @Size(max = 128) String, @NotBlank @Size(max = 20_000) String> configurations,
+            @Size(max = 1000)
             String changeSummary
     ) {}
 
     public record SecretRotationRequest(
             @NotBlank(message = "Secret key name is required")
+            @Size(max = 128)
             String keyName,
 
             @NotBlank(message = "New secret plaintext is required")
+            @Size(max = 20_000)
             String newSecret,
 
+            @Size(max = 1000)
             String reason
     ) {}
 
     public record RollbackRequest(
+            @Positive(message = "Target revision number must be positive")
             long targetRevisionNumber,
+            @Size(max = 1000)
             String reason
     ) {}
 
@@ -110,6 +128,22 @@ public class ConfigurationDtos {
             Instant createdAt,
             java.util.List<RevisionEntryDto> entries
     ) {}
+
+    /** Mutation result without database ids or revision-entry values. */
+    public record ConfigurationRevisionResultDto(
+            Long revisionNumber,
+            Long rollbackFromRevision,
+            String status,
+            Instant createdAt
+    ) {
+        public Long getRevisionNumber() {
+            return revisionNumber;
+        }
+
+        public Long getRollbackFromRevision() {
+            return rollbackFromRevision;
+        }
+    }
 
     public record RevisionEntryDto(
             String keyName,

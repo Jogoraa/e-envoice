@@ -5,6 +5,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -25,7 +27,11 @@ public record CreateInvoiceRequest(
         @NotEmpty(message = "Invoice must contain at least one line item.")
         @Size(max = 1000, message = "Line items cannot exceed 1000 items.")
         @Valid List<LineItemRequest> items,
+        @DecimalMin(value = "-90.0", message = "Latitude must be between -90 and 90")
+        @DecimalMax(value = "90.0", message = "Latitude must be between -90 and 90")
         Double latitude,
+        @DecimalMin(value = "-180.0", message = "Longitude must be between -180 and 180")
+        @DecimalMax(value = "180.0", message = "Longitude must be between -180 and 180")
         Double longitude,
         @Size(max = 64)
         String customDocumentNumber,

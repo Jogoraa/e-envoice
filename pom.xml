@@ -23,6 +23,7 @@
         <bouncycastle.version>1.78.1</bouncycastle.version>
         <zxing.version>3.5.3</zxing.version>
         <springdoc.version>2.6.0</springdoc.version>
+        <owasp-html-sanitizer.version>20260924.2</owasp-html-sanitizer.version>
     </properties>
 
     <dependencies>
@@ -120,6 +121,11 @@
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.googlecode.owasp-java-html-sanitizer</groupId>
+            <artifactId>owasp-java-html-sanitizer</artifactId>
+            <version>${owasp-html-sanitizer.version}</version>
         </dependency>
 
         <!-- Testing -->

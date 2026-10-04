@@ -67,12 +67,16 @@ public class MasterApiClientController {
             UUID tenantId,
 
             @NotBlank(message = "Client name is mandatory")
+            @jakarta.validation.constraints.Size(max = 128)
             String clientName,
 
+            @jakarta.validation.constraints.Pattern(regexp = "^$|^(EXTERNAL_ERP|POS|INTEGRATION)$", message = "Client type is invalid")
             String clientType, // Default EXTERNAL_ERP
 
+            @jakarta.validation.constraints.Size(max = 1000)
             String scopes, // Comma or space separated scopes
 
+            @jakarta.validation.constraints.Positive
             Integer rateLimitRps
     ) {}
 
@@ -97,6 +101,7 @@ public class MasterApiClientController {
 
     public record UpdateStatusRequest(
             @NotBlank(message = "Status is mandatory")
+            @jakarta.validation.constraints.Pattern(regexp = "^(ACTIVE|SUSPENDED|REVOKED)$", message = "Status must be ACTIVE, SUSPENDED, or REVOKED")
             String status // ACTIVE, SUSPENDED, REVOKED
     ) {}
 

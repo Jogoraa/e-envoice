@@ -7,12 +7,9 @@ import java.util.UUID;
 
 public record ServiceItemDto(
         UUID id,
-        UUID tenantId,
-        UUID branchId,
         String serviceCode,
         String name,
         String description,
-        UUID categoryId,
         String categoryCode,
         String unit,
         BigDecimal unitPrice,
@@ -23,12 +20,9 @@ public record ServiceItemDto(
     public static ServiceItemDto fromEntity(ServiceItem s) {
         return new ServiceItemDto(
                 s.getId(),
-                s.getTenantId(),
-                s.getBranchId(),
                 s.getServiceCode(),
                 s.getName(),
                 s.getDescription(),
-                s.getCategoryId(),
                 s.getCategoryCode(),
                 s.getUnit(),
                 s.getUnitPrice(),

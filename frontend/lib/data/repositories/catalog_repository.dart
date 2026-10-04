@@ -58,10 +58,7 @@ class CatalogRepositoryImpl implements CatalogRepository {
   final List<ServiceModel> _mockServices = [];
   final List<CategoryModel> _mockCategories = [];
 
-  CatalogRepositoryImpl({
-    required this.apiClient,
-    required this.db,
-  }) {
+  CatalogRepositoryImpl({required this.apiClient, required this.db}) {
     _initSeedData();
   }
 
@@ -75,10 +72,34 @@ class CatalogRepositoryImpl implements CatalogRepository {
     const branchBole = '00000000-0000-0000-0000-000000000020';
 
     _mockCategories.addAll([
-      const CategoryModel(id: 'cat-01', tenantId: tenantId, code: 'BEV', name: 'Beverages (መጠጦች)', type: 'PRODUCT'),
-      const CategoryModel(id: 'cat-02', tenantId: tenantId, code: 'GRAIN', name: 'Grains & Cereals (እህሎች)', type: 'PRODUCT'),
-      const CategoryModel(id: 'cat-03', tenantId: tenantId, code: 'IT_SERV', name: 'IT & Software Services', type: 'SERVICE'),
-      const CategoryModel(id: 'cat-04', tenantId: tenantId, code: 'CONSULT', name: 'Consulting & Advisory', type: 'SERVICE'),
+      const CategoryModel(
+        id: 'cat-01',
+        tenantId: tenantId,
+        code: 'BEV',
+        name: 'Beverages (መጠጦች)',
+        type: 'PRODUCT',
+      ),
+      const CategoryModel(
+        id: 'cat-02',
+        tenantId: tenantId,
+        code: 'GRAIN',
+        name: 'Grains & Cereals (እህሎች)',
+        type: 'PRODUCT',
+      ),
+      const CategoryModel(
+        id: 'cat-03',
+        tenantId: tenantId,
+        code: 'IT_SERV',
+        name: 'IT & Software Services',
+        type: 'SERVICE',
+      ),
+      const CategoryModel(
+        id: 'cat-04',
+        tenantId: tenantId,
+        code: 'CONSULT',
+        name: 'Consulting & Advisory',
+        type: 'SERVICE',
+      ),
     ]);
 
     _mockProducts.addAll([
@@ -211,10 +232,15 @@ class CatalogRepositoryImpl implements CatalogRepository {
     try {
       final params = <String, dynamic>{'size': 100};
       if (query != null && query.isNotEmpty) params['query'] = query;
-      if (category != null && category.isNotEmpty) params['categoryCode'] = category;
+      if (category != null && category.isNotEmpty) {
+        params['categoryCode'] = category;
+      }
       if (isActive != null) params['isActive'] = isActive;
 
-      final response = await apiClient.get('/api/v1/catalog/products', queryParameters: params);
+      final response = await apiClient.get(
+        '/api/v1/catalog/products',
+        queryParameters: params,
+      );
       if (response.statusCode == 200 && response.data != null) {
         final dynamic data = response.data;
         List<dynamic> items = [];
@@ -224,7 +250,15 @@ class CatalogRepositoryImpl implements CatalogRepository {
           items = data;
         }
         if (items.isNotEmpty) {
-          final list = items.map((e) => ProductModel.fromJson(e as Map<String, dynamic>)).toList();
+          final list = items
+              .map(
+                (e) => ProductModel.fromJson({
+                  ...(e as Map<String, dynamic>),
+                  'tenantId': tenantId,
+                  'branchId': branchId,
+                }),
+              )
+              .toList();
           return list;
         }
       }
@@ -237,9 +271,16 @@ class CatalogRepositoryImpl implements CatalogRepository {
     }
 
     return _mockProducts.where((p) {
-      if (p.tenantId != tenantId && p.tenantId != '00000000-0000-0000-0000-000000000001') return false;
-      if (isActive != null && p.isActive != isActive) return false;
-      if (category != null && category.isNotEmpty && p.category != category) return false;
+      if (p.tenantId != tenantId &&
+          p.tenantId != '00000000-0000-0000-0000-000000000001') {
+        return false;
+      }
+      if (isActive != null && p.isActive != isActive) {
+        return false;
+      }
+      if (category != null && category.isNotEmpty && p.category != category) {
+        return false;
+      }
       if (query != null && query.isNotEmpty) {
         final q = query.toLowerCase();
         final matchCode = p.itemCode.toLowerCase().contains(q);
@@ -259,9 +300,15 @@ class CatalogRepositoryImpl implements CatalogRepository {
     required String barcode,
   }) async {
     try {
-      final response = await apiClient.get('/api/v1/catalog/products/barcode/$barcode');
+      final response = await apiClient.get(
+        '/api/v1/catalog/products/barcode/$barcode',
+      );
       if (response.statusCode == 200 && response.data != null) {
-        return ProductModel.fromJson(response.data as Map<String, dynamic>);
+        return ProductModel.fromJson({
+          ...(response.data as Map<String, dynamic>),
+          'tenantId': tenantId,
+          'branchId': branchId,
+        });
       }
     } catch (_) {
       // Fallback
@@ -269,9 +316,11 @@ class CatalogRepositoryImpl implements CatalogRepository {
 
     try {
       return _mockProducts.firstWhere(
-        (p) => (p.tenantId == tenantId || p.tenantId == '00000000-0000-0000-0000-000000000001') &&
-               p.barcode == barcode &&
-               p.isActive,
+        (p) =>
+            (p.tenantId == tenantId ||
+                p.tenantId == '00000000-0000-0000-0000-000000000001') &&
+            p.barcode == barcode &&
+            p.isActive,
       );
     } catch (_) {
       return null;
@@ -285,23 +334,32 @@ class CatalogRepositoryImpl implements CatalogRepository {
     required ProductModel product,
   }) async {
     try {
-      final response = await apiClient.post('/api/v1/catalog/products', data: {
-        'itemCode': product.itemCode,
-        'sku': product.sku,
-        'barcode': product.barcode,
-        'description': product.description,
-        'categoryCode': product.category,
-        'unit': product.unit,
-        'unitPrice': product.unitPrice,
-        'taxClassification': product.taxClassification.code,
-        'trackStock': product.trackStock,
-        'stockQuantity': product.stockQuantity,
-        'minStockLevel': product.minStockLevel,
-      });
+      final response = await apiClient.post(
+        '/api/v1/catalog/products',
+        data: {
+          'itemCode': product.itemCode,
+          'sku': product.sku,
+          'barcode': product.barcode,
+          'description': product.description,
+          'categoryCode': product.category,
+          'unit': product.unit,
+          'unitPrice': product.unitPrice,
+          'taxClassification': product.taxClassification.code,
+          'trackStock': product.trackStock,
+          'stockQuantity': product.stockQuantity,
+          'minStockLevel': product.minStockLevel,
+        },
+      );
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final registered = ProductModel.fromJson(response.data as Map<String, dynamic>);
+        final registered = ProductModel.fromJson({
+          ...(response.data as Map<String, dynamic>),
+          'tenantId': tenantId,
+          'branchId': branchId,
+        });
         _mockProducts.add(registered);
-        await db.into(db.localProducts).insertOnConflictUpdate(
+        await db
+            .into(db.localProducts)
+            .insertOnConflictUpdate(
               LocalProductsCompanion.insert(
                 id: registered.id,
                 tenantId: registered.tenantId,
@@ -327,7 +385,9 @@ class CatalogRepositoryImpl implements CatalogRepository {
     _mockProducts.add(registered);
 
     // Cache locally in Drift
-    await db.into(db.localProducts).insertOnConflictUpdate(
+    await db
+        .into(db.localProducts)
+        .insertOnConflictUpdate(
           LocalProductsCompanion.insert(
             id: registered.id,
             tenantId: registered.tenantId,
@@ -353,9 +413,14 @@ class CatalogRepositoryImpl implements CatalogRepository {
     try {
       final params = <String, dynamic>{'size': 100};
       if (query != null && query.isNotEmpty) params['query'] = query;
-      if (category != null && category.isNotEmpty) params['categoryCode'] = category;
+      if (category != null && category.isNotEmpty) {
+        params['categoryCode'] = category;
+      }
 
-      final response = await apiClient.get('/api/v1/catalog/services', queryParameters: params);
+      final response = await apiClient.get(
+        '/api/v1/catalog/services',
+        queryParameters: params,
+      );
       if (response.statusCode == 200 && response.data != null) {
         final dynamic data = response.data;
         List<dynamic> items = [];
@@ -365,7 +430,15 @@ class CatalogRepositoryImpl implements CatalogRepository {
           items = data;
         }
         if (items.isNotEmpty) {
-          return items.map((e) => ServiceModel.fromJson(e as Map<String, dynamic>)).toList();
+          return items
+              .map(
+                (e) => ServiceModel.fromJson({
+                  ...(e as Map<String, dynamic>),
+                  'tenantId': tenantId,
+                  'branchId': branchId,
+                }),
+              )
+              .toList();
         }
       }
     } catch (_) {
@@ -377,11 +450,17 @@ class CatalogRepositoryImpl implements CatalogRepository {
     }
 
     return _mockServices.where((s) {
-      if (s.tenantId != tenantId && s.tenantId != '00000000-0000-0000-0000-000000000001') return false;
-      if (category != null && category.isNotEmpty && s.category != category) return false;
+      if (s.tenantId != tenantId &&
+          s.tenantId != '00000000-0000-0000-0000-000000000001') {
+        return false;
+      }
+      if (category != null && category.isNotEmpty && s.category != category) {
+        return false;
+      }
       if (query != null && query.isNotEmpty) {
         final q = query.toLowerCase();
-        return s.serviceCode.toLowerCase().contains(q) || s.name.toLowerCase().contains(q);
+        return s.serviceCode.toLowerCase().contains(q) ||
+            s.name.toLowerCase().contains(q);
       }
       return true;
     }).toList();
@@ -394,17 +473,24 @@ class CatalogRepositoryImpl implements CatalogRepository {
     required ServiceModel service,
   }) async {
     try {
-      final response = await apiClient.post('/api/v1/catalog/services', data: {
-        'serviceCode': service.serviceCode,
-        'name': service.name,
-        'description': service.description,
-        'categoryCode': service.category,
-        'unit': service.unit,
-        'unitPrice': service.unitPrice,
-        'taxClassification': service.taxClassification.code,
-      });
+      final response = await apiClient.post(
+        '/api/v1/catalog/services',
+        data: {
+          'serviceCode': service.serviceCode,
+          'name': service.name,
+          'description': service.description,
+          'categoryCode': service.category,
+          'unit': service.unit,
+          'unitPrice': service.unitPrice,
+          'taxClassification': service.taxClassification.code,
+        },
+      );
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final registered = ServiceModel.fromJson(response.data as Map<String, dynamic>);
+        final registered = ServiceModel.fromJson({
+          ...(response.data as Map<String, dynamic>),
+          'tenantId': tenantId,
+          'branchId': branchId,
+        });
         _mockServices.add(registered);
         return registered;
       }
@@ -424,7 +510,10 @@ class CatalogRepositoryImpl implements CatalogRepository {
   @override
   Future<List<CategoryModel>> getCategories({required String tenantId}) async {
     try {
-      final response = await apiClient.get('/api/v1/categories', queryParameters: {'size': 100});
+      final response = await apiClient.get(
+        '/api/v1/categories',
+        queryParameters: {'size': 100},
+      );
       if (response.statusCode == 200 && response.data != null) {
         final dynamic data = response.data;
         List<dynamic> items = [];
@@ -434,9 +523,18 @@ class CatalogRepositoryImpl implements CatalogRepository {
           items = data;
         }
         if (items.isNotEmpty) {
-          final list = items.map((e) => CategoryModel.fromJson(e as Map<String, dynamic>)).toList();
+          final list = items
+              .map(
+                (e) => CategoryModel.fromJson({
+                  ...(e as Map<String, dynamic>),
+                  'tenantId': tenantId,
+                }),
+              )
+              .toList();
           for (final c in list) {
-            if (!_mockCategories.any((m) => m.code == c.code && m.tenantId == c.tenantId)) {
+            if (!_mockCategories.any(
+              (m) => m.code == c.code && m.tenantId == c.tenantId,
+            )) {
               _mockCategories.add(c);
             }
           }
@@ -447,17 +545,47 @@ class CatalogRepositoryImpl implements CatalogRepository {
       // Fallback
     }
 
-    final cached = _mockCategories.where((c) => c.tenantId == tenantId || c.tenantId == '00000000-0000-0000-0000-000000000001').toList();
+    final cached = _mockCategories
+        .where(
+          (c) =>
+              c.tenantId == tenantId ||
+              c.tenantId == '00000000-0000-0000-0000-000000000001',
+        )
+        .toList();
     if (cached.isNotEmpty) {
       return cached;
     }
 
     // Default baseline so dropdowns never assert on missing initial value
     return [
-      CategoryModel(id: 'cat-01', tenantId: tenantId, code: 'BEV', name: 'Beverages (መጠጦች)', type: 'PRODUCT'),
-      CategoryModel(id: 'cat-02', tenantId: tenantId, code: 'GRAIN', name: 'Grains & Cereals (እህሎች)', type: 'PRODUCT'),
-      CategoryModel(id: 'cat-03', tenantId: tenantId, code: 'IT_SERV', name: 'IT & Software Services', type: 'SERVICE'),
-      CategoryModel(id: 'cat-04', tenantId: tenantId, code: 'CONSULT', name: 'Consulting & Advisory', type: 'SERVICE'),
+      CategoryModel(
+        id: 'cat-01',
+        tenantId: tenantId,
+        code: 'BEV',
+        name: 'Beverages (መጠጦች)',
+        type: 'PRODUCT',
+      ),
+      CategoryModel(
+        id: 'cat-02',
+        tenantId: tenantId,
+        code: 'GRAIN',
+        name: 'Grains & Cereals (እህሎች)',
+        type: 'PRODUCT',
+      ),
+      CategoryModel(
+        id: 'cat-03',
+        tenantId: tenantId,
+        code: 'IT_SERV',
+        name: 'IT & Software Services',
+        type: 'SERVICE',
+      ),
+      CategoryModel(
+        id: 'cat-04',
+        tenantId: tenantId,
+        code: 'CONSULT',
+        name: 'Consulting & Advisory',
+        type: 'SERVICE',
+      ),
     ];
   }
 
@@ -476,9 +604,15 @@ class CatalogRepositoryImpl implements CatalogRepository {
       'description': description,
     };
     try {
-      final response = await apiClient.post('/api/v1/categories', data: payload);
+      final response = await apiClient.post(
+        '/api/v1/categories',
+        data: payload,
+      );
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final created = CategoryModel.fromJson(response.data as Map<String, dynamic>);
+        final created = CategoryModel.fromJson({
+          ...(response.data as Map<String, dynamic>),
+          'tenantId': tenantId,
+        });
         _mockCategories.add(created);
         return created;
       }

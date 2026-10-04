@@ -6,11 +6,21 @@ import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class OpenApiConfig {
+
+    /** A stable OpenAPI document for the frozen v1 wire contract. */
+    @Bean
+    public GroupedOpenApi v1OpenApi() {
+        return GroupedOpenApi.builder()
+                .group("v1")
+                .pathsToMatch("/api/v1/**")
+                .build();
+    }
 
     @Bean
     public OpenAPI customOpenAPI() {
@@ -29,6 +39,16 @@ public class OpenApiConfig {
                         .addSecuritySchemes("ApiKeyAuth", new SecurityScheme()
                                 .type(SecurityScheme.Type.APIKEY)
                                 .in(SecurityScheme.In.HEADER)
-                                .name("X-API-KEY")));
+                                .name("X-API-KEY"))
+                        .addSecuritySchemes("RequestSignature", new SecurityScheme()
+                                .type(SecurityScheme.Type.APIKEY)
+                                .in(SecurityScheme.In.HEADER)
+                                .name("X-Request-Signature")
+                                .description("Required for POST, PUT, PATCH, and DELETE. Base64url HMAC-SHA-256 over the canonical request."))
+                        .addSecuritySchemes("RequestTimestamp", new SecurityScheme()
+                                .type(SecurityScheme.Type.APIKEY)
+                                .in(SecurityScheme.In.HEADER)
+                                .name("X-Request-Timestamp")
+                                .description("Required Unix epoch seconds for signed mutating requests.")));
     }
 }

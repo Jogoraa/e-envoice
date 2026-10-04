@@ -44,3 +44,10 @@ notifications:
 logging:
   level:
     et.ut.einvoice: INFO
+
+# Legacy integration tests exercise endpoint behavior independently of the external HMAC client contract.
+# Dedicated request-signing tests enable and verify the middleware directly.
+platform:
+  security:
+    request-signing:
+      enabled: false

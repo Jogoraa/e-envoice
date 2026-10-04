@@ -7,6 +7,11 @@ import et.ut.einvoice.tenancy.domain.*;
 import et.ut.einvoice.tenancy.repository.ApiClientRepository;
 import et.ut.einvoice.tenancy.repository.SubscriptionRepository;
 import et.ut.einvoice.tenancy.repository.TenantRepository;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -59,21 +64,36 @@ public class SaasTenantService {
     ) {}
 
     public record OnboardTenantRequest(
+            @Size(max = 64)
             String organizationId,
+            @NotBlank(message = "Legal name is required")
+            @Size(max = 255)
             String legalName,
+            @Size(max = 255)
             String tradeName,
+            @NotBlank(message = "TIN is required")
+            @Pattern(regexp = "^\\d{10}$", message = "TIN must contain exactly 10 digits")
             String tin,
+            @Pattern(regexp = "^$|^[A-Z][A-Z0-9_-]{0,63}$", message = "Plan code is invalid")
             String planCode,
+            @Pattern(regexp = "^$|^(MONTHLY|ANNUAL)$", message = "Billing cycle is invalid")
             String billingCycle,
+            @Positive(message = "Maximum monthly invoices must be positive")
             Integer maxMonthlyInvoices,
+            @Positive(message = "Rate limit must be positive")
             Integer rateLimitRps,
             Boolean offlineAllowed,
+            @Size(max = 128)
             String initialApiKey,
+            @Size(max = 256, message = "Initial client secret must not exceed 256 characters")
             String initialClientSecret
     ) {}
 
     public record LifecycleTransitionRequest(
+            @NotBlank(message = "Target state is required")
+            @Pattern(regexp = "^(ACTIVE|SUSPENDED|DEACTIVATED)$", message = "Target state is invalid")
             String targetState,
+            @Size(max = 1000)
             String reason
     ) {}
 

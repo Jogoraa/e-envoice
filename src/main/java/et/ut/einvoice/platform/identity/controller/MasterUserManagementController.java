@@ -2,6 +2,7 @@ package et.ut.einvoice.platform.identity.controller;
 
 import et.ut.einvoice.platform.identity.dto.IdentityDtos.*;
 import et.ut.einvoice.platform.identity.service.MasterUserLifecycleService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -39,7 +40,7 @@ public class MasterUserManagementController {
     @PostMapping("/invite")
     public ResponseEntity<InvitationSummaryDto> inviteAdmin(
             Authentication auth,
-            @RequestBody InviteAdminRequest req
+            @Valid @RequestBody InviteAdminRequest req
     ) {
         String adminUsername = resolveUsername(auth);
         return ResponseEntity.ok(userLifecycleService.inviteAdmin(adminUsername, req));
@@ -49,7 +50,7 @@ public class MasterUserManagementController {
     public ResponseEntity<PlatformUserSummaryDto> updateUserStatus(
             Authentication auth,
             @PathVariable UUID userId,
-            @RequestBody UpdateUserStatusRequest req
+            @Valid @RequestBody UpdateUserStatusRequest req
     ) {
         String adminUsername = resolveUsername(auth);
         return ResponseEntity.ok(userLifecycleService.updateUserStatus(adminUsername, userId, req));
@@ -59,7 +60,7 @@ public class MasterUserManagementController {
     public ResponseEntity<PlatformUserSummaryDto> updateUserRoles(
             Authentication auth,
             @PathVariable UUID userId,
-            @RequestBody UpdateUserRolesRequest req
+            @Valid @RequestBody UpdateUserRolesRequest req
     ) {
         String adminUsername = resolveUsername(auth);
         return ResponseEntity.ok(userLifecycleService.updateUserRoles(adminUsername, userId, req));
@@ -69,10 +70,10 @@ public class MasterUserManagementController {
     public ResponseEntity<Map<String, Object>> resetUserMfa(
             Authentication auth,
             @PathVariable UUID userId,
-            @RequestBody(required = false) Map<String, String> body
+            @Valid @RequestBody(required = false) ResetUserMfaRequest body
     ) {
         String adminUsername = resolveUsername(auth);
-        String reason = body != null ? body.get("reason") : "Administrative reset";
+        String reason = body != null ? body.reason() : "Administrative reset";
         userLifecycleService.resetUserMfa(adminUsername, userId, reason);
         return ResponseEntity.ok(Map.of("success", true, "message", "MFA reset successfully."));
     }
@@ -100,4 +101,8 @@ public class MasterUserManagementController {
         }
         return auth.getName();
     }
+
+    public record ResetUserMfaRequest(
+            @jakarta.validation.constraints.Size(max = 500) String reason
+    ) {}
 }

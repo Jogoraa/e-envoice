@@ -66,7 +66,7 @@ public class GlobalExceptionHandler {
             details.add(new ErrorEnvelope.ValidationErrorDetail(
                     fe.getField(),
                     fe.getDefaultMessage(),
-                    fe.getRejectedValue()
+                    null
             ));
         }
 
@@ -94,7 +94,7 @@ public class GlobalExceptionHandler {
             details.add(new ErrorEnvelope.ValidationErrorDetail(
                     propertyPath,
                     cv.getMessage(),
-                    cv.getInvalidValue()
+                    null
             ));
         }
 

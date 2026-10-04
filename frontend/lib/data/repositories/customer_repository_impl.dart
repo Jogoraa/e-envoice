@@ -11,10 +11,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
   final AppDatabase db;
   static const Uuid _uuid = Uuid();
 
-  CustomerRepositoryImpl({
-    required this.apiClient,
-    required this.db,
-  });
+  CustomerRepositoryImpl({required this.apiClient, required this.db});
 
   @override
   Future<List<CustomerModel>> searchCustomers({
@@ -31,7 +28,9 @@ class CustomerRepositoryImpl implements CustomerRepository {
       query: query,
       limit: size,
     );
-    final localModels = localRows.map<CustomerModel>(_fromLocalCustomer).toList();
+    final localModels = localRows
+        .map<CustomerModel>(_fromLocalCustomer)
+        .toList();
 
     // 2. Fetch from backend REST API if online
     try {
@@ -50,16 +49,24 @@ class CustomerRepositoryImpl implements CustomerRepository {
 
         for (final item in content) {
           if (item is Map<String, dynamic>) {
-            final model = CustomerModel.fromJson(item);
+            // Tenant ownership is client context, not an API response field.
+            final model = CustomerModel.fromJson({
+              ...item,
+              'tenantId': tenantId,
+            });
             remoteModels.add(model);
             // Upsert into local database
-            await db.upsertLocalCustomer(_toLocalCompanion(model, syncStatus: 'synced'));
+            await db.upsertLocalCustomer(
+              _toLocalCompanion(model, syncStatus: 'synced'),
+            );
           }
         }
         return remoteModels;
       }
     } catch (e) {
-      debugPrint('[CustomerRepository] Remote customer fetch failed: $e. Returning local DB fallback.');
+      debugPrint(
+        '[CustomerRepository] Remote customer fetch failed: $e. Returning local DB fallback.',
+      );
     }
 
     return localModels;
@@ -67,9 +74,9 @@ class CustomerRepositoryImpl implements CustomerRepository {
 
   @override
   Stream<List<CustomerModel>> watchCustomers({required String tenantId}) {
-    return db.watchScopedCustomers(tenantId: tenantId).map(
-          (rows) => rows.map<CustomerModel>(_fromLocalCustomer).toList(),
-        );
+    return db
+        .watchScopedCustomers(tenantId: tenantId)
+        .map((rows) => rows.map<CustomerModel>(_fromLocalCustomer).toList());
   }
 
   @override
@@ -88,8 +95,13 @@ class CustomerRepositoryImpl implements CustomerRepository {
         '/api/v1/customers/$customerId',
       );
       if (response.data != null) {
-        final model = CustomerModel.fromJson(response.data!);
-        await db.upsertLocalCustomer(_toLocalCompanion(model, syncStatus: 'synced'));
+        final model = CustomerModel.fromJson({
+          ...response.data!,
+          'tenantId': tenantId,
+        });
+        await db.upsertLocalCustomer(
+          _toLocalCompanion(model, syncStatus: 'synced'),
+        );
         return model;
       }
     } catch (e) {
@@ -116,8 +128,13 @@ class CustomerRepositoryImpl implements CustomerRepository {
         queryParameters: {'tin': normalizedTin},
       );
       if (response.data != null) {
-        final model = CustomerModel.fromJson(response.data!);
-        await db.upsertLocalCustomer(_toLocalCompanion(model, syncStatus: 'synced'));
+        final model = CustomerModel.fromJson({
+          ...response.data!,
+          'tenantId': tenantId,
+        });
+        await db.upsertLocalCustomer(
+          _toLocalCompanion(model, syncStatus: 'synced'),
+        );
         return model;
       }
     } catch (e) {
@@ -141,7 +158,9 @@ class CustomerRepositoryImpl implements CustomerRepository {
     );
 
     // Save locally immediately
-    await db.upsertLocalCustomer(_toLocalCompanion(modelToSave, syncStatus: 'pending'));
+    await db.upsertLocalCustomer(
+      _toLocalCompanion(modelToSave, syncStatus: 'pending'),
+    );
 
     try {
       final response = await apiClient.post<Map<String, dynamic>>(
@@ -150,10 +169,13 @@ class CustomerRepositoryImpl implements CustomerRepository {
         data: {
           'legalName': modelToSave.legalName,
           if (modelToSave.tradeName != null) 'tradeName': modelToSave.tradeName,
-          if (modelToSave.tin != null && modelToSave.tin!.isNotEmpty) 'tin': modelToSave.tin,
+          if (modelToSave.tin != null && modelToSave.tin!.isNotEmpty)
+            'tin': modelToSave.tin,
           if (modelToSave.vatNumber != null) 'vatNumber': modelToSave.vatNumber,
-          if (modelToSave.buyerIdType.isNotEmpty) 'buyerIdType': modelToSave.buyerIdType,
-          if (modelToSave.buyerIdNumber != null) 'buyerIdNumber': modelToSave.buyerIdNumber,
+          if (modelToSave.buyerIdType.isNotEmpty)
+            'buyerIdType': modelToSave.buyerIdType,
+          if (modelToSave.buyerIdNumber != null)
+            'buyerIdNumber': modelToSave.buyerIdNumber,
           if (modelToSave.phone != null) 'phone': modelToSave.phone,
           if (modelToSave.email != null) 'email': modelToSave.email,
           'country': modelToSave.country,
@@ -162,21 +184,31 @@ class CustomerRepositoryImpl implements CustomerRepository {
           if (modelToSave.zone != null) 'zone': modelToSave.zone,
           if (modelToSave.woreda != null) 'woreda': modelToSave.woreda,
           if (modelToSave.kebele != null) 'kebele': modelToSave.kebele,
-          if (modelToSave.houseNumber != null) 'houseNumber': modelToSave.houseNumber,
+          if (modelToSave.houseNumber != null)
+            'houseNumber': modelToSave.houseNumber,
           'isVatRegistered': modelToSave.isVatRegistered,
         },
       );
 
       if (response.data != null) {
-        final syncedModel = CustomerModel.fromJson(response.data!);
+        final syncedModel = CustomerModel.fromJson({
+          ...response.data!,
+          'tenantId': tenantId,
+        });
         if (syncedModel.id != modelToSave.id) {
-          await (db.delete(db.localCustomers)..where((tbl) => tbl.id.equals(modelToSave.id))).go();
+          await (db.delete(
+            db.localCustomers,
+          )..where((tbl) => tbl.id.equals(modelToSave.id))).go();
         }
-        await db.upsertLocalCustomer(_toLocalCompanion(syncedModel, syncStatus: 'synced'));
+        await db.upsertLocalCustomer(
+          _toLocalCompanion(syncedModel, syncStatus: 'synced'),
+        );
         return syncedModel;
       }
     } catch (e) {
-      debugPrint('[CustomerRepository] Remote customer create failed: $e. Retaining local draft.');
+      debugPrint(
+        '[CustomerRepository] Remote customer create failed: $e. Retaining local draft.',
+      );
     }
 
     return modelToSave;
@@ -194,7 +226,9 @@ class CustomerRepositoryImpl implements CustomerRepository {
       syncStatus: 'pending',
     );
 
-    await db.upsertLocalCustomer(_toLocalCompanion(modelToSave, syncStatus: 'pending'));
+    await db.upsertLocalCustomer(
+      _toLocalCompanion(modelToSave, syncStatus: 'pending'),
+    );
 
     try {
       final response = await apiClient.put<Map<String, dynamic>>(
@@ -203,10 +237,13 @@ class CustomerRepositoryImpl implements CustomerRepository {
         data: {
           'legalName': modelToSave.legalName,
           if (modelToSave.tradeName != null) 'tradeName': modelToSave.tradeName,
-          if (modelToSave.tin != null && modelToSave.tin!.isNotEmpty) 'tin': modelToSave.tin,
+          if (modelToSave.tin != null && modelToSave.tin!.isNotEmpty)
+            'tin': modelToSave.tin,
           if (modelToSave.vatNumber != null) 'vatNumber': modelToSave.vatNumber,
-          if (modelToSave.buyerIdType.isNotEmpty) 'buyerIdType': modelToSave.buyerIdType,
-          if (modelToSave.buyerIdNumber != null) 'buyerIdNumber': modelToSave.buyerIdNumber,
+          if (modelToSave.buyerIdType.isNotEmpty)
+            'buyerIdType': modelToSave.buyerIdType,
+          if (modelToSave.buyerIdNumber != null)
+            'buyerIdNumber': modelToSave.buyerIdNumber,
           if (modelToSave.phone != null) 'phone': modelToSave.phone,
           if (modelToSave.email != null) 'email': modelToSave.email,
           'country': modelToSave.country,
@@ -215,18 +252,26 @@ class CustomerRepositoryImpl implements CustomerRepository {
           if (modelToSave.zone != null) 'zone': modelToSave.zone,
           if (modelToSave.woreda != null) 'woreda': modelToSave.woreda,
           if (modelToSave.kebele != null) 'kebele': modelToSave.kebele,
-          if (modelToSave.houseNumber != null) 'houseNumber': modelToSave.houseNumber,
+          if (modelToSave.houseNumber != null)
+            'houseNumber': modelToSave.houseNumber,
           'isVatRegistered': modelToSave.isVatRegistered,
         },
       );
 
       if (response.data != null) {
-        final syncedModel = CustomerModel.fromJson(response.data!);
-        await db.upsertLocalCustomer(_toLocalCompanion(syncedModel, syncStatus: 'synced'));
+        final syncedModel = CustomerModel.fromJson({
+          ...response.data!,
+          'tenantId': tenantId,
+        });
+        await db.upsertLocalCustomer(
+          _toLocalCompanion(syncedModel, syncStatus: 'synced'),
+        );
         return syncedModel;
       }
     } catch (e) {
-      debugPrint('[CustomerRepository] Remote customer update failed: $e. Retaining local update.');
+      debugPrint(
+        '[CustomerRepository] Remote customer update failed: $e. Retaining local update.',
+      );
     }
 
     return modelToSave;
@@ -260,7 +305,10 @@ class CustomerRepositoryImpl implements CustomerRepository {
     );
   }
 
-  LocalCustomersCompanion _toLocalCompanion(CustomerModel model, {String syncStatus = 'synced'}) {
+  LocalCustomersCompanion _toLocalCompanion(
+    CustomerModel model, {
+    String syncStatus = 'synced',
+  }) {
     return LocalCustomersCompanion(
       id: Value(model.id),
       tenantId: Value(model.tenantId),

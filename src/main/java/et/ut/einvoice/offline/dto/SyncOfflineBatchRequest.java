@@ -2,7 +2,9 @@ package et.ut.einvoice.offline.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
@@ -18,9 +20,9 @@ public record SyncOfflineBatchRequest(
         List<OfflineInvoiceItemDto> transactions
 ) {
     public record OfflineInvoiceItemDto(
-            @NotNull Long offlineSeqNo,
+            @NotNull @Positive Long offlineSeqNo,
             @NotNull Instant bufferedAt,
-            @NotNull String payloadJson,
-            @NotNull String deviceSignature
+            @NotBlank @Size(max = 1_000_000) String payloadJson,
+            @NotBlank @Size(max = 16_384) String deviceSignature
     ) {}
 }

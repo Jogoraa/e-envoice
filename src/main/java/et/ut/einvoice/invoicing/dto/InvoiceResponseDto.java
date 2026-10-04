@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 
 public record InvoiceResponseDto(
         UUID id,
-        UUID tenantId,
         String documentNumber,
         Long invoiceCounter,
         Instant invoiceDate,
@@ -82,7 +81,6 @@ public record InvoiceResponseDto(
 
         return new InvoiceResponseDto(
                 inv.getId(),
-                inv.getTenantId(),
                 inv.getDocumentNumber(),
                 inv.getInvoiceCounter(),
                 inv.getInvoiceDate(),

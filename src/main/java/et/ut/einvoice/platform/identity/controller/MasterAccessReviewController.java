@@ -2,6 +2,7 @@ package et.ut.einvoice.platform.identity.controller;
 
 import et.ut.einvoice.platform.identity.dto.IdentityDtos.*;
 import et.ut.einvoice.platform.identity.service.MasterAccessReviewService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -29,7 +30,7 @@ public class MasterAccessReviewController {
     @PostMapping("/campaigns")
     public ResponseEntity<AccessReviewCampaignDto> createCampaign(
             Authentication auth,
-            @RequestBody CreateReviewCampaignRequest req
+            @Valid @RequestBody CreateReviewCampaignRequest req
     ) {
         String adminUsername = resolveUsername(auth);
         return ResponseEntity.ok(reviewService.createCampaign(adminUsername, req));
@@ -53,7 +54,7 @@ public class MasterAccessReviewController {
     public ResponseEntity<AccessReviewEntryDto> submitDecision(
             Authentication auth,
             @PathVariable UUID entryId,
-            @RequestBody SubmitReviewDecisionRequest req
+            @Valid @RequestBody SubmitReviewDecisionRequest req
     ) {
         String adminUsername = resolveUsername(auth);
         return ResponseEntity.ok(reviewService.submitEntryDecision(adminUsername, entryId, req));

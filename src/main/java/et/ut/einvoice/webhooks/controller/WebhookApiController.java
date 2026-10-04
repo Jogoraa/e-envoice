@@ -1,7 +1,6 @@
 package et.ut.einvoice.webhooks.controller;
 
 import et.ut.einvoice.platform.context.TenantContextHolder;
-import et.ut.einvoice.webhooks.domain.WebhookSubscription;
 import et.ut.einvoice.webhooks.service.WebhookService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,16 +29,19 @@ public class WebhookApiController {
     @PostMapping("/subscriptions")
     @PreAuthorize("hasAuthority('SCOPE_tenant:admin') or hasRole('TENANT_ADMIN')")
     @Operation(summary = "Register a new webhook subscription endpoint")
-    public ResponseEntity<WebhookSubscription> registerSubscription(@Valid @RequestBody CreateSubscriptionRequest request) {
+    public ResponseEntity<WebhookRegistrationResponse> registerSubscription(@Valid @RequestBody CreateSubscriptionRequest request) {
         ssrfValidator.validateDestinationUrl(request.targetUrl());
         UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
-        WebhookSubscription sub = webhookService.registerSubscription(
+        var sub = webhookService.registerSubscription(
                 tenantId,
                 request.targetUrl(),
                 request.secretKey(),
                 request.subscribedEvents()
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(sub);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new WebhookRegistrationResponse(
+                sub.isActive(),
+                "Webhook subscription registered. Its secret is never returned."
+        ));
     }
 
     public record CreateSubscriptionRequest(
@@ -53,6 +55,10 @@ public class WebhookApiController {
             String secretKey,
 
             @jakarta.validation.constraints.Size(max = 512, message = "Subscribed events must not exceed 512 characters")
+            @jakarta.validation.constraints.Pattern(regexp = "^$|^[A-Za-z0-9_:, .-]+$", message = "Subscribed events contain unsupported characters")
             String subscribedEvents
     ) {}
+
+    /** Registration acknowledgement intentionally does not expose database or tenant identifiers. */
+    public record WebhookRegistrationResponse(boolean active, String message) {}
 }

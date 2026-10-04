@@ -311,7 +311,6 @@ public class MasterUserLifecycleService {
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getPhone(),
                 user.getFullName(),
                 user.getRole(),
                 roleCodes,
@@ -326,7 +325,6 @@ public class MasterUserLifecycleService {
         return new InvitationSummaryDto(
                 inv.getId(),
                 inv.getEmail(),
-                inv.getPhone(),
                 inv.getFullName(),
                 inv.getInitialRoleCode(),
                 inv.getTenantId(),

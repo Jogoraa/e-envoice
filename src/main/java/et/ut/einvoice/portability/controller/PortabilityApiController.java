@@ -2,6 +2,7 @@ package et.ut.einvoice.portability.controller;
 
 import et.ut.einvoice.platform.context.TenantContextHolder;
 import et.ut.einvoice.portability.domain.ExportJob;
+import et.ut.einvoice.portability.dto.ExportJobResponseDto;
 import et.ut.einvoice.portability.service.DataPortabilityService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,16 +27,16 @@ public class PortabilityApiController {
     @PostMapping("/exports")
     @PreAuthorize("hasAuthority('SCOPE_tenant:admin') or hasRole('TENANT_ADMIN')")
     @Operation(summary = "Initiate an asynchronous legally exportable data archive packaging job")
-    public ResponseEntity<ExportJob> initiateExport() {
+    public ResponseEntity<ExportJobResponseDto> initiateExport() {
         UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(portabilityService.initiateExport(tenantId));
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ExportJobResponseDto.fromEntity(portabilityService.initiateExport(tenantId)));
     }
 
     @GetMapping("/exports")
     @PreAuthorize("hasAuthority('SCOPE_tenant:admin') or hasRole('TENANT_ADMIN')")
     @Operation(summary = "List data export jobs for the current tenant")
-    public ResponseEntity<java.util.List<ExportJob>> listExports() {
+    public ResponseEntity<java.util.List<ExportJobResponseDto>> listExports() {
         UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
-        return ResponseEntity.ok(portabilityService.listExports(tenantId));
+        return ResponseEntity.ok(portabilityService.listExports(tenantId).stream().map(ExportJobResponseDto::fromEntity).toList());
     }
 }

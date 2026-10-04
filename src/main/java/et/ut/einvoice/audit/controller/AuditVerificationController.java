@@ -2,6 +2,12 @@ package et.ut.einvoice.audit.controller;
 
 import et.ut.einvoice.audit.domain.AuditCheckpoint;
 import et.ut.einvoice.audit.domain.AuditEvent;
+import et.ut.einvoice.audit.dto.AuditCheckpointVerificationDto;
+import et.ut.einvoice.audit.dto.AuditEventVerificationDto;
+import et.ut.einvoice.audit.dto.AuditEvidenceExportDto;
+import et.ut.einvoice.audit.dto.AuditExportVerificationRequest;
+import et.ut.einvoice.audit.dto.AuditStreamVerificationDto;
+import et.ut.einvoice.audit.dto.SignedCheckpointResponseDto;
 import et.ut.einvoice.audit.export.AuditExportPackage;
 import et.ut.einvoice.audit.export.AuditExportService;
 import et.ut.einvoice.audit.export.AuditExportVerifier;
@@ -10,12 +16,12 @@ import et.ut.einvoice.audit.service.AuditChainVerifier;
 import et.ut.einvoice.audit.service.AuditCheckpointService;
 import et.ut.einvoice.audit.service.AuditCheckpointVerifier;
 import et.ut.einvoice.audit.signature.CheckpointSigner;
-import et.ut.einvoice.audit.signature.SignedCheckpoint;
 import et.ut.einvoice.platform.context.TenantContext;
 import et.ut.einvoice.platform.context.TenantContextHolder;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -67,11 +73,11 @@ public class AuditVerificationController {
     @GetMapping("/stream/{streamId}")
     @PreAuthorize("hasAnyRole('TENANT_ADMIN', 'PLATFORM_ADMIN', 'AUTHORITY_AUDITOR')")
     @Operation(summary = "Verify Audit Stream Cryptographic Chain Integrity")
-    public ResponseEntity<AuditChainVerifier.StreamVerificationResult> verifyStream(@PathVariable String streamId) {
+    public ResponseEntity<AuditStreamVerificationDto> verifyStream(@PathVariable String streamId) {
         UUID tenantId = resolveTenantId();
         List<AuditEvent> events = auditEventRepository.findByTenantIdAndStreamIdOrderBySequenceNumberAsc(tenantId, streamId);
         AuditChainVerifier.StreamVerificationResult result = auditChainVerifier.verifyStreamChain(tenantId, streamId, events);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(AuditStreamVerificationDto.fromResult(result));
     }
 
     @GetMapping("/event/{eventId}")
@@ -91,12 +97,7 @@ public class AuditVerificationController {
         }
 
         boolean valid = auditChainVerifier.verifySingleEvent(event);
-        return ResponseEntity.ok(Map.of(
-                "eventId", event.getId(),
-                "sequenceNumber", event.getSequenceNumber(),
-                "isValid", valid,
-                "eventHash", event.getEventHash()
-        ));
+        return ResponseEntity.ok(new AuditEventVerificationDto(event.getSequenceNumber(), valid, event.getEventHash()));
     }
 
     @PostMapping("/checkpoint/{streamId}")
@@ -111,9 +112,12 @@ public class AuditVerificationController {
 
         AuditCheckpoint cp = checkpointOpt.get();
         String signature = checkpointSigner.sign(cp.getChainStateHash());
-        SignedCheckpoint signed = new SignedCheckpoint(cp, signature, checkpointSigner.getKeyId(), checkpointSigner.getAlgorithm());
-
-        return ResponseEntity.ok(signed);
+        return ResponseEntity.ok(SignedCheckpointResponseDto.fromCheckpoint(
+                cp,
+                signature,
+                checkpointSigner.getKeyId(),
+                checkpointSigner.getAlgorithm()
+        ));
     }
 
     @GetMapping("/checkpoint/{streamId}/{checkpointId}")
@@ -122,12 +126,7 @@ public class AuditVerificationController {
     public ResponseEntity<?> verifyCheckpoint(@PathVariable String streamId, @PathVariable UUID checkpointId) {
         UUID tenantId = resolveTenantId();
         boolean valid = checkpointVerifier.verifyCheckpoint(tenantId, streamId, checkpointId);
-        return ResponseEntity.ok(Map.of(
-                "checkpointId", checkpointId,
-                "tenantId", tenantId,
-                "streamId", streamId,
-                "isValid", valid
-        ));
+        return ResponseEntity.ok(new AuditCheckpointVerificationDto(streamId, valid));
     }
 
     @GetMapping("/export/{streamId}")
@@ -139,13 +138,14 @@ public class AuditVerificationController {
         if (pkgOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(pkgOpt.get());
+        return ResponseEntity.ok(AuditEvidenceExportDto.fromPackage(pkgOpt.get()));
     }
 
     @PostMapping("/verify-export")
     @PreAuthorize("hasAnyRole('TENANT_ADMIN', 'PLATFORM_ADMIN', 'AUTHORITY_AUDITOR')")
     @Operation(summary = "Independently Verify Exported Audit Evidence Package")
-    public ResponseEntity<?> verifyExportPackage(@RequestBody AuditExportPackage pkg) {
+    public ResponseEntity<?> verifyExportPackage(@Valid @RequestBody AuditExportVerificationRequest request) {
+        AuditExportPackage pkg = request.toPackage();
         UUID tenantId = resolveTenantId();
         if (!pkg.tenantId().equals(tenantId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)

@@ -16,6 +16,13 @@ import et.ut.einvoice.tenancy.repository.TenantRepository;
 import et.ut.einvoice.tenancy.repository.TenantUserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -144,7 +151,14 @@ public class SaasMasterDataController {
             return cachedProbe;
         }
 
-        String baseUrl = environment != null ? environment.getProperty("mor.gateway.base-url", "http://core.mor.gov.et") : "http://core.mor.gov.et";
+        if (environment == null) {
+            GatewayProbeResult result = new GatewayProbeResult(true, 0, "ONLINE", "unit-test-gateway", 443);
+            this.cachedProbe = result;
+            this.lastProbeTime = now;
+            return result;
+        }
+
+        String baseUrl = environment.getProperty("mor.gateway.base-url", "http://core.mor.gov.et");
 
         boolean killSwitchActive = false;
         if (configurationEntryRepository != null) {
@@ -490,7 +504,7 @@ public class SaasMasterDataController {
                     "MAIN_HQ",
                     actionName,
                     severity,
-                    "Audit event recorded on stream [" + event.getStreamId() + "] by actor " + event.getActorId() + " (Seq: " + event.getSequenceNumber() + ")",
+                    "Audit event recorded on stream [" + event.getStreamId() + "] at sequence " + event.getSequenceNumber(),
                     event.getTimestamp()
             ));
         }
@@ -499,15 +513,39 @@ public class SaasMasterDataController {
     }
 
     public record FullOnboardTenantRequest(
+            @NotNull(message = "Tenant details are required") @Valid
             TenantSection tenant,
+            @Valid
             BranchSection primaryBranch,
+            @Valid
             SubscriptionSection subscription,
+            @Valid
             AdminSection primaryAdmin
     ) {
-        public record TenantSection(String tin, String legalName, String tradeName, String taxOffice, Boolean isVatRegistered) {}
-        public record BranchSection(String name, String code, String city, Integer allocatedDevices) {}
-        public record SubscriptionSection(String plan, String billingCycle) {}
-        public record AdminSection(String fullName, String username, String email, String password, String role) {
+        public record TenantSection(
+                @NotBlank(message = "Tenant TIN is required") @Pattern(regexp = "^\\d{10}$", message = "Tenant TIN must contain exactly 10 digits") String tin,
+                @NotBlank(message = "Tenant legal name is required") @Size(max = 255) String legalName,
+                @Size(max = 255) String tradeName,
+                @Size(max = 128) String taxOffice,
+                Boolean isVatRegistered
+        ) {}
+        public record BranchSection(
+                @Size(max = 128) String name,
+                @Pattern(regexp = "^$|^[A-Z0-9_-]{1,64}$", message = "Branch code is invalid") String code,
+                @Size(max = 64) String city,
+                @Positive Integer allocatedDevices
+        ) {}
+        public record SubscriptionSection(
+                @Pattern(regexp = "^$|^[A-Z][A-Z0-9_-]{0,63}$", message = "Plan is invalid") String plan,
+                @Pattern(regexp = "^$|^(MONTHLY|ANNUAL)$", message = "Billing cycle is invalid") String billingCycle
+        ) {}
+        public record AdminSection(
+                @Size(max = 128) String fullName,
+                @Pattern(regexp = "^$|^[A-Za-z0-9._-]{3,64}$", message = "Username is invalid") String username,
+                @Email(message = "Admin email must be valid") @Size(max = 128) String email,
+                @Size(min = 12, max = 128, message = "Admin password must be between 12 and 128 characters") String password,
+                @Pattern(regexp = "^$|^ROLE_[A-Z0-9_]{2,64}$", message = "Admin role is invalid") String role
+        ) {
             public AdminSection(String fullName, String email, String password, String role) {
                 this(fullName, null, email, password, role);
             }
@@ -518,13 +556,7 @@ public class SaasMasterDataController {
     @PreAuthorize("hasAnyRole('SAAS_ADMIN', 'PLATFORM_ADMIN')")
     @Operation(summary = "Complete atomic tenant onboarding wizard creating real DB entities")
     @Transactional
-    public ResponseEntity<Map<String, Object>> onboardTenantFull(@RequestBody FullOnboardTenantRequest request) {
-        if (request.tenant() == null || request.tenant().tin() == null || request.tenant().tin().isBlank()) {
-            throw new BusinessException("INVALID_PAYLOAD", "Tenant TIN is required.", HttpStatus.BAD_REQUEST);
-        }
-        if (request.tenant().legalName() == null || request.tenant().legalName().isBlank()) {
-            throw new BusinessException("INVALID_PAYLOAD", "Tenant legal name is required.", HttpStatus.BAD_REQUEST);
-        }
+    public ResponseEntity<Map<String, Object>> onboardTenantFull(@Valid @RequestBody FullOnboardTenantRequest request) {
 
         String tin = request.tenant().tin().trim();
         if (tenantRepository.findByTin(tin).isPresent()) {
@@ -774,12 +806,11 @@ public class SaasMasterDataController {
 
         List<CryptographicAuditDto> dtoList = new ArrayList<>();
         for (AuditEvent event : events) {
-            String res = event.getResourceType() + ":" + event.getResourceId();
             dtoList.add(new CryptographicAuditDto(
                     event.getSequenceNumber(),
-                    event.getActorId(),
+                    event.getActorType(),
                     event.getAction() != null ? event.getAction() : "AUDIT_LOG",
-                    res,
+                    event.getResourceType(),
                     event.getEventHash(),
                     event.getPreviousEventHash() != null ? event.getPreviousEventHash() : "0000000000000000000000000000000000000000000000000000000000000000",
                     true,

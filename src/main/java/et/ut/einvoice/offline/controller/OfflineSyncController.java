@@ -2,6 +2,7 @@ package et.ut.einvoice.offline.controller;
 
 import et.ut.einvoice.offline.domain.OfflineTransactionBuffer;
 import et.ut.einvoice.offline.dto.SyncOfflineBatchRequest;
+import et.ut.einvoice.offline.dto.OfflineSyncStatusDto;
 import et.ut.einvoice.offline.repository.OfflineTransactionBufferRepository;
 import et.ut.einvoice.offline.service.OfflineSyncService;
 import et.ut.einvoice.platform.context.TenantContextHolder;
@@ -35,16 +36,16 @@ public class OfflineSyncController {
     @PostMapping("/sync")
     @PreAuthorize("hasAuthority('SCOPE_invoice:create') or hasRole('TENANT_ADMIN') or hasRole('CASHIER')")
     @Operation(summary = "Submit Offline Batch for Synchronization", description = "Buffers offline transactions for automated 72-hour reconciliation.")
-    public ResponseEntity<List<OfflineTransactionBuffer>> syncOfflineTransactions(@Valid @RequestBody SyncOfflineBatchRequest request) {
+    public ResponseEntity<List<OfflineSyncStatusDto>> syncOfflineTransactions(@Valid @RequestBody SyncOfflineBatchRequest request) {
         List<OfflineTransactionBuffer> buffers = offlineSyncService.bufferOfflineTransactions(request);
-        return new ResponseEntity<>(buffers, HttpStatus.ACCEPTED);
+        return new ResponseEntity<>(buffers.stream().map(OfflineSyncStatusDto::fromEntity).toList(), HttpStatus.ACCEPTED);
     }
 
     @GetMapping("/queue")
     @PreAuthorize("hasAuthority('SCOPE_invoice:read') or hasRole('TENANT_ADMIN') or hasRole('CASHIER')")
     @Operation(summary = "List Queued Offline Transactions")
-    public ResponseEntity<Page<OfflineTransactionBuffer>> listQueue(@PageableDefault(size = 20) Pageable pageable) {
+    public ResponseEntity<Page<OfflineSyncStatusDto>> listQueue(@PageableDefault(size = 20) Pageable pageable) {
         UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
-        return ResponseEntity.ok(bufferRepository.findAllByTenantId(tenantId, pageable));
+        return ResponseEntity.ok(bufferRepository.findAllByTenantId(tenantId, pageable).map(OfflineSyncStatusDto::fromEntity));
     }
 }

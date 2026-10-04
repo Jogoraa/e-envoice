@@ -14,7 +14,9 @@ The UT Invoicing Platform exposes a high-performance, developer-friendly, and en
 
 ---
 
-## 2. Global Request & Response Headers
+## 2. Versioning and Global Request & Response Headers
+
+All public routes use path-based major versioning. `/api/v1` is the frozen current contract; future breaking work belongs under `/api/v2` and does not change v1 behavior. The URL path is authoritative. See [API versioning and negotiation policy](versioning.md) for the compatibility assertions and retirement process.
 
 ### 2.1 Request Headers
 ```http

@@ -2,6 +2,7 @@ package et.ut.einvoice.cancellation.controller;
 
 import et.ut.einvoice.cancellation.domain.CancellationRequest;
 import et.ut.einvoice.cancellation.dto.CreateCancellationRequestDto;
+import et.ut.einvoice.cancellation.dto.CancellationResponseDto;
 import et.ut.einvoice.cancellation.repository.CancellationRequestRepository;
 import et.ut.einvoice.cancellation.service.CancellationService;
 import et.ut.einvoice.platform.context.TenantContextHolder;
@@ -35,26 +36,26 @@ public class CancellationController {
     @PostMapping
     @PreAuthorize("hasAuthority('SCOPE_invoice:cancel') or hasRole('TENANT_ADMIN') or hasRole('CASHIER')")
     @Operation(summary = "Submit Cancellation Request", description = "Initiates an invoice cancellation workflow subject to MoR approval.")
-    public ResponseEntity<CancellationRequest> requestCancellation(@Valid @RequestBody CreateCancellationRequestDto request) {
+    public ResponseEntity<CancellationResponseDto> requestCancellation(@Valid @RequestBody CreateCancellationRequestDto request) {
         CancellationRequest result = cancellationService.requestCancellation(request);
-        return new ResponseEntity<>(result, HttpStatus.CREATED);
+        return new ResponseEntity<>(CancellationResponseDto.fromEntity(result), HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('SCOPE_invoice:read') or hasRole('TENANT_ADMIN') or hasRole('CASHIER')")
     @Operation(summary = "Get Cancellation Request by ID")
-    public ResponseEntity<CancellationRequest> getCancellation(@PathVariable UUID id) {
+    public ResponseEntity<CancellationResponseDto> getCancellation(@PathVariable UUID id) {
         UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
         CancellationRequest req = cancellationRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new BusinessException("CANCELLATION_NOT_FOUND", "Cancellation request not found", HttpStatus.NOT_FOUND));
-        return ResponseEntity.ok(req);
+        return ResponseEntity.ok(CancellationResponseDto.fromEntity(req));
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('SCOPE_invoice:read') or hasRole('TENANT_ADMIN') or hasRole('CASHIER')")
     @Operation(summary = "List Cancellation Requests")
-    public ResponseEntity<Page<CancellationRequest>> listCancellations(@PageableDefault(size = 20) Pageable pageable) {
+    public ResponseEntity<Page<CancellationResponseDto>> listCancellations(@PageableDefault(size = 20) Pageable pageable) {
         UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
-        return ResponseEntity.ok(cancellationRepository.findAllByTenantId(tenantId, pageable));
+        return ResponseEntity.ok(cancellationRepository.findAllByTenantId(tenantId, pageable).map(CancellationResponseDto::fromEntity));
     }
 }

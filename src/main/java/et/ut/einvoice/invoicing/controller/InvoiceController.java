@@ -2,12 +2,13 @@ package et.ut.einvoice.invoicing.controller;
 
 import et.ut.einvoice.documents.service.PdfExportService;
 import et.ut.einvoice.documents.service.ReceiptRenderingService;
-import et.ut.einvoice.government.domain.MorReceiptViewModel;
 import et.ut.einvoice.government.service.MorInvoiceCanonicalizationService;
 import et.ut.einvoice.invoicing.domain.Invoice;
 import et.ut.einvoice.invoicing.domain.InvoiceStatus;
 import et.ut.einvoice.invoicing.dto.CreateInvoiceRequest;
+import et.ut.einvoice.invoicing.dto.InvoiceListItemDto;
 import et.ut.einvoice.invoicing.dto.InvoiceResponseDto;
+import et.ut.einvoice.invoicing.dto.InvoiceReceiptSummaryDto;
 import et.ut.einvoice.invoicing.repository.InvoiceRepository;
 import et.ut.einvoice.invoicing.service.InvoiceService;
 import et.ut.einvoice.platform.context.TenantContextHolder;
@@ -88,11 +89,11 @@ public class InvoiceController {
     @GetMapping
     @PreAuthorize("hasAuthority('SCOPE_invoice:read') or hasRole('TENANT_ADMIN') or hasRole('CASHIER')")
     @Operation(summary = "List Invoices with Pagination and Filters")
-    public ResponseEntity<Page<InvoiceResponseDto>> listInvoices(
+    public ResponseEntity<Page<InvoiceListItemDto>> listInvoices(
             @RequestParam(required = false) InvoiceStatus status,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ResponseEntity.ok(invoiceService.listInvoices(status, pageable));
+        return ResponseEntity.ok(invoiceService.listInvoices(status, pageable).map(InvoiceListItemDto::fromInvoiceResponse));
     }
 
     @GetMapping("/summary")
@@ -105,25 +106,12 @@ public class InvoiceController {
 
     @GetMapping(value = "/{id}/receipt", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasAuthority('SCOPE_invoice:read') or hasRole('TENANT_ADMIN') or hasRole('CASHIER')")
-    @Operation(summary = "Get Canonical MoR Receipt View Model")
-    public ResponseEntity<MorReceiptViewModel> getReceiptViewModel(@PathVariable UUID id) {
+    @Operation(summary = "Get receipt metadata without buyer or seller personal data")
+    public ResponseEntity<InvoiceReceiptSummaryDto> getReceiptViewModel(@PathVariable UUID id) {
         UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
         Invoice invoice = invoiceRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new BusinessException("INVOICE_NOT_FOUND", "Invoice not found", HttpStatus.NOT_FOUND));
-        TaxpayerProfile seller = taxpayerProfileRepository.findById(tenantId)
-                .orElseThrow(() -> new BusinessException("TAXPAYER_PROFILE_NOT_FOUND", "Seller profile missing", HttpStatus.INTERNAL_SERVER_ERROR));
-
-        String qrImage = invoice.getSignedQr();
-        String qrJson = null;
-        if (canonicalizationService != null) {
-            qrJson = canonicalizationService.buildCanonicalQrData(invoice, seller, invoice.getSignedInvoice(), invoice.getAckDate());
-        }
-
-        MorReceiptViewModel vm = canonicalizationService != null
-                ? canonicalizationService.buildReceiptViewModel(invoice, seller, qrImage, qrJson)
-                : null;
-
-        return ResponseEntity.ok(vm);
+        return ResponseEntity.ok(InvoiceReceiptSummaryDto.fromEntity(invoice));
     }
 
     @GetMapping(value = "/{id}/document", produces = {MediaType.TEXT_HTML_VALUE, MediaType.ALL_VALUE})

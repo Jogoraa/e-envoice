@@ -7,8 +7,6 @@ import java.util.UUID;
 
 public record CustomerDto(
         UUID id,
-        UUID tenantId,
-        UUID branchId,
         String tin,
         String vatNumber,
         String legalName,
@@ -32,8 +30,6 @@ public record CustomerDto(
     public static CustomerDto fromEntity(Customer c) {
         return new CustomerDto(
                 c.getId(),
-                c.getTenantId(),
-                c.getBranchId(),
                 c.getTin(),
                 c.getVatNumber(),
                 c.getLegalName(),

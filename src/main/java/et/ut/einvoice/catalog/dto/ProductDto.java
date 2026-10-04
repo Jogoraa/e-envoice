@@ -7,13 +7,10 @@ import java.util.UUID;
 
 public record ProductDto(
         UUID id,
-        UUID tenantId,
-        UUID branchId,
         String itemCode,
         String sku,
         String barcode,
         String description,
-        UUID categoryId,
         String categoryCode,
         String unit,
         BigDecimal unitPrice,
@@ -27,13 +24,10 @@ public record ProductDto(
     public static ProductDto fromEntity(Product p) {
         return new ProductDto(
                 p.getId(),
-                p.getTenantId(),
-                p.getBranchId(),
                 p.getItemCode(),
                 p.getSku(),
                 p.getBarcode(),
                 p.getDescription(),
-                p.getCategoryId(),
                 p.getCategoryCode(),
                 p.getUnit(),
                 p.getUnitPrice(),

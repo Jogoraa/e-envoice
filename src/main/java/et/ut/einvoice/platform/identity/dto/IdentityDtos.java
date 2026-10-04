@@ -1,5 +1,10 @@
 package et.ut.einvoice.platform.identity.dto;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -29,32 +34,62 @@ public class IdentityDtos {
     ) {}
 
     public record UpdateProfileRequest(
+            @Size(max = 128)
             String fullName,
+            @Size(max = 64)
             String timezone,
+            @Size(max = 32)
             String dateFormat
-    ) {}
+    ) {
+        @jakarta.validation.constraints.AssertTrue(message = "At least one profile field must be provided")
+        public boolean hasUpdate() {
+            return (fullName != null && !fullName.isBlank())
+                    || (timezone != null && !timezone.isBlank())
+                    || (dateFormat != null && !dateFormat.isBlank());
+        }
+    }
 
     public record InitiateEmailChangeRequest(
+            @NotBlank(message = "New email is required")
+            @Email(message = "New email must be a valid address")
+            @Size(max = 128)
             String newEmail
     ) {}
 
     public record ConfirmEmailChangeRequest(
+            @NotBlank(message = "New email is required")
+            @Email(message = "New email must be a valid address")
+            @Size(max = 128)
             String newEmail,
+            @NotBlank(message = "Verification code is required")
+            @Pattern(regexp = "^\\d{6}$", message = "Verification code must contain six digits")
             String verificationCode
     ) {}
 
     public record InitiatePhoneVerificationRequest(
+            @NotBlank(message = "Phone number is required")
+            @Pattern(regexp = "^(\\+251|0)(9|7)\\d{8}$|^(\\+251|0)[1-5]\\d{7,8}$", message = "Invalid Ethiopian phone number")
             String phone
     ) {}
 
     public record ConfirmPhoneVerificationRequest(
+            @NotBlank(message = "Phone number is required")
+            @Pattern(regexp = "^(\\+251|0)(9|7)\\d{8}$|^(\\+251|0)[1-5]\\d{7,8}$", message = "Invalid Ethiopian phone number")
             String phone,
+            @NotBlank(message = "Verification code is required")
+            @Pattern(regexp = "^\\d{6}$", message = "Verification code must contain six digits")
             String verificationCode
     ) {}
 
     public record ChangePasswordRequest(
+            @NotBlank(message = "Current password is required")
+            @Size(max = 128)
             String currentPassword,
+            @NotBlank(message = "New password is required")
+            @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{12,128}$", message = "New password must meet password complexity requirements")
             String newPassword,
+            @NotBlank(message = "Password confirmation is required")
+            @Size(max = 128)
             String confirmPassword
     ) {}
 
@@ -65,11 +100,17 @@ public class IdentityDtos {
     ) {}
 
     public record VerifyMfaSetupRequest(
+            @NotBlank(message = "MFA code is required")
+            @Pattern(regexp = "^\\d{6}$", message = "MFA code must contain six digits")
             String code
     ) {}
 
     public record DisableMfaRequest(
+            @NotBlank(message = "Password is required")
+            @Size(max = 128)
             String password,
+            @NotBlank(message = "MFA code is required")
+            @Pattern(regexp = "^\\d{6}$", message = "MFA code must contain six digits")
             String code
     ) {}
 
@@ -84,7 +125,6 @@ public class IdentityDtos {
             UUID id,
             String username,
             String email,
-            String phone,
             String fullName,
             String primaryRole,
             List<String> roles,
@@ -95,26 +135,38 @@ public class IdentityDtos {
     ) {}
 
     public record InviteAdminRequest(
+            @NotBlank(message = "Email is required")
+            @Email(message = "Email must be a valid address")
+            @Size(max = 128)
             String email,
+            @Pattern(regexp = "^$|^(\\+251|0)(9|7)\\d{8}$|^(\\+251|0)[1-5]\\d{7,8}$", message = "Invalid Ethiopian phone number")
             String phone,
+            @NotBlank(message = "Full name is required")
+            @Size(max = 128)
             String fullName,
+            @NotBlank(message = "Initial role code is required")
+            @Pattern(regexp = "^ROLE_[A-Z0-9_]{2,64}$", message = "Initial role code is invalid")
             String initialRoleCode,
             UUID tenantId
     ) {}
 
     public record UpdateUserStatusRequest(
+            @NotBlank(message = "Status is required")
+            @Pattern(regexp = "^(ACTIVE|SUSPENDED|DISABLED)$", message = "Status must be ACTIVE, SUSPENDED, or DISABLED")
             String status,
+            @Size(max = 500)
             String reason
     ) {}
 
     public record UpdateUserRolesRequest(
+            @NotEmpty(message = "At least one role code is required")
+            @Size(max = 20)
             List<String> roleCodes
     ) {}
 
     public record InvitationSummaryDto(
             UUID id,
             String email,
-            String phone,
             String fullName,
             String initialRoleCode,
             UUID tenantId,
@@ -148,18 +200,33 @@ public class IdentityDtos {
     ) {}
 
     public record CreateRoleRequest(
+            @NotBlank(message = "Role code is required")
+            @Pattern(regexp = "^ROLE_[A-Z0-9_]{2,64}$", message = "Role code is invalid")
             String code,
+            @NotBlank(message = "Role name is required")
+            @Size(max = 128)
             String name,
+            @Size(max = 1000)
             String description,
+            @Pattern(regexp = "^$|^(PLATFORM|TENANT)$", message = "Role scope must be PLATFORM or TENANT")
             String scope,
+            @Size(max = 100)
             List<String> permissionCodes
     ) {}
 
     public record UpdateRoleRequest(
+            @Size(max = 128)
             String name,
+            @Size(max = 1000)
             String description,
+            @Size(max = 100)
             List<String> permissionCodes
-    ) {}
+    ) {
+        @jakarta.validation.constraints.AssertTrue(message = "At least one role field must be provided")
+        public boolean hasUpdate() {
+            return (name != null && !name.isBlank()) || description != null || permissionCodes != null;
+        }
+    }
 
     public record EffectiveAccessDto(
             UUID userId,
@@ -187,6 +254,7 @@ public class IdentityDtos {
     ) {}
 
     public record RevokeSessionRequest(
+            @Size(max = 500)
             String reason
     ) {}
 
@@ -220,12 +288,18 @@ public class IdentityDtos {
     ) {}
 
     public record CreateReviewCampaignRequest(
+            @NotBlank(message = "Campaign title is required")
+            @Size(max = 255)
             String title,
+            @Size(max = 2000)
             String description
     ) {}
 
     public record SubmitReviewDecisionRequest(
+            @NotBlank(message = "Review decision is required")
+            @Pattern(regexp = "^(APPROVED|MODIFIED|REVOKED|SUSPENDED)$", message = "Review decision is invalid")
             String decision,
+            @Size(max = 2000)
             String notes
     ) {}
 }

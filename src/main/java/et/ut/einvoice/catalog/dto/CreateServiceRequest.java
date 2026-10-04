@@ -18,17 +18,21 @@ public record CreateServiceRequest(
         @Size(min = 1, max = 128)
         String name,
 
+        @Size(max = 1000)
         String description,
 
         UUID categoryId,
 
+        @Size(max = 64)
         String categoryCode,
 
+        @Size(max = 32)
         String unit,
 
         @NotNull(message = "Unit price is mandatory")
         @PositiveOrZero(message = "Unit price cannot be negative")
         BigDecimal unitPrice,
 
+        @Size(max = 32)
         String taxClassification
 ) {}

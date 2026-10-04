@@ -83,7 +83,7 @@ public class SaasTenantManagementController {
     @Operation(summary = "Issue a controlled, short-lived delegated tenant token for testing or support")
     public ResponseEntity<DelegatedTenantSessionService.DelegatedSessionResult> createSupportSession(
             @PathVariable("id") UUID targetTenantId,
-            @RequestBody(required = false) RequestSupportSessionPayload payload
+            @Valid @RequestBody(required = false) RequestSupportSessionPayload payload
     ) {
         String operatorId = resolveOperatorId();
         String accessType = (payload != null && payload.accessType() != null) ? payload.accessType() : "TESTING";
@@ -112,9 +112,13 @@ public class SaasTenantManagementController {
     }
 
     public record RequestSupportSessionPayload(
+            @jakarta.validation.constraints.Pattern(regexp = "^$|^(TESTING|SUPPORT|DIAGNOSTIC)$", message = "Access type is invalid")
             String accessType,
             UUID branchId,
+            @jakarta.validation.constraints.Size(max = 1000)
             String reason,
+            @jakarta.validation.constraints.Positive
+            @jakarta.validation.constraints.Max(86_400)
             Long ttlSeconds
     ) {}
 }

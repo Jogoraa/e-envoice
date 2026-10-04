@@ -4,6 +4,7 @@ import et.ut.einvoice.platform.context.TenantContextHolder;
 import et.ut.einvoice.receipts.domain.Receipt;
 import et.ut.einvoice.receipts.domain.ReceiptType;
 import et.ut.einvoice.receipts.dto.CreateReceiptRequest;
+import et.ut.einvoice.receipts.dto.ReceiptResponseDto;
 import et.ut.einvoice.receipts.repository.ReceiptRepository;
 import et.ut.einvoice.receipts.service.ReceiptService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,24 +36,24 @@ public class ReceiptController {
     @PostMapping("/sales")
     @PreAuthorize("hasAuthority('SCOPE_receipt:create') or hasRole('TENANT_ADMIN') or hasRole('CASHIER')")
     @Operation(summary = "Register Sales Receipt", description = "Issues a sales receipt linked to an existing registered invoice.")
-    public ResponseEntity<Receipt> createSalesReceipt(@Valid @RequestBody CreateReceiptRequest request) {
+    public ResponseEntity<ReceiptResponseDto> createSalesReceipt(@Valid @RequestBody CreateReceiptRequest request) {
         Receipt receipt = receiptService.createReceipt(ReceiptType.SALES_RECEIPT, request);
-        return new ResponseEntity<>(receipt, HttpStatus.CREATED);
+        return new ResponseEntity<>(ReceiptResponseDto.fromEntity(receipt), HttpStatus.CREATED);
     }
 
     @PostMapping("/withholding")
     @PreAuthorize("hasAuthority('SCOPE_receipt:create') or hasRole('TENANT_ADMIN') or hasRole('CASHIER')")
     @Operation(summary = "Register Withholding Tax Receipt", description = "Issues a withholding tax confirmation receipt.")
-    public ResponseEntity<Receipt> createWithholdingReceipt(@Valid @RequestBody CreateReceiptRequest request) {
+    public ResponseEntity<ReceiptResponseDto> createWithholdingReceipt(@Valid @RequestBody CreateReceiptRequest request) {
         Receipt receipt = receiptService.createReceipt(ReceiptType.WITHHOLDING_RECEIPT, request);
-        return new ResponseEntity<>(receipt, HttpStatus.CREATED);
+        return new ResponseEntity<>(ReceiptResponseDto.fromEntity(receipt), HttpStatus.CREATED);
     }
 
     @GetMapping
     @PreAuthorize("hasAuthority('SCOPE_invoice:read') or hasAuthority('SCOPE_receipt:read') or hasRole('TENANT_ADMIN') or hasRole('CASHIER')")
     @Operation(summary = "List Receipts")
-    public ResponseEntity<Page<Receipt>> listReceipts(@PageableDefault(size = 20) Pageable pageable) {
+    public ResponseEntity<Page<ReceiptResponseDto>> listReceipts(@PageableDefault(size = 20) Pageable pageable) {
         UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
-        return ResponseEntity.ok(receiptRepository.findAllByTenantId(tenantId, pageable));
+        return ResponseEntity.ok(receiptRepository.findAllByTenantId(tenantId, pageable).map(ReceiptResponseDto::fromEntity));
     }
 }

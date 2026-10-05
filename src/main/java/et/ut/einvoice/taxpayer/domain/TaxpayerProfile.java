@@ -80,6 +80,7 @@ public class TaxpayerProfile {
         this.createdAt = Instant.now();
     }
 
+    public UUID getId() { return tenantId; }
     public UUID getTenantId() { return tenantId; }
     public String getTin() { return tin; }
     public String getVatNumber() { return vatNumber; }

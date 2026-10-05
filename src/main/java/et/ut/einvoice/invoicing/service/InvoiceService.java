@@ -354,6 +354,7 @@ public class InvoiceService {
                 invoice.addLine(line);
             }
             invoice.recalculateTotals();
+            invoice.initializeCreditStatus();
             Invoice savedInvoice = invoiceRepository.save(invoice);
 
             // Create first-class GovernmentSubmission record

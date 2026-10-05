@@ -10,4 +10,7 @@ import java.util.UUID;
 @Repository
 public interface TaxpayerProfileRepository extends JpaRepository<TaxpayerProfile, UUID> {
     Optional<TaxpayerProfile> findByTin(String tin);
+    default Optional<TaxpayerProfile> findByTenantId(UUID tenantId) {
+        return findById(tenantId);
+    }
 }

@@ -1,5 +1,6 @@
 package et.ut.einvoice.invoicing.dto;
 
+import et.ut.einvoice.creditsales.domain.CreditStatus;
 import et.ut.einvoice.invoicing.domain.Invoice;
 import et.ut.einvoice.invoicing.domain.InvoiceStatus;
 import et.ut.einvoice.invoicing.domain.TransactionType;
@@ -30,8 +31,39 @@ public record InvoiceResponseDto(
         String signedQr,
         int reprintCount,
         BuyerResponse buyer,
-        List<LineItemResponse> lines
+        List<LineItemResponse> lines,
+        BigDecimal outstandingBalance,
+        CreditStatus creditStatus,
+        Instant creditDueDate,
+        String creditTermsDescription
 ) {
+    public InvoiceResponseDto(
+            UUID id,
+            String documentNumber,
+            Long invoiceCounter,
+            Instant invoiceDate,
+            TransactionType transactionType,
+            String paymentMode,
+            String paymentTerm,
+            InvoiceStatus status,
+            BigDecimal preTaxTotal,
+            BigDecimal taxTotal,
+            BigDecimal exciseTotal,
+            BigDecimal grandTotal,
+            String currency,
+            String irn,
+            String rrn,
+            String ackDate,
+            String signedQr,
+            int reprintCount,
+            BuyerResponse buyer,
+            List<LineItemResponse> lines
+    ) {
+        this(id, documentNumber, invoiceCounter, invoiceDate, transactionType, paymentMode, paymentTerm, status,
+             preTaxTotal, taxTotal, exciseTotal, grandTotal, currency, irn, rrn, ackDate, signedQr, reprintCount,
+             buyer, lines, BigDecimal.ZERO, CreditStatus.NOT_APPLICABLE, null, null);
+    }
+
     public record BuyerResponse(
             String legalName,
             String tin,
@@ -99,7 +131,11 @@ public record InvoiceResponseDto(
                 inv.getSignedQr(),
                 inv.getReprintCount(),
                 buyerResp,
-                linesResp
+                linesResp,
+                inv.getOutstandingBalance(),
+                inv.getCreditStatus(),
+                inv.getCreditDueDate(),
+                inv.getCreditTermsDescription()
         );
     }
 }

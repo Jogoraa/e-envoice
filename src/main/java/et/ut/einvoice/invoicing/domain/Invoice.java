@@ -44,6 +44,19 @@ public class Invoice {
     @Column(name = "payment_term", nullable = false, length = 32)
     private String paymentTerm = "IMMEDIATE";
 
+    @Column(name = "credit_due_date")
+    private Instant creditDueDate;
+
+    @Column(name = "credit_terms_description")
+    private String creditTermsDescription;
+
+    @Column(name = "outstanding_balance", precision = 18, scale = 2)
+    private BigDecimal outstandingBalance = BigDecimal.ZERO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "credit_status", length = 32)
+    private et.ut.einvoice.creditsales.domain.CreditStatus creditStatus = et.ut.einvoice.creditsales.domain.CreditStatus.NOT_APPLICABLE;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 32)
     private InvoiceStatus status = InvoiceStatus.DRAFT;
@@ -343,4 +356,57 @@ public class Invoice {
     public String getPublicVerificationToken() { return publicVerificationToken; }
     public void setPublicVerificationToken(String publicVerificationToken) { this.publicVerificationToken = publicVerificationToken; }
     public List<InvoiceLine> getLines() { return lines; }
+
+    public Instant getCreditDueDate() { return creditDueDate; }
+    public void setCreditDueDate(Instant creditDueDate) { this.creditDueDate = creditDueDate; }
+    public String getCreditTermsDescription() { return creditTermsDescription; }
+    public void setCreditTermsDescription(String creditTermsDescription) { this.creditTermsDescription = creditTermsDescription; }
+    public BigDecimal getOutstandingBalance() { return outstandingBalance; }
+    public void setOutstandingBalance(BigDecimal outstandingBalance) { this.outstandingBalance = outstandingBalance; }
+    public et.ut.einvoice.creditsales.domain.CreditStatus getCreditStatus() { return creditStatus; }
+    public void setCreditStatus(et.ut.einvoice.creditsales.domain.CreditStatus creditStatus) { this.creditStatus = creditStatus; }
+
+    public void initializeCreditStatus() {
+        if ("CREDIT".equalsIgnoreCase(this.paymentTerm)) {
+            this.outstandingBalance = this.grandTotal;
+            this.creditStatus = et.ut.einvoice.creditsales.domain.CreditStatus.UNPAID;
+        } else {
+            this.outstandingBalance = BigDecimal.ZERO;
+            this.creditStatus = et.ut.einvoice.creditsales.domain.CreditStatus.NOT_APPLICABLE;
+        }
+    }
+
+    public void applySettlement(BigDecimal settlementAmount) {
+        if (!"CREDIT".equalsIgnoreCase(this.paymentTerm) || this.creditStatus == et.ut.einvoice.creditsales.domain.CreditStatus.NOT_APPLICABLE) {
+            throw new BusinessException(
+                    "NOT_A_CREDIT_SALE",
+                    "Invoice " + this.documentNumber + " is not a credit sale invoice.",
+                    "ደረሰኙ የብድር ሽያጭ አይደለም።",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+        if (settlementAmount == null || settlementAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(
+                    "INVALID_SETTLEMENT_AMOUNT",
+                    "Settlement amount must be strictly positive",
+                    "የክፍያ መጠኑ ከዜሮ በላይ መሆን አለበት።",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+        if (settlementAmount.compareTo(this.outstandingBalance) > 0) {
+            throw new BusinessException(
+                    "SETTLEMENT_EXCEEDS_OUTSTANDING_BALANCE",
+                    "Settlement amount " + settlementAmount + " exceeds outstanding balance " + this.outstandingBalance,
+                    "የክፍያ መጠኑ ካልተከፈለው ቀሪ ሂሳብ በላይ ሊሆን አይችልም።",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+        this.outstandingBalance = this.outstandingBalance.subtract(settlementAmount).setScale(2, java.math.RoundingMode.HALF_UP);
+        if (this.outstandingBalance.compareTo(BigDecimal.ZERO) == 0) {
+            this.creditStatus = et.ut.einvoice.creditsales.domain.CreditStatus.SETTLED;
+        } else {
+            this.creditStatus = et.ut.einvoice.creditsales.domain.CreditStatus.PARTIALLY_PAID;
+        }
+        this.updatedAt = Instant.now();
+    }
 }

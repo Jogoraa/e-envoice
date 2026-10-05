@@ -28,18 +28,22 @@ public class OfflineSyncService {
     private final DeviceTrustService deviceTrustService;
     private final AuditService auditService;
     private final et.ut.einvoice.taxpayer.crypto.DeviceCryptographicService deviceCryptoService;
+    private final DeviceOfflineAllocationService allocationService;
 
     public OfflineSyncService(
             OfflineTransactionBufferRepository bufferRepository,
             DeviceTrustService deviceTrustService,
             AuditService auditService,
             @org.springframework.beans.factory.annotation.Autowired(required = false)
-            et.ut.einvoice.taxpayer.crypto.DeviceCryptographicService deviceCryptoService
+            et.ut.einvoice.taxpayer.crypto.DeviceCryptographicService deviceCryptoService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            DeviceOfflineAllocationService allocationService
     ) {
         this.bufferRepository = bufferRepository;
         this.deviceTrustService = deviceTrustService;
         this.auditService = auditService;
         this.deviceCryptoService = deviceCryptoService;
+        this.allocationService = allocationService;
     }
 
     @Transactional
@@ -113,6 +117,17 @@ public class OfflineSyncService {
                 throw new BusinessException("DUPLICATE_OFFLINE_SEQUENCE",
                         "Replayed or duplicate offline transaction detected for sequence " + item.offlineSeqNo(),
                         HttpStatus.CONFLICT);
+            }
+
+            // 7. Pre-Allocated Offline Sequence Range Enforcement (Directive No. 1142/2026 Art. 4(4) & Art. 22)
+            if (allocationService != null) {
+                if (item.offlineAllocationRef() != null && !item.offlineAllocationRef().isBlank()) {
+                    if (allocationService.allocationExists(tenantId, item.offlineAllocationRef())) {
+                        allocationService.validateAndConsumeSequence(tenantId, request.deviceId(), item.offlineAllocationRef(), item.offlineSeqNo());
+                    }
+                } else if (allocationService.getActiveAllocation(tenantId, request.deviceId()).isPresent()) {
+                    allocationService.validateAndConsumeSequence(tenantId, request.deviceId(), null, item.offlineSeqNo());
+                }
             }
 
             OfflineTransactionBuffer buf = new OfflineTransactionBuffer(

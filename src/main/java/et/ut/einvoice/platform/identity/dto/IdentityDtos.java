@@ -86,7 +86,7 @@ public class IdentityDtos {
             @Size(max = 128)
             String currentPassword,
             @NotBlank(message = "New password is required")
-            @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{12,128}$", message = "New password must meet password complexity requirements")
+            @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&#^()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]).{12,128}$", message = "New password must meet password complexity requirements")
             String newPassword,
             @NotBlank(message = "Password confirmation is required")
             @Size(max = 128)

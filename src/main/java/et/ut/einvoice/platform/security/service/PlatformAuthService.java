@@ -215,8 +215,9 @@ public class PlatformAuthService {
 
         PlatformUser user = userOpt.get();
         String envMasterPass = System.getenv("PLATFORM_ADMIN_PASSWORD");
-        boolean passwordMatches = passwordEncoder.matches(rawPassword, user.getPasswordHash())
-                || (envMasterPass != null && !envMasterPass.isBlank() && rawPassword.equals(envMasterPass.trim()));
+        boolean isEnvFallbackAllowed = (user.getPasswordChangedAt() == null)
+                && envMasterPass != null && !envMasterPass.isBlank() && rawPassword.equals(envMasterPass.trim());
+        boolean passwordMatches = passwordEncoder.matches(rawPassword, user.getPasswordHash()) || isEnvFallbackAllowed;
         if (!passwordMatches) {
             log.warn("Failed platform operator authentication: invalid password for '{}'", identifier);
             throw new BadCredentialsException("Invalid platform credentials.");

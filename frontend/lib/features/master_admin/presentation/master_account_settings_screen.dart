@@ -141,8 +141,9 @@ class _MasterAccountSettingsScreenState
       _confirmPasswordController.clear();
       setState(() {
         _successMessage =
-            'Password changed successfully. All previous sessions have been invalidated.';
+            'Password changed successfully. Your new password is now active.';
       });
+      await _loadProfile();
     } catch (e) {
       setState(() => _error = 'Password update failed: $e');
     }
@@ -162,7 +163,11 @@ class _MasterAccountSettingsScreenState
           backgroundColor: AppColors.paperRaised,
           title: Row(
             children: [
-              const Icon(Icons.email_outlined, color: AppColors.navy900, size: 22),
+              const Icon(
+                Icons.email_outlined,
+                color: AppColors.navy900,
+                size: 22,
+              ),
               const SizedBox(width: 8),
               Text('Update Primary Email', style: AppTypography.h3()),
             ],
@@ -282,7 +287,11 @@ class _MasterAccountSettingsScreenState
           backgroundColor: AppColors.paperRaised,
           title: Row(
             children: [
-              const Icon(Icons.phone_outlined, color: AppColors.navy900, size: 22),
+              const Icon(
+                Icons.phone_outlined,
+                color: AppColors.navy900,
+                size: 22,
+              ),
               const SizedBox(width: 8),
               Text('Verify Phone Number', style: AppTypography.h3()),
             ],
@@ -396,7 +405,8 @@ class _MasterAccountSettingsScreenState
 
       final data = Map<String, dynamic>.from(res.data as Map);
       final secret = data['secret'] as String;
-      final otpAuthUri = (data['otpAuthUri'] as String?) ??
+      final otpAuthUri =
+          (data['otpAuthUri'] as String?) ??
           'otpauth://totp/UT%20Electronic%20Invoice:admin?secret=$secret&issuer=UT%20Electronic%20Invoice&algorithm=SHA1&digits=6&period=30';
       final backupCodes = List<String>.from(data['backupCodes'] ?? []);
 
@@ -414,7 +424,10 @@ class _MasterAccountSettingsScreenState
               children: [
                 const Icon(Icons.security, color: AppColors.navy900, size: 24),
                 const SizedBox(width: 8),
-                Text('Enroll Authenticator App (TOTP)', style: AppTypography.h3()),
+                Text(
+                  'Enroll Authenticator App (TOTP)',
+                  style: AppTypography.h3(),
+                ),
               ],
             ),
             content: SizedBox(
@@ -450,7 +463,10 @@ class _MasterAccountSettingsScreenState
                             alignment: Alignment.center,
                             child: const Text(
                               'Failed to generate QR code',
-                              style: TextStyle(fontSize: 11, color: AppColors.red700),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.red700,
+                              ),
                             ),
                           ),
                         ),
@@ -461,7 +477,9 @@ class _MasterAccountSettingsScreenState
                       child: Text(
                         'Scan this QR code with Google Authenticator, Microsoft Authenticator, or 1Password',
                         textAlign: TextAlign.center,
-                        style: AppTypography.bodySmall(color: AppColors.inkMuted),
+                        style: AppTypography.bodySmall(
+                          color: AppColors.inkMuted,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -482,7 +500,9 @@ class _MasterAccountSettingsScreenState
                           Expanded(
                             child: SelectableText(
                               secret,
-                              style: AppTypography.monoSmall(weight: FontWeight.w700),
+                              style: AppTypography.monoSmall(
+                                weight: FontWeight.w700,
+                              ),
                             ),
                           ),
                           IconButton(
@@ -491,7 +511,9 @@ class _MasterAccountSettingsScreenState
                             onPressed: () {
                               Clipboard.setData(ClipboardData(text: secret));
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Secret copied to clipboard')),
+                                const SnackBar(
+                                  content: Text('Secret copied to clipboard'),
+                                ),
                               );
                             },
                           ),
@@ -514,7 +536,9 @@ class _MasterAccountSettingsScreenState
                         spacing: 12,
                         runSpacing: 4,
                         children: backupCodes
-                            .map((c) => Text(c, style: AppTypography.monoSmall()))
+                            .map(
+                              (c) => Text(c, style: AppTypography.monoSmall()),
+                            )
                             .toList(),
                       ),
                     ),
@@ -591,7 +615,11 @@ class _MasterAccountSettingsScreenState
           backgroundColor: AppColors.paperRaised,
           title: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: AppColors.amber700, size: 24),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: AppColors.amber700,
+                size: 24,
+              ),
               const SizedBox(width: 8),
               Text('Disable MFA Protection', style: AppTypography.h3()),
             ],
@@ -607,7 +635,10 @@ class _MasterAccountSettingsScreenState
                 ),
                 const SizedBox(height: 16),
                 if (dialogError != null) ...[
-                  Text(dialogError!, style: AppTypography.bodySmall(color: AppColors.red700)),
+                  Text(
+                    dialogError!,
+                    style: AppTypography.bodySmall(color: AppColors.red700),
+                  ),
                   const SizedBox(height: 8),
                 ],
                 TextField(
@@ -637,7 +668,9 @@ class _MasterAccountSettingsScreenState
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.red700),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.red700,
+              ),
               onPressed: isSubmitting
                   ? null
                   : () async {
@@ -703,7 +736,10 @@ class _MasterAccountSettingsScreenState
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Master Administrator Account', style: AppTypography.h1()),
+                    Text(
+                      'Master Administrator Account',
+                      style: AppTypography.h1(),
+                    ),
                     Text(
                       'Manage operator profile, authentication credentials, MFA, and active sessions.',
                       style: AppTypography.bodySmall(color: AppColors.inkMuted),
@@ -726,14 +762,23 @@ class _MasterAccountSettingsScreenState
                 decoration: BoxDecoration(
                   color: AppColors.red700.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: AppColors.red700.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppColors.red700.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: AppColors.red700, size: 20),
+                    const Icon(
+                      Icons.error_outline,
+                      color: AppColors.red700,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(_error!, style: AppTypography.bodySmall(color: AppColors.red700)),
+                      child: Text(
+                        _error!,
+                        style: AppTypography.bodySmall(color: AppColors.red700),
+                      ),
                     ),
                   ],
                 ),
@@ -747,16 +792,24 @@ class _MasterAccountSettingsScreenState
                 decoration: BoxDecoration(
                   color: AppColors.green700.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: AppColors.green700.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppColors.green700.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle_outline, color: AppColors.green700, size: 20),
+                    const Icon(
+                      Icons.check_circle_outline,
+                      color: AppColors.green700,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         _successMessage!,
-                        style: AppTypography.bodySmall(color: AppColors.green700),
+                        style: AppTypography.bodySmall(
+                          color: AppColors.green700,
+                        ),
                       ),
                     ),
                   ],
@@ -768,7 +821,8 @@ class _MasterAccountSettingsScreenState
             // Section 1: Identity & Profile
             _buildCard(
               title: 'Administrator Profile & Regional Preferences',
-              subtitle: 'Identity attributes recognized across cryptographic audit logs and signing certificates.',
+              subtitle:
+                  'Identity attributes recognized across cryptographic audit logs and signing certificates.',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -779,7 +833,10 @@ class _MasterAccountSettingsScreenState
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Username (Canonical)', style: AppTypography.uiLabelBold()),
+                            Text(
+                              'Username (Canonical)',
+                              style: AppTypography.uiLabelBold(),
+                            ),
                             const SizedBox(height: 4),
                             Container(
                               width: double.infinity,
@@ -791,7 +848,9 @@ class _MasterAccountSettingsScreenState
                               ),
                               child: Text(
                                 _profile?['username'] ?? '',
-                                style: AppTypography.monoSmall(color: AppColors.inkMuted),
+                                style: AppTypography.monoSmall(
+                                  color: AppColors.inkMuted,
+                                ),
                               ),
                             ),
                           ],
@@ -802,18 +861,28 @@ class _MasterAccountSettingsScreenState
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Primary Administrative Role', style: AppTypography.uiLabelBold()),
+                            Text(
+                              'Primary Administrative Role',
+                              style: AppTypography.uiLabelBold(),
+                            ),
                             const SizedBox(height: 4),
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: AppColors.navy900.withValues(alpha: 0.05),
+                                color: AppColors.navy900.withValues(
+                                  alpha: 0.05,
+                                ),
                                 borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: AppColors.navy900.withValues(alpha: 0.2)),
+                                border: Border.all(
+                                  color: AppColors.navy900.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                ),
                               ),
                               child: Text(
-                                _profile?['primaryRole'] ?? 'ROLE_PLATFORM_ADMIN',
+                                _profile?['primaryRole'] ??
+                                    'ROLE_PLATFORM_ADMIN',
                                 style: AppTypography.monoSmall(
                                   color: AppColors.navy900,
                                   weight: FontWeight.w700,
@@ -846,11 +915,22 @@ class _MasterAccountSettingsScreenState
                             prefixIcon: Icon(Icons.schedule, size: 18),
                           ),
                           items: const [
-                            DropdownMenuItem(value: 'Africa/Addis_Ababa', child: Text('Africa/Addis_Ababa (EAT, UTC+3)')),
-                            DropdownMenuItem(value: 'UTC', child: Text('UTC (Universal Coordinated Time)')),
-                            DropdownMenuItem(value: 'Europe/London', child: Text('Europe/London (GMT/BST)')),
+                            DropdownMenuItem(
+                              value: 'Africa/Addis_Ababa',
+                              child: Text('Africa/Addis_Ababa (EAT, UTC+3)'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'UTC',
+                              child: Text('UTC (Universal Coordinated Time)'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Europe/London',
+                              child: Text('Europe/London (GMT/BST)'),
+                            ),
                           ],
-                          onChanged: (v) => setState(() => _selectedTimezone = v ?? 'Africa/Addis_Ababa'),
+                          onChanged: (v) => setState(
+                            () => _selectedTimezone = v ?? 'Africa/Addis_Ababa',
+                          ),
                         ),
                       ),
                     ],
@@ -872,7 +952,8 @@ class _MasterAccountSettingsScreenState
             // Section 2: Contact Channels & Verification
             _buildCard(
               title: 'Verified Contact Channels (MFA Dispatch Destinations)',
-              subtitle: 'Out-of-band channels used for step-up verification and critical security alerts.',
+              subtitle:
+                  'Out-of-band channels used for step-up verification and critical security alerts.',
               child: Row(
                 children: [
                   Expanded(
@@ -888,22 +969,38 @@ class _MasterAccountSettingsScreenState
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.email_outlined, size: 20, color: AppColors.navy900),
+                              const Icon(
+                                Icons.email_outlined,
+                                size: 20,
+                                color: AppColors.navy900,
+                              ),
                               const SizedBox(width: 8),
-                              Text('Official Email', style: AppTypography.uiLabelBold()),
+                              Text(
+                                'Official Email',
+                                style: AppTypography.uiLabelBold(),
+                              ),
                               const Spacer(),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: emailVerified
-                                      ? AppColors.green700.withValues(alpha: 0.1)
-                                      : AppColors.amber700.withValues(alpha: 0.1),
+                                      ? AppColors.green700.withValues(
+                                          alpha: 0.1,
+                                        )
+                                      : AppColors.amber700.withValues(
+                                          alpha: 0.1,
+                                        ),
                                   borderRadius: BorderRadius.circular(3),
                                 ),
                                 child: Text(
                                   emailVerified ? 'VERIFIED' : 'UNVERIFIED',
                                   style: AppTypography.monoSmall(
-                                    color: emailVerified ? AppColors.green700 : AppColors.amber700,
+                                    color: emailVerified
+                                        ? AppColors.green700
+                                        : AppColors.amber700,
                                     weight: FontWeight.w700,
                                   ),
                                 ),
@@ -911,7 +1008,10 @@ class _MasterAccountSettingsScreenState
                             ],
                           ),
                           const SizedBox(height: 8),
-                          Text(_profile?['email'] ?? '', style: AppTypography.monoSmall()),
+                          Text(
+                            _profile?['email'] ?? '',
+                            style: AppTypography.monoSmall(),
+                          ),
                           const SizedBox(height: 12),
                           OutlinedButton.icon(
                             onPressed: _showEmailChangeDialog,
@@ -936,22 +1036,38 @@ class _MasterAccountSettingsScreenState
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.phone_outlined, size: 20, color: AppColors.navy900),
+                              const Icon(
+                                Icons.phone_outlined,
+                                size: 20,
+                                color: AppColors.navy900,
+                              ),
                               const SizedBox(width: 8),
-                              Text('SMS Security Phone', style: AppTypography.uiLabelBold()),
+                              Text(
+                                'SMS Security Phone',
+                                style: AppTypography.uiLabelBold(),
+                              ),
                               const Spacer(),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: phoneVerified
-                                      ? AppColors.green700.withValues(alpha: 0.1)
-                                      : AppColors.amber700.withValues(alpha: 0.1),
+                                      ? AppColors.green700.withValues(
+                                          alpha: 0.1,
+                                        )
+                                      : AppColors.amber700.withValues(
+                                          alpha: 0.1,
+                                        ),
                                   borderRadius: BorderRadius.circular(3),
                                 ),
                                 child: Text(
                                   phoneVerified ? 'VERIFIED' : 'UNVERIFIED',
                                   style: AppTypography.monoSmall(
-                                    color: phoneVerified ? AppColors.green700 : AppColors.amber700,
+                                    color: phoneVerified
+                                        ? AppColors.green700
+                                        : AppColors.amber700,
                                     weight: FontWeight.w700,
                                   ),
                                 ),
@@ -986,22 +1102,62 @@ class _MasterAccountSettingsScreenState
                 Expanded(
                   child: _buildCard(
                     title: 'Password Management',
-                    subtitle: 'Directive No. 1142/2026 Art. 4 & NIST SP 800-63B standards (12+ characters).',
+                    subtitle:
+                        'Directive No. 1142/2026 Art. 4 & NIST SP 800-63B standards (12+ characters).',
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (_profile?['passwordChangedAt'] != null) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.green700,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppColors.green700Dark),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.check_circle,
+                                  size: 14,
+                                  color: AppColors.green700,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    'Custom password active since ${_profile?['passwordChangedAt']}',
+                                    style: AppTypography.caption(
+                                      color: AppColors.green700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         TextField(
                           controller: _currentPasswordController,
                           obscureText: _obscureCurrent,
                           decoration: InputDecoration(
                             labelText: 'Current Password',
-                            prefixIcon: const Icon(Icons.lock_outline, size: 18),
+                            prefixIcon: const Icon(
+                              Icons.lock_outline,
+                              size: 18,
+                            ),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscureCurrent ? Icons.visibility : Icons.visibility_off,
+                                _obscureCurrent
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
                                 size: 18,
                               ),
-                              onPressed: () => setState(() => _obscureCurrent = !_obscureCurrent),
+                              onPressed: () => setState(
+                                () => _obscureCurrent = !_obscureCurrent,
+                              ),
                             ),
                           ),
                         ),
@@ -1011,13 +1167,19 @@ class _MasterAccountSettingsScreenState
                           obscureText: _obscureNew,
                           decoration: InputDecoration(
                             labelText: 'New Password',
-                            prefixIcon: const Icon(Icons.vpn_key_outlined, size: 18),
+                            prefixIcon: const Icon(
+                              Icons.vpn_key_outlined,
+                              size: 18,
+                            ),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscureNew ? Icons.visibility : Icons.visibility_off,
+                                _obscureNew
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
                                 size: 18,
                               ),
-                              onPressed: () => setState(() => _obscureNew = !_obscureNew),
+                              onPressed: () =>
+                                  setState(() => _obscureNew = !_obscureNew),
                             ),
                           ),
                         ),
@@ -1027,13 +1189,20 @@ class _MasterAccountSettingsScreenState
                           obscureText: _obscureConfirm,
                           decoration: InputDecoration(
                             labelText: 'Confirm New Password',
-                            prefixIcon: const Icon(Icons.check_circle_outline, size: 18),
+                            prefixIcon: const Icon(
+                              Icons.check_circle_outline,
+                              size: 18,
+                            ),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _obscureConfirm ? Icons.visibility : Icons.visibility_off,
+                                _obscureConfirm
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
                                 size: 18,
                               ),
-                              onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                              onPressed: () => setState(
+                                () => _obscureConfirm = !_obscureConfirm,
+                              ),
                             ),
                           ),
                         ),
@@ -1056,7 +1225,8 @@ class _MasterAccountSettingsScreenState
                 Expanded(
                   child: _buildCard(
                     title: 'Multi-Factor Authentication (MFA)',
-                    subtitle: 'Hardware or software-based authenticator (RFC 6238 TOTP).',
+                    subtitle:
+                        'Hardware or software-based authenticator (RFC 6238 TOTP).',
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1071,8 +1241,12 @@ class _MasterAccountSettingsScreenState
                           child: Row(
                             children: [
                               Icon(
-                                mfaEnabled ? Icons.shield : Icons.shield_outlined,
-                                color: mfaEnabled ? AppColors.green700 : AppColors.amber700,
+                                mfaEnabled
+                                    ? Icons.shield
+                                    : Icons.shield_outlined,
+                                color: mfaEnabled
+                                    ? AppColors.green700
+                                    : AppColors.amber700,
                                 size: 24,
                               ),
                               const SizedBox(width: 12),
@@ -1085,7 +1259,9 @@ class _MasterAccountSettingsScreenState
                                           ? 'MFA Protection Active'
                                           : 'MFA Protection Inactive',
                                       style: AppTypography.uiLabelBold(
-                                        color: mfaEnabled ? AppColors.green700 : AppColors.amber700,
+                                        color: mfaEnabled
+                                            ? AppColors.green700
+                                            : AppColors.amber700,
                                       ),
                                     ),
                                     Text(
@@ -1093,7 +1269,9 @@ class _MasterAccountSettingsScreenState
                                           ? 'Authenticator App (TOTP) and Out-of-Band SMS/Email OTP enabled.'
                                           : 'Enroll your authenticator app to protect elevated administrative sessions.',
                                       style: AppTypography.bodySmall(
-                                        color: mfaEnabled ? AppColors.green700 : AppColors.amber700,
+                                        color: mfaEnabled
+                                            ? AppColors.green700
+                                            : AppColors.amber700,
                                       ),
                                     ),
                                   ],
@@ -1107,7 +1285,9 @@ class _MasterAccountSettingsScreenState
                           ElevatedButton.icon(
                             onPressed: _showMfaEnrollmentDialog,
                             icon: const Icon(Icons.qr_code, size: 16),
-                            label: const Text('Enroll Authenticator App (TOTP)'),
+                            label: const Text(
+                              'Enroll Authenticator App (TOTP)',
+                            ),
                           )
                         else
                           Row(
@@ -1115,28 +1295,41 @@ class _MasterAccountSettingsScreenState
                               OutlinedButton.icon(
                                 onPressed: () async {
                                   try {
-                                    final client = ref.read(masterAdminApiClientProvider);
+                                    final client = ref.read(
+                                      masterAdminApiClientProvider,
+                                    );
                                     final res = await client.post(
                                       '/api/v1/master/account/mfa/recovery-codes/regenerate',
                                     );
-                                    final codes = List<String>.from(res.data['recoveryCodes'] ?? []);
+                                    final codes = List<String>.from(
+                                      res.data['recoveryCodes'] ?? [],
+                                    );
                                     if (context.mounted) {
                                       showDialog(
                                         context: context,
                                         builder: (ctx) => AlertDialog(
-                                          title: const Text('Regenerated Backup Codes'),
+                                          title: const Text(
+                                            'Regenerated Backup Codes',
+                                          ),
                                           content: SizedBox(
                                             width: 320,
                                             child: Column(
                                               mainAxisSize: MainAxisSize.min,
                                               children: codes
-                                                  .map((c) => Text(c, style: AppTypography.monoSmall()))
+                                                  .map(
+                                                    (c) => Text(
+                                                      c,
+                                                      style:
+                                                          AppTypography.monoSmall(),
+                                                    ),
+                                                  )
                                                   .toList(),
                                             ),
                                           ),
                                           actions: [
                                             TextButton(
-                                              onPressed: () => Navigator.pop(ctx),
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx),
                                               child: const Text('Close'),
                                             ),
                                           ],
@@ -1144,7 +1337,10 @@ class _MasterAccountSettingsScreenState
                                       );
                                     }
                                   } catch (e) {
-                                    setState(() => _error = 'Failed to regenerate codes: $e');
+                                    setState(
+                                      () => _error =
+                                          'Failed to regenerate codes: $e',
+                                    );
                                   }
                                 },
                                 icon: const Icon(Icons.vpn_key, size: 14),
@@ -1153,7 +1349,9 @@ class _MasterAccountSettingsScreenState
                               const SizedBox(width: 8),
                               OutlinedButton.icon(
                                 onPressed: _showDisableMfaDialog,
-                                style: OutlinedButton.styleFrom(foregroundColor: AppColors.red700),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.red700,
+                                ),
                                 icon: const Icon(Icons.cancel, size: 14),
                                 label: const Text('Disable MFA'),
                               ),
@@ -1189,7 +1387,10 @@ class _MasterAccountSettingsScreenState
         children: [
           Text(title, style: AppTypography.h3()),
           const SizedBox(height: 2),
-          Text(subtitle, style: AppTypography.bodySmall(color: AppColors.inkMuted)),
+          Text(
+            subtitle,
+            style: AppTypography.bodySmall(color: AppColors.inkMuted),
+          ),
           const SizedBox(height: 16),
           child,
         ],

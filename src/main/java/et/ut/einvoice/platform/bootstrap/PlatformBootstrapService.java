@@ -166,10 +166,14 @@ public class PlatformBootstrapService implements CommandLineRunner {
                     .or(() -> platformUserRepository.findByEmail(generatedMasterEmail));
             if (masterOpt.isPresent()) {
                 PlatformUser masterUser = masterOpt.get();
-                masterUser.setPasswordHash(passwordEncoder.encode(generatedMasterPassword));
-                platformUserRepository.save(masterUser);
-                masterCreated = true;
-                log.info("Synchronized Master Operator password from PLATFORM_ADMIN_PASSWORD environment setting.");
+                if (masterUser.getPasswordChangedAt() == null) {
+                    masterUser.setPasswordHash(passwordEncoder.encode(generatedMasterPassword));
+                    platformUserRepository.save(masterUser);
+                    masterCreated = true;
+                    log.info("Synchronized Master Operator password from PLATFORM_ADMIN_PASSWORD environment setting.");
+                } else {
+                    log.info("Preserving custom Master Operator password set by operator (passwordChangedAt: {})", masterUser.getPasswordChangedAt());
+                }
             }
         }
 
@@ -180,9 +184,13 @@ public class PlatformBootstrapService implements CommandLineRunner {
                 .or(() -> platformUserRepository.findByEmail("saas.admin@utsolutionsplc.com"));
         if (saasOpt.isPresent()) {
             PlatformUser saasUser = saasOpt.get();
-            saasUser.setPasswordHash(saasHash);
-            platformUserRepository.save(saasUser);
-            log.info("Synchronized SaaS Administrator password from environment setting.");
+            if (saasUser.getPasswordChangedAt() == null) {
+                saasUser.setPasswordHash(saasHash);
+                platformUserRepository.save(saasUser);
+                log.info("Synchronized SaaS Administrator password from environment setting.");
+            } else {
+                log.info("Preserving custom SaaS Administrator password set by operator (passwordChangedAt: {})", saasUser.getPasswordChangedAt());
+            }
         } else {
             PlatformUser saasUser = new PlatformUser(
                     UUID.randomUUID(),

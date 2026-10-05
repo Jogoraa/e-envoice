@@ -23,6 +23,20 @@ public record SyncOfflineBatchRequest(
             @NotNull @Positive Long offlineSeqNo,
             @NotNull Instant bufferedAt,
             @NotBlank @Size(max = 1_000_000) String payloadJson,
-            @NotBlank @Size(max = 16_384) String deviceSignature
-    ) {}
+            @NotBlank @Size(max = 16_384) String deviceSignature,
+            String clientOperationId,
+            String payloadDigest,
+            String offlineAllocationRef,
+            String nonce,
+            Integer keyVersion
+    ) {
+        public OfflineInvoiceItemDto(
+                Long offlineSeqNo,
+                Instant bufferedAt,
+                String payloadJson,
+                String deviceSignature
+        ) {
+            this(offlineSeqNo, bufferedAt, payloadJson, deviceSignature, null, null, null, null, 1);
+        }
+    }
 }

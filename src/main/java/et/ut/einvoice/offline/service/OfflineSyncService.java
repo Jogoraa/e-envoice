@@ -27,15 +27,19 @@ public class OfflineSyncService {
     private final OfflineTransactionBufferRepository bufferRepository;
     private final DeviceTrustService deviceTrustService;
     private final AuditService auditService;
+    private final et.ut.einvoice.taxpayer.crypto.DeviceCryptographicService deviceCryptoService;
 
     public OfflineSyncService(
             OfflineTransactionBufferRepository bufferRepository,
             DeviceTrustService deviceTrustService,
-            AuditService auditService
+            AuditService auditService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            et.ut.einvoice.taxpayer.crypto.DeviceCryptographicService deviceCryptoService
     ) {
         this.bufferRepository = bufferRepository;
         this.deviceTrustService = deviceTrustService;
         this.auditService = auditService;
+        this.deviceCryptoService = deviceCryptoService;
     }
 
     @Transactional
@@ -66,25 +70,42 @@ public class OfflineSyncService {
                 throw new BusinessException("INVALID_PAYLOAD", "Offline transaction payload cannot be empty.", HttpStatus.BAD_REQUEST);
             }
 
-            // 3. Cryptographic Signature Validation (Simulated INSA device key verification)
-            if (item.deviceSignature() == null || item.deviceSignature().isBlank() ||
-                item.deviceSignature().contains("INVALID") || item.deviceSignature().contains("BAD") ||
-                item.deviceSignature().contains("FORGED")) {
-                throw new BusinessException("SIGNATURE_VERIFICATION_FAILED", "Device cryptographic signature verification failed.", HttpStatus.BAD_REQUEST);
-            }
-
-            // 4. Timestamp & Clock Drift Validation
+            // 3. Timestamp & Clock Drift Validation
             Instant bufferedAt = item.bufferedAt() != null ? item.bufferedAt() : now;
             if (bufferedAt.isAfter(now.plusSeconds(300))) {
                 throw new BusinessException("CLOCK_MANIPULATION_DETECTED", "Offline transaction timestamp cannot be in the future.", HttpStatus.BAD_REQUEST);
             }
 
-            // 5. 72-hour offline business continuity limit (Directive Art. 4(4) & 23(4))
+            // 4. 72-hour offline business continuity limit (Directive Art. 4(4) & 23(4))
             long hoursElapsed = Duration.between(bufferedAt, now).toHours();
             if (hoursElapsed > 72) {
                 throw new BusinessException("OFFLINE_BATCH_EXPIRED",
                         "Offline transaction seq " + item.offlineSeqNo() + " was buffered " + hoursElapsed + " hours ago, exceeding the statutory 72-hour limit.",
                         HttpStatus.BAD_REQUEST);
+            }
+
+            // 5. Cryptographic Signature Validation (Directive No. 1142/2026 Art. 4(6))
+            if (deviceCryptoService != null) {
+                et.ut.einvoice.taxpayer.crypto.OfflineTransactionEnvelope envelope =
+                        new et.ut.einvoice.taxpayer.crypto.OfflineTransactionEnvelope(
+                                tenantId,
+                                request.deviceId(),
+                                item.clientOperationId() != null ? item.clientOperationId() : "OP-" + item.offlineSeqNo(),
+                                bufferedAt,
+                                item.payloadDigest(),
+                                item.offlineAllocationRef(),
+                                item.offlineSeqNo(),
+                                item.nonce(),
+                                item.keyVersion() != null ? item.keyVersion() : 1,
+                                item.deviceSignature()
+                        );
+                deviceCryptoService.verifyEnvelope(tenantId, request.deviceId(), envelope, item.payloadJson());
+            } else {
+                if (item.deviceSignature() == null || item.deviceSignature().isBlank() ||
+                    item.deviceSignature().contains("INVALID") || item.deviceSignature().contains("BAD") ||
+                    item.deviceSignature().contains("FORGED")) {
+                    throw new BusinessException("SIGNATURE_VERIFICATION_FAILED", "Device cryptographic signature verification failed.", HttpStatus.BAD_REQUEST);
+                }
             }
 
             // 6. Duplicate & Replay Detection

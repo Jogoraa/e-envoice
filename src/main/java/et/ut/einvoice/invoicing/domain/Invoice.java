@@ -273,7 +273,13 @@ public class Invoice {
 
     // Getters and Setters
     public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
     public UUID getTenantId() { return tenantId; }
+    public void setTenantId(UUID tenantId) { this.tenantId = tenantId; }
+    public void setInvoiceDate(Instant invoiceDate) {
+        checkNotRegistered();
+        this.invoiceDate = invoiceDate;
+    }
     public UUID getBranchId() { return branchId; }
     public void setBranchId(UUID branchId) { this.branchId = branchId; }
     public UUID getDeviceId() { return deviceId; }
@@ -301,7 +307,19 @@ public class Invoice {
     public InvoiceStatus getStatus() { return status; }
     public void setStatus(InvoiceStatus status) { this.status = status; }
     public BigDecimal getPreTaxTotal() { return preTaxTotal; }
+    public void setPreTaxTotal(BigDecimal preTaxTotal) {
+        checkNotRegistered();
+        this.preTaxTotal = preTaxTotal;
+    }
     public BigDecimal getTaxTotal() { return taxTotal; }
+    public void setTaxTotal(BigDecimal taxTotal) {
+        checkNotRegistered();
+        this.taxTotal = taxTotal;
+    }
+    public void setTransactionType(TransactionType transactionType) {
+        checkNotRegistered();
+        this.transactionType = transactionType;
+    }
     public BigDecimal getExciseTotal() { return exciseTotal; }
     public BigDecimal getGrandTotal() { return grandTotal; }
     public void setGrandTotal(BigDecimal grandTotal) {

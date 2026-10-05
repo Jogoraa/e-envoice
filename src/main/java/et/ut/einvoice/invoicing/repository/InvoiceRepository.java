@@ -42,6 +42,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
 
     Page<Invoice> findAllByInvoiceDateBetween(Instant fromDate, Instant toDate, Pageable pageable);
 
+    java.util.List<Invoice> findByTenantIdAndInvoiceDateBetween(UUID tenantId, Instant fromDate, Instant toDate);
+
     @Query("SELECT COALESCE(SUM(i.grandTotal), 0) FROM Invoice i WHERE i.invoiceDate >= :since AND i.status != et.ut.einvoice.invoicing.domain.InvoiceStatus.CANCELLED")
     java.math.BigDecimal calculateTotalSalesVolumeSince(@Param("since") Instant since);
 }

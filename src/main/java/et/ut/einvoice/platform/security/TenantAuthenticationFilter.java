@@ -124,7 +124,14 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
                         r.equalsIgnoreCase("ROLE_SAAS_ADMIN") ||
                         r.equalsIgnoreCase("ROLE_SAAS_OPERATOR") ||
                         r.equalsIgnoreCase("ROLE_AUTHORITY_AUDITOR") ||
-                        r.equalsIgnoreCase("ROLE_DELEGATED_OPERATOR")
+                        r.equalsIgnoreCase("ROLE_DELEGATED_OPERATOR") ||
+                        r.equalsIgnoreCase("ROLE_MASTER_ADMIN") ||
+                        r.equalsIgnoreCase("ROLE_SYSTEM_ADMIN") ||
+                        r.equalsIgnoreCase("ROLE_OPERATOR") ||
+                        r.equalsIgnoreCase("ROLE_AUDITOR") ||
+                        r.equalsIgnoreCase("PLATFORM_ADMIN") ||
+                        r.equalsIgnoreCase("MASTER_ADMIN") ||
+                        r.equalsIgnoreCase("AUTHORITY_AUDITOR")
                 );
 
                 if (!claims.isMasterToken() && !hasMasterRole) {
@@ -135,7 +142,14 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
 
                 // Establish platform operator context
                 List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-                claims.roles().forEach(r -> authorities.add(new SimpleGrantedAuthority(r)));
+                claims.roles().forEach(r -> {
+                    authorities.add(new SimpleGrantedAuthority(r));
+                    if (!r.startsWith("ROLE_")) {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_" + r.toUpperCase()));
+                    } else {
+                        authorities.add(new SimpleGrantedAuthority(r.substring(5).toUpperCase()));
+                    }
+                });
                 claims.scopes().forEach(s -> authorities.add(new SimpleGrantedAuthority("SCOPE_" + s)));
                 if (authorities.isEmpty()) {
                     authorities.add(new SimpleGrantedAuthority("ROLE_SAAS_ADMIN"));

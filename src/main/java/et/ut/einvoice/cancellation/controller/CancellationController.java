@@ -58,4 +58,51 @@ public class CancellationController {
         UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
         return ResponseEntity.ok(cancellationRepository.findAllByTenantId(tenantId, pageable).map(CancellationResponseDto::fromEntity));
     }
+
+    @PostMapping("/{id}/demand-evidence")
+    @PreAuthorize("hasAnyAuthority('ROLE_AUTHORITY_AUDITOR', 'ROLE_PLATFORM_ADMIN')")
+    @Operation(summary = "Authority Demands Additional Evidence (Art. 26(3))", description = "Initiates the statutory 48-hour countdown clock for evidence submission.")
+    public ResponseEntity<et.ut.einvoice.cancellation.dto.CancellationStatusResponseDto> demandEvidence(
+            @PathVariable UUID id,
+            @RequestParam(required = false, defaultValue = "48") long hours
+    ) {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        CancellationRequest req = cancellationService.demandAuthorityEvidence(tenantId, id, java.time.Duration.ofHours(hours));
+        return ResponseEntity.ok(et.ut.einvoice.cancellation.dto.CancellationStatusResponseDto.fromEntity(req));
+    }
+
+    @PostMapping("/evidence")
+    @PreAuthorize("hasAuthority('SCOPE_invoice:cancel') or hasAnyRole('TENANT_ADMIN', 'CASHIER')")
+    @Operation(summary = "Submit Evidence Attachments for Cancellation", description = "Uploads verified evidence within the 48-hour statutory window.")
+    public ResponseEntity<et.ut.einvoice.cancellation.dto.CancellationStatusResponseDto> submitEvidence(
+            @Valid @RequestBody et.ut.einvoice.cancellation.dto.SubmitEvidenceDto dto
+    ) {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        CancellationRequest req = cancellationService.submitCancellationEvidence(tenantId, dto);
+        return ResponseEntity.ok(et.ut.einvoice.cancellation.dto.CancellationStatusResponseDto.fromEntity(req));
+    }
+
+    @PostMapping("/{id}/authority-approve")
+    @PreAuthorize("hasAnyAuthority('ROLE_AUTHORITY_AUDITOR', 'ROLE_PLATFORM_ADMIN')")
+    @Operation(summary = "Authority Approves Cancellation", description = "Fiscally marks invoice CANCELLED upon authoritative approval.")
+    public ResponseEntity<et.ut.einvoice.cancellation.dto.CancellationStatusResponseDto> approveCancellation(
+            @PathVariable UUID id,
+            @RequestParam String cancellationRef
+    ) {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        CancellationRequest req = cancellationService.finalizeAuthorityApproval(tenantId, id, cancellationRef);
+        return ResponseEntity.ok(et.ut.einvoice.cancellation.dto.CancellationStatusResponseDto.fromEntity(req));
+    }
+
+    @PostMapping("/{id}/authority-reject")
+    @PreAuthorize("hasAnyAuthority('ROLE_AUTHORITY_AUDITOR', 'ROLE_PLATFORM_ADMIN')")
+    @Operation(summary = "Authority Rejects Cancellation", description = "Rejection keeps invoice registered and immutable.")
+    public ResponseEntity<et.ut.einvoice.cancellation.dto.CancellationStatusResponseDto> rejectCancellation(
+            @PathVariable UUID id,
+            @RequestParam String reason
+    ) {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        CancellationRequest req = cancellationService.finalizeAuthorityRejection(tenantId, id, reason);
+        return ResponseEntity.ok(et.ut.einvoice.cancellation.dto.CancellationStatusResponseDto.fromEntity(req));
+    }
 }

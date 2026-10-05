@@ -31,6 +31,7 @@ public class CancellationService {
     private final et.ut.einvoice.notifications.service.InvoiceNotificationPolicyService notificationPolicyService;
     private final et.ut.einvoice.notifications.repository.InvoiceNotificationOutboxRepository notificationOutboxRepository;
     private final et.ut.einvoice.notifications.metrics.SmsMetrics smsMetrics;
+    private final et.ut.einvoice.cancellation.repository.CancellationEvidenceAttachmentRepository evidenceRepository;
 
     public CancellationService(
             CancellationRequestRepository cancellationRepository,
@@ -43,7 +44,9 @@ public class CancellationService {
             @org.springframework.beans.factory.annotation.Autowired(required = false)
             et.ut.einvoice.notifications.repository.InvoiceNotificationOutboxRepository notificationOutboxRepository,
             @org.springframework.beans.factory.annotation.Autowired(required = false)
-            et.ut.einvoice.notifications.metrics.SmsMetrics smsMetrics
+            et.ut.einvoice.notifications.metrics.SmsMetrics smsMetrics,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            et.ut.einvoice.cancellation.repository.CancellationEvidenceAttachmentRepository evidenceRepository
     ) {
         this.cancellationRepository = cancellationRepository;
         this.invoiceRepository = invoiceRepository;
@@ -53,6 +56,7 @@ public class CancellationService {
         this.notificationPolicyService = notificationPolicyService;
         this.notificationOutboxRepository = notificationOutboxRepository;
         this.smsMetrics = smsMetrics;
+        this.evidenceRepository = evidenceRepository;
     }
 
     @Transactional
@@ -159,6 +163,157 @@ public class CancellationService {
             cancellation.reject(cancelResult.message());
             log.warn("MoR Gateway rejected cancellation for IRN {}: {}", invoice.getIrn(), cancelResult.message());
         }
+
+        return cancellationRepository.save(cancellation);
+    }
+
+    @Transactional
+    public CancellationRequest demandAuthorityEvidence(UUID tenantId, UUID cancellationId, java.time.Duration deadlineDuration) {
+        CancellationRequest cancellation = cancellationRepository.findById(cancellationId)
+                .filter(c -> c.getTenantId().equals(tenantId))
+                .orElseThrow(() -> new BusinessException("CANCELLATION_NOT_FOUND", "Cancellation request not found.", HttpStatus.NOT_FOUND));
+
+        java.time.Instant deadline = java.time.Instant.now().plus(deadlineDuration != null ? deadlineDuration : java.time.Duration.ofHours(48));
+        cancellation.requestEvidence(deadline);
+        CancellationRequest saved = cancellationRepository.save(cancellation);
+
+        auditService.recordEvent(
+                tenantId,
+                "AUTHORITY",
+                "CANCELLATION_EVIDENCE_REQUESTED",
+                "CANCELLATION",
+                saved.getId().toString(),
+                "IRN=" + saved.getIrn() + ",DEADLINE=" + deadline
+        );
+
+        log.info("Authority demanded cancellation evidence for IRN {} [Deadline: {}]", saved.getIrn(), deadline);
+        return saved;
+    }
+
+    @Transactional(noRollbackFor = BusinessException.class)
+    public CancellationRequest submitCancellationEvidence(UUID tenantId, et.ut.einvoice.cancellation.dto.SubmitEvidenceDto dto) {
+        CancellationRequest cancellation = cancellationRepository.findById(dto.cancellationRequestId())
+                .filter(c -> c.getTenantId().equals(tenantId))
+                .orElseThrow(() -> new BusinessException("CANCELLATION_NOT_FOUND", "Cancellation request not found.", HttpStatus.NOT_FOUND));
+
+        // Check if 48-hour deadline has expired
+        if (cancellation.getEvidenceDeadline() != null && java.time.Instant.now().isAfter(cancellation.getEvidenceDeadline())) {
+            cancellation.expire();
+            cancellationRepository.saveAndFlush(cancellation);
+            throw new BusinessException("EVIDENCE_DEADLINE_EXPIRED",
+                    "Statutory 48-hour evidence window under Directive Art. 26(3) has expired.",
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        // File type validation (malware / executable prevention)
+        String mime = dto.contentType() != null ? dto.contentType().trim().toLowerCase() : "";
+        if (!mime.equals("application/pdf") && !mime.equals("image/jpeg") && !mime.equals("image/png")) {
+            throw new BusinessException("UNSUPPORTED_FILE_TYPE",
+                    "Evidence attachment must be PDF, JPEG, or PNG. Prohibited content type: " + dto.contentType(),
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        byte[] fileBytes;
+        try {
+            fileBytes = java.util.Base64.getDecoder().decode(dto.fileBase64());
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException("INVALID_BASE64", "Invalid base64 encoding for evidence attachment.", HttpStatus.BAD_REQUEST);
+        }
+
+        if (fileBytes.length == 0 || fileBytes.length > 20 * 1024 * 1024) {
+            throw new BusinessException("INVALID_FILE_SIZE", "File size must be between 1 byte and 20MB.", HttpStatus.BAD_REQUEST);
+        }
+
+        String sha256;
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            sha256 = java.util.HexFormat.of().formatHex(md.digest(fileBytes));
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 digest unavailable", e);
+        }
+
+        if (evidenceRepository != null) {
+            et.ut.einvoice.cancellation.domain.CancellationEvidenceAttachment attachment =
+                    new et.ut.einvoice.cancellation.domain.CancellationEvidenceAttachment(
+                            UUID.randomUUID(),
+                            tenantId,
+                            cancellation.getId(),
+                            dto.fileName(),
+                            dto.contentType(),
+                            fileBytes.length,
+                            sha256,
+                            "evidence/" + tenantId + "/" + cancellation.getId() + "/" + dto.fileName(),
+                            dto.description(),
+                            "TENANT_OPERATOR"
+                    );
+            evidenceRepository.save(attachment);
+        }
+
+        cancellation.submitEvidence("Attachment: " + dto.fileName() + " [SHA256: " + sha256 + "]");
+        CancellationRequest saved = cancellationRepository.save(cancellation);
+
+        auditService.recordEvent(
+                tenantId,
+                "USER",
+                "CANCELLATION_EVIDENCE_SUBMITTED",
+                "CANCELLATION",
+                saved.getId().toString(),
+                "IRN=" + saved.getIrn() + ",FILE=" + dto.fileName() + ",SHA256=" + sha256
+        );
+
+        return saved;
+    }
+
+    @Transactional
+    public CancellationRequest finalizeAuthorityApproval(UUID tenantId, UUID cancellationId, String cancellationRef) {
+        CancellationRequest cancellation = cancellationRepository.findById(cancellationId)
+                .filter(c -> c.getTenantId().equals(tenantId))
+                .orElseThrow(() -> new BusinessException("CANCELLATION_NOT_FOUND", "Cancellation request not found.", HttpStatus.NOT_FOUND));
+
+        Invoice invoice = invoiceRepository.findById(cancellation.getInvoiceId())
+                .orElseThrow(() -> new BusinessException("INVOICE_NOT_FOUND", "Invoice not found.", HttpStatus.NOT_FOUND));
+
+        cancellation.approve(cancellationRef);
+        invoice.markCancelled();
+        invoiceRepository.save(invoice);
+
+        auditService.recordEvent(
+                tenantId,
+                "AUTHORITY",
+                "CANCEL_INVOICE_APPROVED",
+                "INVOICE",
+                invoice.getId().toString(),
+                "IRN=" + invoice.getIrn() + ",REF=" + cancellationRef
+        );
+
+        eventPublisher.publish(new InvoiceCancelledEvent(
+                invoice.getId(),
+                tenantId,
+                invoice.getIrn(),
+                invoice.getBuyerEmail(),
+                invoice.getBuyerPhone(),
+                cancellationRef
+        ));
+
+        return cancellationRepository.save(cancellation);
+    }
+
+    @Transactional
+    public CancellationRequest finalizeAuthorityRejection(UUID tenantId, UUID cancellationId, String reason) {
+        CancellationRequest cancellation = cancellationRepository.findById(cancellationId)
+                .filter(c -> c.getTenantId().equals(tenantId))
+                .orElseThrow(() -> new BusinessException("CANCELLATION_NOT_FOUND", "Cancellation request not found.", HttpStatus.NOT_FOUND));
+
+        cancellation.reject(reason);
+
+        auditService.recordEvent(
+                tenantId,
+                "AUTHORITY",
+                "CANCEL_INVOICE_REJECTED",
+                "CANCELLATION",
+                cancellation.getId().toString(),
+                "IRN=" + cancellation.getIrn() + ",REASON=" + reason
+        );
 
         return cancellationRepository.save(cancellation);
     }

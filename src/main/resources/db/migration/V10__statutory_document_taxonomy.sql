@@ -261,3 +261,55 @@ DROP TRIGGER IF EXISTS trg_credit_settlements_immutability ON credit_settlements
 CREATE TRIGGER trg_credit_settlements_immutability
 BEFORE UPDATE OR DELETE ON credit_settlements
 FOR EACH ROW EXECUTE FUNCTION enforce_statutory_document_immutability();
+
+-- ------------------------------------------------------------------------------
+-- 7. TAX ADJUSTMENTS EIRS LIFECYCLE (የታክስ ዴቢት እና ክሬዲት ማስታወሻ - Art. 4(1)(c), 25)
+-- Extend tax_adjustments with authoritative EIRS fields, retry counters, and before/after totals
+-- ------------------------------------------------------------------------------
+ALTER TABLE tax_adjustments
+    ADD COLUMN IF NOT EXISTS rrn VARCHAR(128),
+    ADD COLUMN IF NOT EXISTS qr_code TEXT,
+    ADD COLUMN IF NOT EXISTS mor_status VARCHAR(32) DEFAULT 'PENDING',
+    ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(128),
+    ADD COLUMN IF NOT EXISTS submission_attempts INT DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS reconciliation_status VARCHAR(32) DEFAULT 'NONE',
+    ADD COLUMN IF NOT EXISTS original_grand_total NUMERIC(18, 2),
+    ADD COLUMN IF NOT EXISTS new_grand_total NUMERIC(18, 2),
+    ADD COLUMN IF NOT EXISTS error_message VARCHAR(500),
+    ADD COLUMN IF NOT EXISTS signed_payload TEXT,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+
+CREATE INDEX IF NOT EXISTS idx_tax_adjustments_tenant_mor ON tax_adjustments(tenant_id, mor_status);
+CREATE INDEX IF NOT EXISTS idx_tax_adjustments_rrn ON tax_adjustments(rrn);
+CREATE INDEX IF NOT EXISTS idx_tax_adjustments_idempotency ON tax_adjustments(tenant_id, idempotency_key);
+
+CREATE TABLE IF NOT EXISTS tax_adjustment_lines (
+    id UUID PRIMARY KEY,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+    adjustment_id UUID NOT NULL REFERENCES tax_adjustments(id) ON DELETE CASCADE,
+    line_number INT NOT NULL,
+    item_code VARCHAR(64),
+    product_description VARCHAR(255) NOT NULL,
+    adjusted_quantity NUMERIC(18, 4),
+    unit_price NUMERIC(18, 2),
+    pre_tax_adjustment NUMERIC(18, 2) NOT NULL,
+    tax_adjustment NUMERIC(18, 2) NOT NULL,
+    total_adjustment NUMERIC(18, 2) NOT NULL,
+    CONSTRAINT uk_tax_adjustment_line UNIQUE (adjustment_id, line_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_adj_lines_tenant_adjustment ON tax_adjustment_lines(tenant_id, adjustment_id);
+
+ALTER TABLE tax_adjustment_lines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tax_adjustment_lines FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_tax_adj_lines_rls_policy ON tax_adjustment_lines;
+CREATE POLICY tenant_tax_adj_lines_rls_policy ON tax_adjustment_lines
+    FOR ALL
+    USING (
+        tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid
+        OR current_setting('app.is_platform_admin', true) = 'true'
+    )
+    WITH CHECK (
+        tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid
+        OR current_setting('app.is_platform_admin', true) = 'true'
+    );

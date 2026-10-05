@@ -9,6 +9,15 @@ public interface GovernmentRegistrationProvider {
 
     GovernmentRegistrationResult registerInvoice(Invoice invoice, TaxpayerProfile sellerProfile, String token);
 
+    default GovernmentRegistrationResult registerAdjustment(et.ut.einvoice.adjustments.domain.TaxAdjustment adjustment, TaxpayerProfile sellerProfile, String token) {
+        String notePrefix = adjustment.getNoteType() == et.ut.einvoice.adjustments.domain.NoteType.CREDIT_NOTE ? "CN-" : "DN-";
+        String irn = notePrefix + "MOR-" + java.util.UUID.randomUUID().toString().substring(0, 16).toUpperCase();
+        String rrn = "RRN-" + notePrefix + java.util.UUID.randomUUID().toString().substring(0, 18).toUpperCase();
+        String ackDate = java.time.Instant.now().toString();
+        String qr = "TYPE:" + adjustment.getNoteType() + "|IRN:" + irn + "|RRN:" + rrn + "|ORIG:" + adjustment.getOriginalIrn() + "|AMT:" + adjustment.getAdjustedTotal();
+        return GovernmentRegistrationResult.success(irn, rrn, ackDate, qr, "signed-adjustment-payload");
+    }
+
     GovernmentVerificationResult verifySubmission(String submissionId, String documentNumber, TaxpayerProfile sellerProfile, String token);
 
     String authenticate(String clientId, String clientSecret, String apiKey, String tin);

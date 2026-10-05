@@ -100,7 +100,21 @@ final masterAdminRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const MasterEnvironmentSecretsScreen(),
           ),
           GoRoute(
+            path: '/admin/environment',
+            builder: (context, state) => const MasterEnvironmentSecretsScreen(),
+          ),
+          GoRoute(
             path: '/admin/compliance-governance',
+            builder: (context, state) =>
+                const DirectiveComplianceGovernanceScreen(),
+          ),
+          GoRoute(
+            path: '/admin/directive-compliance',
+            builder: (context, state) =>
+                const DirectiveComplianceGovernanceScreen(),
+          ),
+          GoRoute(
+            path: '/admin/compliance-evidence',
             builder: (context, state) =>
                 const DirectiveComplianceGovernanceScreen(),
           ),
@@ -118,6 +132,30 @@ final masterAdminRouterProvider = Provider<GoRouter>((ref) {
             path: '/admin/system-integrity',
             builder: (context, state) =>
                 const SystemIntegrityScreen(),
+          ),
+          GoRoute(
+            path: '/admin/security',
+            builder: (context, state) => const PlatformConfigScreen(),
+          ),
+          GoRoute(
+            path: '/admin/government-integration',
+            builder: (context, state) => const GovernmentGatewayMonitorScreen(),
+          ),
+          GoRoute(
+            path: '/admin/reconciliation',
+            builder: (context, state) => const DeploymentReadinessScreen(),
+          ),
+          GoRoute(
+            path: '/admin/hsm-health',
+            builder: (context, state) => const DeploymentReadinessScreen(),
+          ),
+          GoRoute(
+            path: '/admin/notification-providers',
+            builder: (context, state) => const MasterApiManagementScreen(),
+          ),
+          GoRoute(
+            path: '/admin/system-health',
+            builder: (context, state) => const DeploymentReadinessScreen(),
           ),
         ],
       ),

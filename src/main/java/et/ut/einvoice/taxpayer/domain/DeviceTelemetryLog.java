@@ -20,13 +20,13 @@ public class DeviceTelemetryLog {
     @Column(name = "device_id", nullable = false)
     private UUID deviceId;
 
-    @Column(name = "latitude", nullable = false)
+    @Column(name = "latitude", nullable = false, columnDefinition = "DOUBLE PRECISION")
     private Double latitude;
 
-    @Column(name = "longitude", nullable = false)
+    @Column(name = "longitude", nullable = false, columnDefinition = "DOUBLE PRECISION")
     private Double longitude;
 
-    @Column(name = "accuracy", nullable = false)
+    @Column(name = "accuracy", nullable = false, columnDefinition = "DOUBLE PRECISION")
     private Double accuracy;
 
     @Column(name = "captured_at", nullable = false)

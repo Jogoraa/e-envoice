@@ -9,7 +9,7 @@ void main() {
     testWidgets(
       'Renders professional enterprise sections and Account at bottom',
       (tester) async {
-        tester.view.physicalSize = const Size(1440, 900);
+        tester.view.physicalSize = const Size(1440, 1400);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(() {
           tester.view.resetPhysicalSize();
@@ -51,6 +51,10 @@ void main() {
         expect(find.text('Access Reviews'), findsOneWidget);
         expect(find.text('Sessions & Devices'), findsOneWidget);
         expect(find.text('Audit & Security Events'), findsOneWidget);
+        expect(find.text('Compliance Governance'), findsOneWidget);
+        expect(find.text('Authority Investigation'), findsOneWidget);
+        expect(find.text('Provider Exit Governance'), findsOneWidget);
+        expect(find.text('System Integrity Checksum'), findsOneWidget);
 
         // Section 4: ACCOUNT STRICTLY AT BOTTOM
         expect(find.text('ACCOUNT'), findsOneWidget);

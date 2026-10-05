@@ -245,23 +245,33 @@ class _PurchaseVoucherScreenState extends ConsumerState<PurchaseVoucherScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.receipt_long_outlined, color: AppColors.navy900, size: 28),
-                        const SizedBox(width: 10),
-                        Text('Purchase Vouchers / የግዥ ማረጋገጫ ሰነዶች', style: AppTypography.h2()),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Buyer-issued fiscal vouchers for purchases without seller tax invoices (Directive No. 1142/2026 Art. 2(18))',
-                      style: AppTypography.bodySmall(color: AppColors.inkMuted),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.receipt_long_outlined, color: AppColors.navy900, size: 28),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              'Purchase Vouchers / የግዥ ማረጋገጫ ሰነዶች',
+                              style: AppTypography.h2(),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Buyer-issued fiscal vouchers for purchases without seller tax invoices (Directive No. 1142/2026 Art. 2(18))',
+                        style: AppTypography.bodySmall(color: AppColors.inkMuted),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 16),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.navy900,

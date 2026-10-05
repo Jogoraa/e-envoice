@@ -81,6 +81,16 @@ final saasRouterProvider = Provider<GoRouter>((ref) {
                 const SaasTenantExitOversightScreen(),
           ),
           GoRoute(
+            path: '/saas/merchants',
+            builder: (context, state) =>
+                const MarketplaceManagementScreen(),
+          ),
+          GoRoute(
+            path: '/saas/exit-oversight',
+            builder: (context, state) =>
+                const SaasTenantExitOversightScreen(),
+          ),
+          GoRoute(
             path: '/saas/provider-tiers',
             builder: (context, state) =>
                 const ProviderTierDashboardScreen(),

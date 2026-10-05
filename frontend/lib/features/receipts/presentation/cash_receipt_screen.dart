@@ -220,23 +220,33 @@ class _CashReceiptScreenState extends ConsumerState<CashReceiptScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.payments_outlined, color: AppColors.navy900, size: 28),
-                        const SizedBox(width: 10),
-                        Text('Cash Receipts / የጥሬ ገንዘብ መቀበያ ደረሰኞች', style: AppTypography.h2()),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Statutory non-sale receipting pursuant to FDRE MoR Directive No. 1142/2026 Art. 2(16) & Art. 4(1)(f)',
-                      style: AppTypography.bodySmall(color: AppColors.inkMuted),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.payments_outlined, color: AppColors.navy900, size: 28),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              'Cash Receipts / የጥሬ ገንዘብ መቀበያ ደረሰኞች',
+                              style: AppTypography.h2(),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Statutory non-sale receipting pursuant to FDRE MoR Directive No. 1142/2026 Art. 2(16) & Art. 4(1)(f)',
+                        style: AppTypography.bodySmall(color: AppColors.inkMuted),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 16),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.navy900,
@@ -277,6 +287,7 @@ class _CashReceiptScreenState extends ConsumerState<CashReceiptScreen> {
                 Expanded(
                   flex: 2,
                   child: DropdownButtonFormField<CashReceiptPurpose?>(
+                    isExpanded: true,
                     value: _selectedFilterPurpose,
                     decoration: InputDecoration(
                       labelText: 'Filter by Purpose',

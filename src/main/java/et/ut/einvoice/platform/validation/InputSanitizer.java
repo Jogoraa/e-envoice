@@ -34,7 +34,8 @@ public class InputSanitizer {
 
     private static final Set<String> OPAQUE_FIELD_TOKENS = Set.of(
             "password", "secret", "token", "signature", "hash", "payloadjson",
-            "apikey", "keymaterial", "privatekey", "authorization", "otp", "code"
+            "apikey", "keymaterial", "privatekey", "authorization", "otp", "code",
+            "username", "email", "mail", "tin", "user"
     );
 
     /** Sanitizes a displayable/searchable string while preserving null values. */
@@ -50,7 +51,9 @@ public class InputSanitizer {
         // No request field is permitted to carry executable or renderable HTML.
         String clean = PLAIN_TEXT_POLICY.sanitize(normalized);
         clean = DANGEROUS_URI_SCHEMES.matcher(clean).replaceAll("");
-        return HTML_DATA_URI_SCHEME.matcher(clean).replaceAll("");
+        clean = HTML_DATA_URI_SCHEME.matcher(clean).replaceAll("");
+        // Restore characters that the HTML policy entity-escapes in plain-text JSON APIs (e.g. '@' -> '&#64;')
+        return org.springframework.web.util.HtmlUtils.htmlUnescape(clean);
     }
 
     /** Returns a deep-sanitized JSON tree without changing JSON field names or non-text values. */

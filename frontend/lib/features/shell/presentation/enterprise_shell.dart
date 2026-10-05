@@ -821,8 +821,13 @@ class _EnterpriseShellState extends ConsumerState<EnterpriseShell>
     int badgeCount = 0,
     required bool isCollapsed,
   }) {
-    final location = GoRouterState.of(context).matchedLocation;
-    final isSelected = location.startsWith(route);
+    String location = '';
+    try {
+      location = GoRouterState.of(context).matchedLocation;
+    } catch (_) {
+      location = ModalRoute.of(context)?.settings.name ?? '';
+    }
+    final isSelected = location.isNotEmpty && location.startsWith(route);
 
     if (isCollapsed) {
       return Tooltip(

@@ -136,7 +136,7 @@ public class IdentityDtos {
 
     public record InviteAdminRequest(
             @NotBlank(message = "Email is required")
-            @Email(message = "Email must be a valid address")
+            @Pattern(regexp = "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", message = "Email must be a valid address")
             @Size(max = 128)
             String email,
             @Pattern(regexp = "^$|^(\\+251|0)(9|7)\\d{8}$|^(\\+251|0)[1-5]\\d{7,8}$", message = "Invalid Ethiopian phone number")

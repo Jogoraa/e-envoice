@@ -145,16 +145,23 @@ class _CreditSettlementScreenState extends ConsumerState<CreditSettlementScreen>
               children: [
                 const Icon(Icons.account_balance_outlined, color: AppColors.navy900, size: 28),
                 const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Credit Sales & Settlement / የብድር ሽያጭ አከፋፈል', style: AppTypography.h2()),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Directive No. 1142/2026 Art. 2(14) & Art. 24 — Receivables ledger, partial settlements, and cash receipt issuance.',
-                      style: AppTypography.bodySmall(color: AppColors.inkMuted),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Credit Sales & Settlement / የብድር ሽያጭ አከፋፈል',
+                        style: AppTypography.h2(),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Directive No. 1142/2026 Art. 2(14) & Art. 24 — Receivables ledger, partial settlements, and cash receipt issuance.',
+                        style: AppTypography.bodySmall(color: AppColors.inkMuted),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

@@ -98,17 +98,38 @@ class ApiClient {
           options.headers['X-Branch-ID'] = activeBranch;
         }
 
-        // Attach Authorization strictly from Tenant Token or M2M Credentials
-        final token = await _secureStorage.getToken();
+        // Attach Authorization: prioritize Tenant Token, but fall back to Master Admin or SaaS Admin token if on admin/authority paths or if tenant token is absent
+        if (!options.headers.containsKey('Authorization') ||
+            options.headers['Authorization'] == null ||
+            options.headers['Authorization'].toString().isEmpty) {
+          String? token = await _secureStorage.getToken();
+          final pathLower = options.path.toLowerCase();
+          final isAdminPath = pathLower.contains('/api/v1/master') ||
+              pathLower.contains('/api/v1/authority') ||
+              pathLower.contains('/api/v1/saas') ||
+              pathLower.contains('/api/v1/admin');
 
-        if (token != null && token.isNotEmpty) {
-          options.headers['Authorization'] = 'Bearer $token';
-        } else {
-          final apiKey = await _secureStorage.getApiKey();
-          final clientSecret = await _secureStorage.getClientSecret();
-          if (apiKey != null && clientSecret != null) {
-            options.headers['X-API-Key'] = apiKey;
-            options.headers['X-Client-Secret'] = clientSecret;
+          if (token == null || token.isEmpty || isAdminPath) {
+            final masterToken = await _secureStorage.getMasterAdminToken();
+            if (masterToken != null && masterToken.isNotEmpty) {
+              token = masterToken;
+            } else {
+              final saasToken = await _secureStorage.getSaasAdminToken();
+              if (saasToken != null && saasToken.isNotEmpty) {
+                token = saasToken;
+              }
+            }
+          }
+
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          } else {
+            final apiKey = await _secureStorage.getApiKey();
+            final clientSecret = await _secureStorage.getClientSecret();
+            if (apiKey != null && clientSecret != null) {
+              options.headers['X-API-Key'] = apiKey;
+              options.headers['X-Client-Secret'] = clientSecret;
+            }
           }
         }
 

@@ -111,7 +111,7 @@ class SystemChecksumDto {
       containerDigest: json['containerDigest']?.toString() ?? '',
       databaseSchemaVersion: json['databaseSchemaVersion']?.toString() ?? 'V18',
       registeredChecksum: json['registeredChecksum']?.toString() ?? '',
-      status: json['status']?.toString() ?? 'MATCH',
+      status: json['status']?.toString() ?? json['checksumStatus']?.toString() ?? 'MATCH',
       buildTimestamp: json['buildTimestamp'] != null
           ? DateTime.tryParse(json['buildTimestamp'].toString()) ?? DateTime.now()
           : DateTime.now(),

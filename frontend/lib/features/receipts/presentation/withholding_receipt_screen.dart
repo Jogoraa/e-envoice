@@ -223,23 +223,33 @@ class _WithholdingReceiptScreenState extends ConsumerState<WithholdingReceiptScr
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.account_balance_wallet_outlined, color: AppColors.navy900, size: 28),
-                        const SizedBox(width: 10),
-                        Text('Withholding Receipts / የግብር ቅነሳ ደረሰኞች', style: AppTypography.h2()),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Income Tax (2%) and VAT (50%/100%) statutory withholding receipts under Directive No. 1142/2026 Art. 2(17, 19)',
-                      style: AppTypography.bodySmall(color: AppColors.inkMuted),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.account_balance_wallet_outlined, color: AppColors.navy900, size: 28),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              'Withholding Receipts / የግብር ቅነሳ ደረሰኞች',
+                              style: AppTypography.h2(),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Income Tax (2%) and VAT (50%/100%) statutory withholding receipts under Directive No. 1142/2026 Art. 2(17, 19)',
+                        style: AppTypography.bodySmall(color: AppColors.inkMuted),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 16),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.navy900,
@@ -280,6 +290,7 @@ class _WithholdingReceiptScreenState extends ConsumerState<WithholdingReceiptScr
                 Expanded(
                   flex: 2,
                   child: DropdownButtonFormField<WithholdingType?>(
+                    isExpanded: true,
                     value: _selectedTypeFilter,
                     decoration: InputDecoration(
                       labelText: 'Filter by Withholding Type',

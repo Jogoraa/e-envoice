@@ -59,7 +59,9 @@ CREATE TABLE IF NOT EXISTS purchase_vouchers (
     id UUID PRIMARY KEY,
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
     voucher_number VARCHAR(64) NOT NULL,
-    buyer_taxpayer_id UUID NOT NULL REFERENCES taxpayers(id),
+    -- The canonical taxpayer profile is keyed by tenant_id in V1; no separate
+    -- taxpayers table exists in this schema.
+    buyer_taxpayer_id UUID NOT NULL REFERENCES taxpayer_profiles(tenant_id),
     buyer_tin VARCHAR(32) NOT NULL,
     supplier_name VARCHAR(255) NOT NULL,
     supplier_tin VARCHAR(32),

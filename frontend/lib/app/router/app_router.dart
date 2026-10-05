@@ -267,6 +267,46 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/compliance/exempt-reporting',
             builder: (context, state) => const ExemptSectorReportingScreen(),
           ),
+          GoRoute(
+            path: '/cash-receipts',
+            builder: (context, state) => const CashReceiptScreen(),
+          ),
+          GoRoute(
+            path: '/purchase-vouchers',
+            builder: (context, state) => const PurchaseVoucherScreen(),
+          ),
+          GoRoute(
+            path: '/withholding',
+            builder: (context, state) => const WithholdingReceiptScreen(),
+          ),
+          GoRoute(
+            path: '/credit-settlement',
+            builder: (context, state) => const CreditSettlementScreen(),
+          ),
+          GoRoute(
+            path: '/cancellations',
+            builder: (context, state) => const CancellationManagementScreen(),
+          ),
+          GoRoute(
+            path: '/offline',
+            builder: (context, state) => const OfflineOperationsScreen(),
+          ),
+          GoRoute(
+            path: '/devices',
+            builder: (context, state) => const DeviceComplianceScreen(),
+          ),
+          GoRoute(
+            path: '/mpos',
+            builder: (context, state) => const DeviceComplianceScreen(),
+          ),
+          GoRoute(
+            path: '/tenant-exit',
+            builder: (context, state) => const TenantExitScreen(),
+          ),
+          GoRoute(
+            path: '/retention',
+            builder: (context, state) => const RetentionScheduleScreen(),
+          ),
         ],
       ),
 
@@ -312,6 +352,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/saas/tenant-exit-oversight',
+            builder: (context, state) => const SaasTenantExitOversightScreen(),
+          ),
+          GoRoute(
+            path: '/saas/merchants',
+            builder: (context, state) => const MarketplaceManagementScreen(),
+          ),
+          GoRoute(
+            path: '/saas/exit-oversight',
             builder: (context, state) => const SaasTenantExitOversightScreen(),
           ),
           GoRoute(
@@ -386,7 +434,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const MasterEnvironmentSecretsScreen(),
           ),
           GoRoute(
+            path: '/admin/environment',
+            builder: (context, state) => const MasterEnvironmentSecretsScreen(),
+          ),
+          GoRoute(
             path: '/admin/compliance-governance',
+            builder: (context, state) => const DirectiveComplianceGovernanceScreen(),
+          ),
+          GoRoute(
+            path: '/admin/directive-compliance',
+            builder: (context, state) => const DirectiveComplianceGovernanceScreen(),
+          ),
+          GoRoute(
+            path: '/admin/compliance-evidence',
             builder: (context, state) => const DirectiveComplianceGovernanceScreen(),
           ),
           GoRoute(
@@ -400,6 +460,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/system-integrity',
             builder: (context, state) => const SystemIntegrityScreen(),
+          ),
+          GoRoute(
+            path: '/admin/security',
+            builder: (context, state) => const PlatformConfigScreen(),
+          ),
+          GoRoute(
+            path: '/admin/government-integration',
+            builder: (context, state) => const GovernmentGatewayMonitorScreen(),
+          ),
+          GoRoute(
+            path: '/admin/reconciliation',
+            builder: (context, state) => const DeploymentReadinessScreen(),
+          ),
+          GoRoute(
+            path: '/admin/hsm-health',
+            builder: (context, state) => const DeploymentReadinessScreen(),
+          ),
+          GoRoute(
+            path: '/admin/notification-providers',
+            builder: (context, state) => const MasterApiManagementScreen(),
+          ),
+          GoRoute(
+            path: '/admin/system-health',
+            builder: (context, state) => const DeploymentReadinessScreen(),
           ),
         ],
       ),

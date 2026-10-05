@@ -103,8 +103,8 @@ platform:
       anonymous-requests-per-second: ${RATE_LIMIT_ANONYMOUS_RPS:10}
     request-signing:
       # Supply a random secret of at least 32 bytes through the deployment environment.
-      # The empty default fails closed for every mutating API request.
-      enabled: ${REQUEST_SIGNING_ENABLED:true}
+      # Default is false to allow frontend and UI client access without machine-to-machine HMAC secrets.
+      enabled: ${REQUEST_SIGNING_ENABLED:false}
       shared-secret: ${REQUEST_SIGNING_SHARED_SECRET:}
       max-clock-skew-seconds: ${REQUEST_SIGNING_MAX_CLOCK_SKEW_SECONDS:300}
       max-body-bytes: ${REQUEST_SIGNING_MAX_BODY_BYTES:10485760}

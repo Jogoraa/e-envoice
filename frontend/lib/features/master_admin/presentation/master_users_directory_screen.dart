@@ -211,6 +211,39 @@ class _MasterUsersDirectoryScreenState
               onPressed: isSubmitting
                   ? null
                   : () async {
+                      final fullName = nameCtrl.text.trim();
+                      final email = emailCtrl.text.trim();
+                      final phone = phoneCtrl.text.trim();
+                      final tenantId = tenantCtrl.text.trim();
+
+                      if (fullName.isEmpty) {
+                        setDialogState(() {
+                          dialogError = 'Full name is required.';
+                        });
+                        return;
+                      }
+
+                      if (email.isEmpty) {
+                        setDialogState(() {
+                          dialogError = 'Official email is required.';
+                        });
+                        return;
+                      }
+
+                      if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+                        setDialogState(() {
+                          dialogError = 'Please enter a valid email address (e.g. name@domain.com).';
+                        });
+                        return;
+                      }
+
+                      if (selectedRole == 'ROLE_TENANT_ADMIN' && tenantId.isEmpty) {
+                        setDialogState(() {
+                          dialogError = 'Tenant Administrator must be assigned to a specific tenant UUID.';
+                        });
+                        return;
+                      }
+
                       setDialogState(() {
                         isSubmitting = true;
                         dialogError = null;
@@ -220,15 +253,11 @@ class _MasterUsersDirectoryScreenState
                         await client.post(
                           '/api/v1/master/users/invite',
                           data: {
-                            'fullName': nameCtrl.text.trim(),
-                            'email': emailCtrl.text.trim(),
-                            'phone': phoneCtrl.text.trim().isEmpty
-                                ? null
-                                : phoneCtrl.text.trim(),
+                            'fullName': fullName,
+                            'email': email,
+                            'phone': phone.isEmpty ? null : phone,
                             'initialRoleCode': selectedRole,
-                            'tenantId': tenantCtrl.text.trim().isEmpty
-                                ? null
-                                : tenantCtrl.text.trim(),
+                            'tenantId': tenantId.isEmpty ? null : tenantId,
                           },
                         );
                         if (ctx.mounted) Navigator.pop(ctx);

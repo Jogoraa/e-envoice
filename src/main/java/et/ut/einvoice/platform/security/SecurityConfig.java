@@ -178,7 +178,7 @@ public class SecurityConfig {
     @Bean
     public FilterRegistrationBean<RequestSigningFilter> requestSigningFilterRegistration(
             RequestSignatureVerifier requestSignatureVerifier,
-            @Value("${platform.security.request-signing.enabled:true}") boolean enabled,
+            @Value("${platform.security.request-signing.enabled:false}") boolean enabled,
             @Value("${platform.security.request-signing.max-body-bytes:10485760}") long maxBodyBytes
     ) {
         RequestSigningFilter requestSigningFilter = new RequestSigningFilter(

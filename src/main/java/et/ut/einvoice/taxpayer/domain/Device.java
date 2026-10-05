@@ -42,13 +42,13 @@ public class Device {
     @Column(name = "authorized_geofence_id")
     private UUID authorizedGeofenceId;
 
-    @Column(name = "last_latitude")
+    @Column(name = "last_latitude", columnDefinition = "DOUBLE PRECISION")
     private Double lastLatitude;
 
-    @Column(name = "last_longitude")
+    @Column(name = "last_longitude", columnDefinition = "DOUBLE PRECISION")
     private Double lastLongitude;
 
-    @Column(name = "last_accuracy")
+    @Column(name = "last_accuracy", columnDefinition = "DOUBLE PRECISION")
     private Double lastAccuracy;
 
     @Column(name = "last_heartbeat")

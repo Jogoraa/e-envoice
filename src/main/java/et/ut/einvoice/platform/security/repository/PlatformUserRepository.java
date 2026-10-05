@@ -10,9 +10,16 @@ import java.util.UUID;
 @Repository
 public interface PlatformUserRepository extends JpaRepository<PlatformUser, UUID> {
 
+    @org.springframework.data.jpa.repository.Query("SELECT u FROM PlatformUser u WHERE LOWER(u.username) = LOWER(:identifier) OR LOWER(u.email) = LOWER(:identifier)")
+    Optional<PlatformUser> findByIdentifier(@org.springframework.data.repository.query.Param("identifier") String identifier);
+
     Optional<PlatformUser> findByUsername(String username);
 
     Optional<PlatformUser> findByEmail(String email);
+
+    Optional<PlatformUser> findByUsernameIgnoreCase(String username);
+
+    Optional<PlatformUser> findByEmailIgnoreCase(String email);
 
     Optional<PlatformUser> findByUsernameOrEmail(String username, String email);
 

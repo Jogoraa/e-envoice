@@ -300,7 +300,13 @@ class _SaasManagementShellState extends ConsumerState<SaasManagementShell> with 
                             children: [
                               const Icon(Icons.keyboard_double_arrow_left, size: 18, color: AppColors.inkMuted),
                               const SizedBox(width: 12),
-                              Text('Collapse sidebar', style: AppTypography.uiLabel(color: AppColors.inkMuted)),
+                              Flexible(
+                                child: Text(
+                                  'Collapse sidebar',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.uiLabel(color: AppColors.inkMuted),
+                                ),
+                              ),
                             ],
                           ),
                   ),
@@ -322,8 +328,13 @@ class _SaasManagementShellState extends ConsumerState<SaasManagementShell> with 
     required String route,
     required bool isCollapsed,
   }) {
-    final location = GoRouterState.of(context).matchedLocation;
-    final isSelected = location.startsWith(route);
+    String location = '';
+    try {
+      location = GoRouterState.of(context).matchedLocation;
+    } catch (_) {
+      location = ModalRoute.of(context)?.settings.name ?? '';
+    }
+    final isSelected = location.isNotEmpty && location.startsWith(route);
 
     if (isCollapsed) {
       return Tooltip(

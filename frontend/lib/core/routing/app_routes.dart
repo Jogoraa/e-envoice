@@ -79,10 +79,35 @@ class AppRoutes {
   static const String adminAudit = '/admin/audit';
   static const String adminConfig = '/admin/config';
   static const String adminEnvironment = '/admin/system/environment';
+  static const String adminEnvironmentAlias = '/admin/environment';
   static const String adminComplianceGovernance = '/admin/compliance-governance';
+  static const String adminDirectiveCompliance = '/admin/directive-compliance';
   static const String adminAuthorityInvestigation = '/admin/authority-investigation';
   static const String adminProviderExit = '/admin/provider-exit';
   static const String adminSystemIntegrity = '/admin/system-integrity';
+  static const String adminSecurity = '/admin/security';
+  static const String adminGovernmentIntegration = '/admin/government-integration';
+  static const String adminReconciliation = '/admin/reconciliation';
+  static const String adminHsmHealth = '/admin/hsm-health';
+  static const String adminNotificationProviders = '/admin/notification-providers';
+  static const String adminSystemHealth = '/admin/system-health';
+  static const String adminComplianceEvidence = '/admin/compliance-evidence';
+
+  // Tenant Aliases
+  static const String tenantCashReceiptsAlias = '/cash-receipts';
+  static const String tenantPurchaseVouchersAlias = '/purchase-vouchers';
+  static const String tenantWithholdingAlias = '/withholding';
+  static const String tenantCreditSettlementAlias = '/credit-settlement';
+  static const String tenantCancellationsAlias = '/cancellations';
+  static const String tenantOfflineAlias = '/offline';
+  static const String tenantDevicesAlias = '/devices';
+  static const String tenantMposAlias = '/mpos';
+  static const String tenantExitAlias = '/tenant-exit';
+  static const String tenantRetentionAlias = '/retention';
+
+  // SaaS Aliases
+  static const String saasMerchantsAlias = '/saas/merchants';
+  static const String saasExitOversightAlias = '/saas/exit-oversight';
 
   /// Returns true if the path belongs to Master Admin realm
   static bool isAdminPath(String path) {

@@ -138,13 +138,15 @@ class _DirectiveComplianceGovernanceScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       'Statutory Compliance Governance',
                       style: AppTypography.h2(color: AppColors.navy900),
                     ),
-                    const SizedBox(width: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -607,11 +609,14 @@ class _DirectiveComplianceGovernanceScreenState
             children: [
               Icon(icon, size: 20, color: color),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: AppTypography.monoSmall(
-                  color: AppColors.inkMuted,
-                  weight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTypography.monoSmall(
+                    color: AppColors.inkMuted,
+                    weight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

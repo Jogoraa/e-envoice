@@ -112,23 +112,33 @@ class _OfflineOperationsScreenState extends ConsumerState<OfflineOperationsScree
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.cloud_sync_outlined, color: AppColors.navy900, size: 28),
-                        const SizedBox(width: 10),
-                        Text('Offline Operations Center', style: AppTypography.h2()),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Pre-allocated sequential numbering, 72-hour regulatory SLA, and store-and-forward telemetry (Art. 4(4) & Art. 21)',
-                      style: AppTypography.bodySmall(color: AppColors.inkMuted),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.cloud_sync_outlined, color: AppColors.navy900, size: 28),
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              'Offline Operations Center',
+                              style: AppTypography.h2(),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Pre-allocated sequential numbering, 72-hour regulatory SLA, and store-and-forward telemetry (Art. 4(4) & Art. 21)',
+                        style: AppTypography.bodySmall(color: AppColors.inkMuted),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 16),
                 Row(
                   children: [
                     Container(

@@ -406,6 +406,6 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private static boolean isVersionedApiPath(String path, String route) {
-        return path.matches("^/api/v[1-9][0-9]*/" + Pattern.quote(route) + "(?:/|$)");
+        return path.matches("^/api/v[1-9][0-9]*/" + Pattern.quote(route) + "(?:/.*)?$");
     }
 }

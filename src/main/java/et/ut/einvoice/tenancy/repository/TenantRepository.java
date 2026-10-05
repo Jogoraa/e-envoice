@@ -10,4 +10,6 @@ import java.util.UUID;
 @Repository
 public interface TenantRepository extends JpaRepository<Tenant, UUID> {
     Optional<Tenant> findByTin(String tin);
+
+    long countByStatus(et.ut.einvoice.tenancy.domain.TenantStatus status);
 }

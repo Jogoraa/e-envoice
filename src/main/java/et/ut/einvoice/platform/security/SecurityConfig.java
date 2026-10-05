@@ -129,6 +129,7 @@ public class SecurityConfig {
                                 "/api/*/master/rbac/**",
                                 "/api/*/master/access-reviews/**"
                         ).hasAuthority("ROLE_PLATFORM_ADMIN")
+                        .requestMatchers("/api/*/master/provider-tiers/**").hasAnyAuthority("ROLE_PLATFORM_ADMIN", "ROLE_SAAS_ADMIN", "ROLE_AUTHORITY_AUDITOR")
                         .requestMatchers("/api/*/saas/**", "/api/*/master/**", "/api/*/admin/**").hasAnyAuthority("ROLE_SAAS_ADMIN", "ROLE_PLATFORM_ADMIN", "ROLE_SAAS_OPERATOR", "ROLE_DELEGATED_OPERATOR")
                         .requestMatchers("/actuator/**").hasRole("PLATFORM_ADMIN")
                         .anyRequest().authenticated()

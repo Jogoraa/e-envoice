@@ -161,7 +161,7 @@ class _DirectiveComplianceGovernanceScreenState
                   children: [
                     Text(
                       'Statutory Compliance Governance',
-                      style: AppTypography.h2(color: AppColors.inkDark),
+                      style: AppTypography.h2(color: AppColors.navy900),
                     ),
                     const SizedBox(width: 12),
                     Container(
@@ -335,7 +335,7 @@ class _DirectiveComplianceGovernanceScreenState
                                   style: AppTypography.monoSmall(
                                     color: isCurrent
                                         ? Colors.white
-                                        : AppColors.inkDark,
+                                        : AppColors.ink,
                                     weight: FontWeight.w700,
                                   ),
                                 ),
@@ -669,7 +669,7 @@ class _DirectiveComplianceGovernanceScreenState
               children: [
                 Text(
                   title,
-                  style: AppTypography.uiLabelBold(color: AppColors.inkDark),
+                  style: AppTypography.uiLabelBold(color: AppColors.navy900),
                 ),
                 const SizedBox(height: 4),
                 Text(

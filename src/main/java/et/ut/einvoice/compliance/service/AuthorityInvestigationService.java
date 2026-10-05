@@ -60,7 +60,7 @@ public class AuthorityInvestigationService {
         this.objectMapper = objectMapper;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Page<AuthorityCustomerResponseDto> searchCustomers(
             UUID tenantId,
             String tin,

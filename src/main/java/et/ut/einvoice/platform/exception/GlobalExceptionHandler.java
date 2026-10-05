@@ -145,10 +145,10 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(envelope, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorEnvelope> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request, HttpServletResponse response) {
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
+    public ResponseEntity<ErrorEnvelope> handleIllegalArgument(RuntimeException ex, HttpServletRequest request, HttpServletResponse response) {
         String correlationId = resolveCorrelationId(request, response);
-        log.warn("Illegal argument on request {} [{}]: {}", correlationId, request.getRequestURI(), ex.getMessage());
+        log.warn("Illegal argument or state on request {} [{}]: {}", correlationId, request.getRequestURI(), ex.getMessage());
 
         ErrorEnvelope envelope = ErrorEnvelope.of(
                 HttpStatus.BAD_REQUEST.value(),

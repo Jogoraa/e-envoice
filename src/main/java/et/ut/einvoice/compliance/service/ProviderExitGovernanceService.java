@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import et.ut.einvoice.audit.service.AuditService;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -25,18 +26,22 @@ import java.util.stream.Collectors;
 public class ProviderExitGovernanceService {
 
     private static final Logger log = LoggerFactory.getLogger(ProviderExitGovernanceService.class);
+    private static final UUID PLATFORM_TENANT_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
     private final ProviderExitPlanRepository exitPlanRepository;
     private final ProviderTenantTransitionRepository tenantTransitionRepository;
     private final TenantRepository tenantRepository;
+    private final AuditService auditService;
 
     public ProviderExitGovernanceService(
             ProviderExitPlanRepository exitPlanRepository,
             ProviderTenantTransitionRepository tenantTransitionRepository,
-            TenantRepository tenantRepository) {
+            TenantRepository tenantRepository,
+            AuditService auditService) {
         this.exitPlanRepository = exitPlanRepository;
         this.tenantTransitionRepository = tenantTransitionRepository;
         this.tenantRepository = tenantRepository;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -68,6 +73,14 @@ public class ProviderExitGovernanceService {
         );
 
         ProviderExitPlan saved = exitPlanRepository.save(plan);
+        auditService.recordEvent(
+                PLATFORM_TENANT_ID,
+                "PLATFORM_ADMIN",
+                "PROVIDER_EXIT_PLAN_CREATED",
+                "PROVIDER_EXIT_PLAN",
+                saved.getId().toString(),
+                "{\"exitReason\":\"" + saved.getExitReason() + "\",\"effectiveExitDate\":\"" + saved.getEffectiveExitDate() + "\"}"
+        );
         log.info("Created Provider Exit Plan id={}, effectiveExitDate={}, isRevocation={}", saved.getId(), saved.getEffectiveExitDate(), dto.isRevocation());
         return ProviderExitPlanResponseDto.fromEntity(saved);
     }
@@ -79,6 +92,14 @@ public class ProviderExitGovernanceService {
 
         plan.submitStrategy(dto.getStrategyDocumentReference());
         ProviderExitPlan saved = exitPlanRepository.save(plan);
+        auditService.recordEvent(
+                PLATFORM_TENANT_ID,
+                "PLATFORM_ADMIN",
+                "PROVIDER_EXIT_STRATEGY_SUBMITTED",
+                "PROVIDER_EXIT_PLAN",
+                planId.toString(),
+                "{\"strategyDocumentReference\":\"" + dto.getStrategyDocumentReference() + "\"}"
+        );
         log.info("Submitted Exit Strategy for plan id={}, docRef={}", planId, dto.getStrategyDocumentReference());
         return ProviderExitPlanResponseDto.fromEntity(saved);
     }
@@ -90,6 +111,14 @@ public class ProviderExitGovernanceService {
 
         plan.recordAuthorityApproval(dto.getApprovalReference(), dto.getApprovedBy());
         ProviderExitPlan saved = exitPlanRepository.save(plan);
+        auditService.recordEvent(
+                PLATFORM_TENANT_ID,
+                dto.getApprovedBy(),
+                "PROVIDER_EXIT_AUTHORITY_APPROVED",
+                "PROVIDER_EXIT_PLAN",
+                planId.toString(),
+                "{\"approvalReference\":\"" + dto.getApprovalReference() + "\"}"
+        );
         log.info("Authority approved Exit Strategy for plan id={}, ref={}", planId, dto.getApprovalReference());
         return ProviderExitPlanResponseDto.fromEntity(saved);
     }
@@ -119,6 +148,14 @@ public class ProviderExitGovernanceService {
         plan.recordTaxpayersNotified(activeTenants.size());
         plan.markInTransition();
         ProviderExitPlan saved = exitPlanRepository.save(plan);
+        auditService.recordEvent(
+                PLATFORM_TENANT_ID,
+                "PLATFORM_ADMIN",
+                "PROVIDER_EXIT_TAXPAYERS_NOTIFIED",
+                "PROVIDER_EXIT_PLAN",
+                planId.toString(),
+                "{\"activeTenantsCount\":" + activeTenants.size() + "}"
+        );
         log.info("Notified {} active taxpayers for exit plan id={}", activeTenants.size(), planId);
         return ProviderExitPlanResponseDto.fromEntity(saved);
     }
@@ -149,6 +186,14 @@ public class ProviderExitGovernanceService {
             exitPlanRepository.save(plan);
         }
 
+        auditService.recordEvent(
+                transition.getTenantId(),
+                "PLATFORM_ADMIN",
+                "PROVIDER_TENANT_MIGRATION_RECORDED",
+                "PROVIDER_TENANT_TRANSITION",
+                transition.getId().toString(),
+                "{\"destinationProviderName\":\"" + dto.getDestinationProviderName() + "\",\"evidenceHash\":\"" + dto.getMigrationEvidenceHash() + "\"}"
+        );
         log.info("Tenant {} migration recorded. Total migrated: {}/{}", dto.getTenantId(), plan.getMigratedTenantsCount(), plan.getTotalActiveTenants());
         return savedTransition;
     }
@@ -161,6 +206,14 @@ public class ProviderExitGovernanceService {
         // Enforce Art. 17(5): 100% tenant migration + certificate surrender
         plan.confirmCessation(dto.getSurrenderedCertificateReference(), dto.getCessationConfirmationReference());
         ProviderExitPlan saved = exitPlanRepository.save(plan);
+        auditService.recordEvent(
+                PLATFORM_TENANT_ID,
+                "PLATFORM_ADMIN",
+                "PROVIDER_CESSATION_CONFIRMED",
+                "PROVIDER_EXIT_PLAN",
+                planId.toString(),
+                "{\"surrenderedCertificateReference\":\"" + dto.getSurrenderedCertificateReference() + "\",\"cessationConfirmationReference\":\"" + dto.getCessationConfirmationReference() + "\"}"
+        );
         log.info("Cessation confirmed for plan id={}, certRef={}, confirmRef={}", planId, dto.getSurrenderedCertificateReference(), dto.getCessationConfirmationReference());
         return ProviderExitPlanResponseDto.fromEntity(saved);
     }

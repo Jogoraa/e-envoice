@@ -35,6 +35,8 @@ abstract class AppColors {
   static const Color ruleLight = Color(0xFFEEF0F2);
   static const Color blue600 = Color(0xFF0F4A9C);
   static const Color inkMuted = Color(0xFF5A6675); // Secondary neutral text
+  //canvas
+  static const Color canvas = Color(0xFFF8F9FA);
 
   // Dark Mode Equivalents (lightened for contrast on dark surfaces)
   static const Color navy900Dark = Color(0xFF7FA6E0);
@@ -47,4 +49,5 @@ abstract class AppColors {
   static const Color ruleDark = Color(0xFF2C3138);
   static const Color inkDark = Color(0xFFF0F4F8);
   static const Color inkMutedDark = Color(0xFF9AA7B7);
+  static const Color canvasDark = Color(0xFFF8F9FA);
 }

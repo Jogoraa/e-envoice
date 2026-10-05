@@ -30,13 +30,16 @@ public class AuthorityAuditController {
     private final AuditEventRepository auditRepository;
     private final InvoiceRepository invoiceRepository;
     private final et.ut.einvoice.compliance.service.SoftwareIntegrityService softwareIntegrityService;
+    private final et.ut.einvoice.compliance.service.AuthorityInvestigationService investigationService;
 
     public AuthorityAuditController(AuditEventRepository auditRepository,
                                     InvoiceRepository invoiceRepository,
-                                    et.ut.einvoice.compliance.service.SoftwareIntegrityService softwareIntegrityService) {
+                                    et.ut.einvoice.compliance.service.SoftwareIntegrityService softwareIntegrityService,
+                                    et.ut.einvoice.compliance.service.AuthorityInvestigationService investigationService) {
         this.auditRepository = auditRepository;
         this.invoiceRepository = invoiceRepository;
         this.softwareIntegrityService = softwareIntegrityService;
+        this.investigationService = investigationService;
     }
 
     @GetMapping("/system-checksum")
@@ -69,5 +72,52 @@ public class AuthorityAuditController {
     ) {
         Page<Invoice> invoices = invoiceRepository.findAllByInvoiceDateBetween(from, to, pageable);
         return ResponseEntity.ok(invoices.map(InvoiceResponseDto::fromEntity).map(InvoiceListItemDto::fromInvoiceResponse));
+    }
+
+    @GetMapping("/customers")
+    @PreAuthorize("hasAnyAuthority('ROLE_AUTHORITY_AUDITOR', 'ROLE_PLATFORM_ADMIN')")
+    @Operation(summary = "Controlled Tax Authority Customer Inspection (Directive No. 1142/2026 Art. 15(5))")
+    public ResponseEntity<Page<et.ut.einvoice.compliance.dto.AuthorityCustomerResponseDto>> getCustomers(
+            @RequestParam(required = false) UUID tenantId,
+            @RequestParam(required = false) String tin,
+            @RequestParam(required = false) String legalName,
+            @RequestParam String caseReference,
+            @RequestParam String reason,
+            org.springframework.security.core.Authentication authentication,
+            @PageableDefault(size = 50) Pageable pageable
+    ) {
+        String auditorId = authentication != null ? authentication.getName() : "GOV_AUDITOR";
+        return ResponseEntity.ok(investigationService.searchCustomers(tenantId, tin, legalName, caseReference, reason, auditorId, pageable));
+    }
+
+    @PostMapping("/investigations/exports")
+    @PreAuthorize("hasAnyAuthority('ROLE_AUTHORITY_AUDITOR', 'ROLE_PLATFORM_ADMIN')")
+    @Operation(summary = "Initiate Encrypted Tax Authority Investigation Export Job (Directive No. 1142/2026 Art. 15(5))")
+    public ResponseEntity<et.ut.einvoice.compliance.dto.AuthorityExportJobDto> createExportJob(
+            @jakarta.validation.Valid @RequestBody et.ut.einvoice.compliance.dto.AuthorityExportRequestDto request,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        String auditorId = authentication != null ? authentication.getName() : "GOV_AUDITOR";
+        return ResponseEntity.ok(investigationService.createExportJob(request, auditorId));
+    }
+
+    @GetMapping("/investigations/exports/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_AUTHORITY_AUDITOR', 'ROLE_PLATFORM_ADMIN')")
+    @Operation(summary = "Retrieve Encrypted Investigation Export Job Artifact (Directive No. 1142/2026 Art. 15(5))")
+    public ResponseEntity<et.ut.einvoice.compliance.dto.AuthorityExportJobDto> getExportJob(
+            @PathVariable UUID id,
+            org.springframework.security.core.Authentication authentication
+    ) {
+        String auditorId = authentication != null ? authentication.getName() : "GOV_AUDITOR";
+        return ResponseEntity.ok(investigationService.getExportJob(id, auditorId));
+    }
+
+    @GetMapping("/investigations/exports")
+    @PreAuthorize("hasAnyAuthority('ROLE_AUTHORITY_AUDITOR', 'ROLE_PLATFORM_ADMIN')")
+    @Operation(summary = "List Authority Investigation Export Jobs (Directive No. 1142/2026 Art. 15(5))")
+    public ResponseEntity<Page<et.ut.einvoice.compliance.dto.AuthorityExportJobDto>> listExportJobs(
+            @PageableDefault(size = 20) Pageable pageable
+    ) {
+        return ResponseEntity.ok(investigationService.listExportJobs(pageable));
     }
 }

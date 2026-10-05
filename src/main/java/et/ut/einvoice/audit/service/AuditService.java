@@ -10,6 +10,7 @@ import et.ut.einvoice.platform.context.TenantContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -92,7 +93,7 @@ public class AuditService {
         return recordEventInternal(tenantId, streamId, actorId, actorType, action, resourceType, resourceId, payloadJson, "127.0.0.1", correlationId, traceId);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public AuditEvent recordEventInternal(
             UUID tenantId,
             String streamId,

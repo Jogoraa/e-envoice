@@ -95,7 +95,8 @@ public class TenantAuthenticationFilter extends OncePerRequestFilter {
 
             boolean isSaasOrMasterPath = isVersionedApiPath(path, "saas")
                     || isVersionedApiPath(path, "master")
-                    || isVersionedApiPath(path, "admin");
+                    || isVersionedApiPath(path, "admin")
+                    || isVersionedApiPath(path, "authority");
 
             // =========================================================================
             // A. SAAS / MASTER ADMIN GATEWAY ENDPOINT PROTECTION

@@ -104,6 +104,14 @@ public class MasterComplianceInspectionTestSuite {
         Mockito.when(governmentRegistrationProvider.getProviderVersion()).thenReturn("v1.0");
         Mockito.when(governmentRegistrationProvider.cancelInvoice(anyString(), anyString(), anyString()))
                 .thenReturn(new GovernmentRegistrationProvider.CancellationResult(true, "CANCEL-ACK-12345", "Cancelled"));
+
+        Mockito.when(governmentRegistrationProvider.registerAdjustment(any(), any(), anyString()))
+                .thenAnswer(inv -> {
+                    String irn = "CN-MOR-" + UUID.randomUUID().toString().substring(0, 8);
+                    String rrn = "RRN-CN-" + UUID.randomUUID().toString().substring(0, 8);
+                    String qr = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+                    return GovernmentRegistrationProvider.GovernmentRegistrationResult.success(irn, rrn, "2026-09-18T12:00:00Z", qr, "signed-adj-mock");
+                });
     }
 
     @Test

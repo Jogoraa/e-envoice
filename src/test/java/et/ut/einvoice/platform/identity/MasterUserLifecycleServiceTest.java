@@ -16,9 +16,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
@@ -141,7 +144,7 @@ class MasterUserLifecycleServiceTest {
     }
 
     @Test
-    @DisplayName("inviteAdmin dispatches both email and SMS when phone is provided")
+    @DisplayName("inviteAdmin dispatches an actionable URL without exposing a standalone token")
     void testInviteAdminDispatchesSmsWhenPhoneProvided() {
         when(userRepository.findByEmail("newops@utsolutionsplc.com")).thenReturn(Optional.empty());
         when(roleRepository.findByCode("ROLE_SAAS_ADMIN")).thenReturn(Optional.of(saasRole));
@@ -153,8 +156,13 @@ class MasterUserLifecycleServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.email()).isEqualTo("newops@utsolutionsplc.com");
 
-        verify(emailProvider).sendEmail(eq("newops@utsolutionsplc.com"), anyString(), contains("Invitation Token:"));
-        verify(smsProvider).sendSms(eq("+251925970827"), contains("Invitation Token:"));
+        ArgumentCaptor<String> plainText = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> html = ArgumentCaptor.forClass(String.class);
+        verify(emailProvider).sendHtmlEmail(eq("newops@utsolutionsplc.com"), eq("You're invited to UT Invoice"), html.capture(), plainText.capture());
+        verify(smsProvider).sendSms(eq("+251925970827"), contains("/auth/invitations/accept?token="));
+        assertThat(plainText.getValue()).contains("https://invoice.utsolutionsplc.com/auth/invitations/accept?token=");
+        assertThat(plainText.getValue()).doesNotContain("Invitation Token:");
+        assertThat(html.getValue()).contains("Activate Account");
     }
 
     @Test
@@ -168,8 +176,85 @@ class MasterUserLifecycleServiceTest {
         var result = service.inviteAdmin("platform.admin", req);
 
         assertThat(result).isNotNull();
-        verify(emailProvider).sendEmail(eq("newops@utsolutionsplc.com"), anyString(), contains("Invitation Token:"));
+        verify(emailProvider).sendHtmlEmail(eq("newops@utsolutionsplc.com"), eq("You're invited to UT Invoice"), anyString(), anyString());
         verify(smsProvider, never()).sendSms(anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("invitation stores only a hash and acceptance consumes it exactly once")
+    void invitationAcceptanceCreatesActiveRoleAssignedAccountAndRejectsReuse() {
+        when(userRepository.findByEmail("newops@utsolutionsplc.com")).thenReturn(Optional.empty());
+        when(invitationRepository.findByEmailAndStatus("newops@utsolutionsplc.com", "PENDING")).thenReturn(List.of());
+        when(roleRepository.findByCode("ROLE_SAAS_ADMIN")).thenReturn(Optional.of(saasRole));
+
+        InviteAdminRequest invite = new InviteAdminRequest("newops@utsolutionsplc.com", null, "Samson Aweke", "ROLE_SAAS_ADMIN", null);
+        service.inviteAdmin("platform.admin", invite);
+
+        ArgumentCaptor<String> plainText = ArgumentCaptor.forClass(String.class);
+        verify(emailProvider).sendHtmlEmail(anyString(), anyString(), anyString(), plainText.capture());
+        String invitationUrl = plainText.getValue().lines()
+                .filter(line -> line.startsWith("https://"))
+                .findFirst()
+                .orElseThrow();
+        String rawToken = invitationUrl.substring(invitationUrl.indexOf("token=") + "token=".length());
+
+        ArgumentCaptor<et.ut.einvoice.platform.identity.domain.PlatformUserInvitation> invitationCaptor =
+                ArgumentCaptor.forClass(et.ut.einvoice.platform.identity.domain.PlatformUserInvitation.class);
+        verify(invitationRepository, atLeastOnce()).save(invitationCaptor.capture());
+        var invitation = invitationCaptor.getAllValues().getFirst();
+        assertThat(invitation.getTokenHash()).isNotEqualTo(rawToken);
+        assertThat(invitation.getTokenHash()).hasSize(64);
+
+        when(invitationRepository.findWithLockByTokenHash(invitation.getTokenHash())).thenReturn(Optional.of(invitation));
+        when(userRepository.findByEmail("newops@utsolutionsplc.com")).thenReturn(Optional.empty());
+
+        var response = service.acceptInvitation(new AcceptInvitationRequest(rawToken, "SecurePass1!", "SecurePass1!"));
+
+        assertThat(response.success()).isTrue();
+        assertThat(invitation.getStatus()).isEqualTo("ACCEPTED");
+        ArgumentCaptor<PlatformUser> userCaptor = ArgumentCaptor.forClass(PlatformUser.class);
+        verify(userRepository).save(userCaptor.capture());
+        assertThat(userCaptor.getValue().isActive()).isTrue();
+        assertThat(userCaptor.getValue().getRoles()).containsExactly(saasRole);
+
+        assertThatThrownBy(() -> service.acceptInvitation(new AcceptInvitationRequest(rawToken, "SecurePass1!", "SecurePass1!")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("already been used");
+    }
+
+    @Test
+    @DisplayName("validation returns EXPIRED for a matching expired invitation and permanently marks it expired")
+    void validationExpiresInvitation() throws Exception {
+        String rawToken = "A".repeat(43);
+        String tokenHash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(rawToken.getBytes(StandardCharsets.UTF_8)));
+        var invitation = new et.ut.einvoice.platform.identity.domain.PlatformUserInvitation(
+                UUID.randomUUID(), "expired@utsolutionsplc.com", null, "Expired Invitee", "ROLE_SAAS_ADMIN", null,
+                tokenHash, Instant.now().minusSeconds(1), "platform.admin");
+        when(invitationRepository.findByTokenHash(anyString())).thenReturn(Optional.of(invitation));
+
+        var result = service.validateInvitation(rawToken);
+
+        assertThat(result.valid()).isFalse();
+        assertThat(result.state()).isEqualTo("EXPIRED");
+        assertThat(invitation.getStatus()).isEqualTo("EXPIRED");
+    }
+
+    @Test
+    @DisplayName("resend replaces the stored hash and expiration so the prior activation link is invalidated")
+    void resendInvalidatesPriorCredential() {
+        var invitation = new et.ut.einvoice.platform.identity.domain.PlatformUserInvitation(
+                UUID.randomUUID(), "resend@utsolutionsplc.com", null, "Resend Invitee", "ROLE_SAAS_ADMIN", null,
+                "b".repeat(64), Instant.now().plusSeconds(60), "platform.admin");
+        when(invitationRepository.findWithLockById(invitation.getId())).thenReturn(Optional.of(invitation));
+        when(userRepository.findByEmail(invitation.getEmail())).thenReturn(Optional.empty());
+        when(roleRepository.findByCode("ROLE_SAAS_ADMIN")).thenReturn(Optional.of(saasRole));
+
+        service.resendInvitation("platform.admin", invitation.getId());
+
+        assertThat(invitation.getTokenHash()).isNotEqualTo("b".repeat(64));
+        assertThat(invitation.getExpiresAt()).isAfter(Instant.now());
+        assertThat(invitation.getResendCount()).isEqualTo(1);
+        verify(emailProvider).sendHtmlEmail(eq(invitation.getEmail()), eq("You're invited to UT Invoice"), anyString(), anyString());
     }
 
     @Test

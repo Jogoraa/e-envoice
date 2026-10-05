@@ -95,6 +95,15 @@ public class MasterUserManagementController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Invitation revoked."));
     }
 
+    @PostMapping("/invitations/{invitationId}/resend")
+    public ResponseEntity<InvitationSummaryDto> resendInvitation(
+            Authentication auth,
+            @PathVariable UUID invitationId
+    ) {
+        String adminUsername = resolveUsername(auth);
+        return ResponseEntity.ok(userLifecycleService.resendInvitation(adminUsername, invitationId));
+    }
+
     private String resolveUsername(Authentication auth) {
         if (auth == null || auth.getName() == null) {
             return "platform.admin";

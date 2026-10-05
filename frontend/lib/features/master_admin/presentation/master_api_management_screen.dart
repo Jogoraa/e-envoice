@@ -41,7 +41,9 @@ class _MasterApiManagementScreenState
 
   Future<void> _loadAllData() async {
     setState(() => _isLoading = true);
-    final apiClient = ref.read(apiClientProvider);
+    // This is a platform-admin screen. The tenant client only carries tenant
+    // credentials, which caused master API calls to be sent without the admin JWT.
+    final apiClient = ref.read(masterAdminApiClientProvider);
 
     try {
       // 1. Load API Clients
@@ -249,7 +251,7 @@ class _MasterApiManagementScreenState
                   return;
                 }
 
-                final apiClient = ref.read(apiClientProvider);
+                final apiClient = ref.read(masterAdminApiClientProvider);
                 final messenger = ScaffoldMessenger.of(context);
                 try {
                   final res = await apiClient.post(
@@ -433,7 +435,7 @@ class _MasterApiManagementScreenState
 
     if (confirm != true) return;
 
-    final apiClient = ref.read(apiClientProvider);
+    final apiClient = ref.read(masterAdminApiClientProvider);
     try {
       final res = await apiClient.post(
         '/api/v1/master/api-clients/${client['id']}/rotate-secret',
@@ -457,7 +459,7 @@ class _MasterApiManagementScreenState
 
   void _toggleClientStatus(dynamic client) async {
     final newStatus = client['status'] == 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
-    final apiClient = ref.read(apiClientProvider);
+    final apiClient = ref.read(masterAdminApiClientProvider);
     try {
       await apiClient.put(
         '/api/v1/master/api-clients/${client['id']}/status',
@@ -482,7 +484,7 @@ class _MasterApiManagementScreenState
   }
 
   void _retryDelivery(dynamic delivery) async {
-    final apiClient = ref.read(apiClientProvider);
+    final apiClient = ref.read(masterAdminApiClientProvider);
     try {
       final res = await apiClient.post(
         '/api/v1/master/webhooks/deliveries/${delivery['id']}/retry',

@@ -74,6 +74,10 @@ platform:
   default-currency: "ETB"
   offline-sla-hours: 72
   cancellation-sla-hours: 48
+  invitation:
+    # Canonical public Flutter/Web origin. Set APP_PUBLIC_URL in every deployed environment.
+    public-url: ${APP_PUBLIC_URL:http://localhost:3000}
+    expiration-hours: ${INVITATION_EXPIRATION_HOURS:72}
   api:
     # The URL path is authoritative: /api/v{major}/... . Add a new major only when its
     # controllers, security rules, and OpenAPI group are deployed in the same release.

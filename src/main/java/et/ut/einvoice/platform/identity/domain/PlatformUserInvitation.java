@@ -39,6 +39,21 @@ public class PlatformUserInvitation {
     @Column(name = "accepted_at")
     private Instant acceptedAt;
 
+    @Column(name = "email_delivery_status", nullable = false, length = 32)
+    private String emailDeliveryStatus = "PENDING";
+
+    @Column(name = "sms_delivery_status", nullable = false, length = 32)
+    private String smsDeliveryStatus = "NOT_CONFIGURED";
+
+    @Column(name = "last_delivery_attempt_at")
+    private Instant lastDeliveryAttemptAt;
+
+    @Column(name = "delivery_error", length = 512)
+    private String deliveryError;
+
+    @Column(name = "resend_count", nullable = false)
+    private int resendCount;
+
     @Column(name = "created_by", nullable = false, length = 64)
     private String createdBy;
 
@@ -135,6 +150,46 @@ public class PlatformUserInvitation {
 
     public void setAcceptedAt(Instant acceptedAt) {
         this.acceptedAt = acceptedAt;
+    }
+
+    public String getEmailDeliveryStatus() {
+        return emailDeliveryStatus;
+    }
+
+    public void setEmailDeliveryStatus(String emailDeliveryStatus) {
+        this.emailDeliveryStatus = emailDeliveryStatus;
+    }
+
+    public String getSmsDeliveryStatus() {
+        return smsDeliveryStatus;
+    }
+
+    public void setSmsDeliveryStatus(String smsDeliveryStatus) {
+        this.smsDeliveryStatus = smsDeliveryStatus;
+    }
+
+    public Instant getLastDeliveryAttemptAt() {
+        return lastDeliveryAttemptAt;
+    }
+
+    public void setLastDeliveryAttemptAt(Instant lastDeliveryAttemptAt) {
+        this.lastDeliveryAttemptAt = lastDeliveryAttemptAt;
+    }
+
+    public String getDeliveryError() {
+        return deliveryError;
+    }
+
+    public void setDeliveryError(String deliveryError) {
+        this.deliveryError = deliveryError;
+    }
+
+    public int getResendCount() {
+        return resendCount;
+    }
+
+    public void setResendCount(int resendCount) {
+        this.resendCount = resendCount;
     }
 
     public String getCreatedBy() {

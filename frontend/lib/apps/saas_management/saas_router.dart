@@ -10,6 +10,13 @@ import '../../features/saas_management/presentation/support_diagnostics_screen.d
 import '../../features/saas_management/presentation/tenant_lifecycle_screen.dart';
 import '../../features/saas_management/presentation/tenant_onboarding_wizard.dart';
 import '../../features/saas_management/presentation/usage_metering_screen.dart';
+import '../../features/authentication/presentation/invitation_acceptance_screen.dart';
+import '../../features/saas_management/presentation/tenant_lifecycle_notifications_screen.dart';
+import '../../features/saas_management/presentation/marketplace_management_screen.dart';
+import '../../features/saas_management/presentation/saas_tenant_exit_oversight_screen.dart';
+import '../../features/saas_management/presentation/provider_tier_dashboard_screen.dart';
+import '../../core/routing/app_surface.dart';
+import '../../core/routing/presentation/route_recovery_screen.dart';
 
 final saasRouterProvider = Provider<GoRouter>((ref) {
   final session = ref.watch(saasSessionProvider);
@@ -17,6 +24,12 @@ final saasRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: session != null ? '/saas/dashboard' : '/saas/login',
     routes: [
+      GoRoute(
+        path: '/auth/invitations/accept',
+        builder: (context, state) => InvitationAcceptanceScreen(
+          token: state.uri.queryParameters['token'],
+        ),
+      ),
       GoRoute(
         path: '/saas/login',
         builder: (context, state) => const SaasLoginScreen(),
@@ -52,8 +65,37 @@ final saasRouterProvider = Provider<GoRouter>((ref) {
             path: '/saas/support',
             builder: (context, state) => const SupportDiagnosticsScreen(),
           ),
+          GoRoute(
+            path: '/saas/lifecycle-notifications',
+            builder: (context, state) =>
+                const TenantLifecycleNotificationsScreen(),
+          ),
+          GoRoute(
+            path: '/saas/marketplace',
+            builder: (context, state) =>
+                const MarketplaceManagementScreen(),
+          ),
+          GoRoute(
+            path: '/saas/tenant-exit-oversight',
+            builder: (context, state) =>
+                const SaasTenantExitOversightScreen(),
+          ),
+          GoRoute(
+            path: '/saas/provider-tiers',
+            builder: (context, state) =>
+                const ProviderTierDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/saas/onboarding/wizard',
+            builder: (context, state) =>
+                const TenantOnboardingWizard(),
+          ),
         ],
       ),
     ],
+    errorBuilder: (context, state) => RouteRecoveryScreen(
+      state: state,
+      defaultSurface: AppSurface.saasManagement,
+    ),
   );
 });

@@ -12,7 +12,12 @@ class GatewayConfig {
     defaultValue: 'http://localhost:8081/api/v1/tenant',
   );
 
-  static const String activeBackendHost = 'http://localhost:8081';
+  /// Host root used by public, unauthenticated API calls such as invitation activation.
+  /// Supply it at build time with --dart-define=PUBLIC_API_BASE_URL=https://api.example.et.
+  static const String activeBackendHost = String.fromEnvironment(
+    'PUBLIC_API_BASE_URL',
+    defaultValue: 'http://localhost:8081',
+  );
 
   /// Base URL for the UT Master Admin API (Platform, regulatory, security oversight)
   static const String masterAdminApiBaseUrl = String.fromEnvironment(

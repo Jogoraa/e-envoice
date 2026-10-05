@@ -172,7 +172,40 @@ public class IdentityDtos {
             UUID tenantId,
             Instant expiresAt,
             String status,
+            String emailDeliveryStatus,
+            String smsDeliveryStatus,
+            Instant lastDeliveryAttemptAt,
+            int resendCount,
             Instant createdAt
+    ) {}
+
+    public record InvitationValidationDto(
+            boolean valid,
+            String state,
+            String email,
+            String displayName,
+            String role,
+            String organization,
+            Instant expiresAt,
+            boolean requiresMfa
+    ) {}
+
+    public record AcceptInvitationRequest(
+            @NotBlank(message = "Invitation token is required")
+            @Size(max = 256)
+            String token,
+            @NotBlank(message = "Password is required")
+            @Size(max = 128)
+            String password,
+            @NotBlank(message = "Password confirmation is required")
+            @Size(max = 128)
+            String confirmPassword
+    ) {}
+
+    public record InvitationAcceptanceResponse(
+            boolean success,
+            boolean requiresMfa,
+            String loginPath
     ) {}
 
     // ==========================================

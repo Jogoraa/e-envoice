@@ -17,21 +17,12 @@ class _DirectiveComplianceGovernanceScreenState
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isLoading = true;
-  String? _errorMessage;
-
   // Provider Tier Data (Art. 12 & 13)
   Map<String, dynamic>? _tierStatus;
   List<dynamic> _allTiers = [];
 
-  // Authority Exports (Art. 4(2)(c))
-  List<dynamic> _authorityExports = [];
-
-  // Exempt Sector Data (Art. 20)
-  List<dynamic> _exemptAuthorizations = [];
-
   // Provider Exit Data (Art. 17)
   Map<String, dynamic>? _latestExitPlan;
-  List<dynamic> _tenantTransitions = [];
 
   @override
   void initState() {
@@ -49,7 +40,6 @@ class _DirectiveComplianceGovernanceScreenState
   Future<void> _loadComplianceData() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
     try {
@@ -77,25 +67,16 @@ class _DirectiveComplianceGovernanceScreenState
         );
         if (exitRes.data is Map) {
           _latestExitPlan = Map<String, dynamic>.from(exitRes.data as Map);
-          if (_latestExitPlan!['id'] != null) {
-            final transRes = await client.get(
-              '/api/v1/master/provider-exit/plans/${_latestExitPlan!['id']}/tenants',
-            );
-            if (transRes.data is List) {
-              _tenantTransitions = transRes.data as List;
-            }
-          }
         }
       } catch (_) {}
 
       if (mounted) {
         setState(() => _isLoading = false);
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = e.toString();
         });
       }
     }
@@ -303,7 +284,7 @@ class _DirectiveComplianceGovernanceScreenState
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _allTiers.length,
-                    separatorBuilder: (_, __) =>
+                    separatorBuilder: (context, index) =>
                         const Divider(height: 1, color: AppColors.rule),
                     itemBuilder: (context, index) {
                       final item = _allTiers[index];

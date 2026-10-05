@@ -17,6 +17,19 @@ abstract class AppColors {
   static const Color amber700 = Color(0xFFB35E00);
   //surfaceMuted
   static const Color surfaceMuted = Color(0xFFF1F3F5);
+  // Semantic & UI Token Aliases (Mapped to UT Brand Guidelines v1.1)
+  static const Color primary = navy900;
+  static const Color secondary = navy700;
+  static const Color background = paper;
+  static const Color surface = paperRaised;
+  static const Color error = red600;
+  static const Color warning = amber600;
+  static const Color success = green700;
+  static const Color textPrimary = ink;
+  static const Color textSecondary = inkMuted;
+  static const Color textTertiary = Color(0xFF8A94A6);
+  static const Color divider = rule;
+
   // Status Semantics
   static const Color amber600 = Color(
     0xFFB3781A,

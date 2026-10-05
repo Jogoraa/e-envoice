@@ -49,9 +49,15 @@ class _MasterUsersDirectoryScreenState
       final client = ref.read(masterAdminApiClientProvider);
 
       String url = '/api/v1/master/users?';
-      if (_searchQuery.isNotEmpty) url += 'search=$_searchQuery&';
-      if (_selectedRoleFilter != 'ALL') url += 'role=$_selectedRoleFilter&';
-      if (_selectedStatusFilter != 'ALL') url += 'status=$_selectedStatusFilter&';
+      if (_searchQuery.isNotEmpty) {
+        url += 'search=$_searchQuery&';
+      }
+      if (_selectedRoleFilter != 'ALL') {
+        url += 'role=$_selectedRoleFilter&';
+      }
+      if (_selectedStatusFilter != 'ALL') {
+        url += 'status=$_selectedStatusFilter&';
+      }
 
       final usersRes = await client.get(url);
       final invRes = await client.get('/api/v1/master/users/invitations');
@@ -85,7 +91,11 @@ class _MasterUsersDirectoryScreenState
           backgroundColor: AppColors.paperRaised,
           title: Row(
             children: [
-              const Icon(Icons.person_add_alt_1, color: AppColors.navy900, size: 22),
+              const Icon(
+                Icons.person_add_alt_1,
+                color: AppColors.navy900,
+                size: 22,
+              ),
               const SizedBox(width: 8),
               Text('Invite Administrator', style: AppTypography.h3()),
             ],
@@ -98,12 +108,15 @@ class _MasterUsersDirectoryScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'An invitation token will be generated and dispatched with 72-hour validity.',
+                    'A secure one-time activation link will be sent. The invitee chooses their own password before the exact expiry time shown in the message.',
                     style: AppTypography.bodySmall(color: AppColors.inkMuted),
                   ),
                   const SizedBox(height: 16),
                   if (dialogError != null) ...[
-                    Text(dialogError!, style: AppTypography.bodySmall(color: AppColors.red700)),
+                    Text(
+                      dialogError!,
+                      style: AppTypography.bodySmall(color: AppColors.red700),
+                    ),
                     const SizedBox(height: 8),
                   ],
                   TextField(
@@ -137,16 +150,42 @@ class _MasterUsersDirectoryScreenState
                       prefixIcon: Icon(Icons.shield, size: 18),
                     ),
                     items: const [
-                      DropdownMenuItem(value: 'ROLE_PLATFORM_ADMIN', child: Text('Platform Administrator')),
-                      DropdownMenuItem(value: 'ROLE_SAAS_ADMIN', child: Text('SaaS Administrator')),
-                      DropdownMenuItem(value: 'ROLE_TENANT_ADMIN', child: Text('Tenant Administrator')),
-                      DropdownMenuItem(value: 'ROLE_SECURITY_ADMIN', child: Text('Security Administrator')),
-                      DropdownMenuItem(value: 'ROLE_AUDIT_ADMIN', child: Text('Audit Administrator')),
-                      DropdownMenuItem(value: 'ROLE_SUPPORT_ADMIN', child: Text('Support Administrator')),
-                      DropdownMenuItem(value: 'ROLE_FINANCE_ADMIN', child: Text('Finance Administrator')),
-                      DropdownMenuItem(value: 'ROLE_READ_ONLY', child: Text('Read-Only Auditor')),
+                      DropdownMenuItem(
+                        value: 'ROLE_PLATFORM_ADMIN',
+                        child: Text('Platform Administrator'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ROLE_SAAS_ADMIN',
+                        child: Text('SaaS Administrator'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ROLE_TENANT_ADMIN',
+                        child: Text('Tenant Administrator'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ROLE_SECURITY_ADMIN',
+                        child: Text('Security Administrator'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ROLE_AUDIT_ADMIN',
+                        child: Text('Audit Administrator'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ROLE_SUPPORT_ADMIN',
+                        child: Text('Support Administrator'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ROLE_FINANCE_ADMIN',
+                        child: Text('Finance Administrator'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ROLE_READ_ONLY',
+                        child: Text('Read-Only Auditor'),
+                      ),
                     ],
-                    onChanged: (v) => setDialogState(() => selectedRole = v ?? 'ROLE_SAAS_ADMIN'),
+                    onChanged: (v) => setDialogState(
+                      () => selectedRole = v ?? 'ROLE_SAAS_ADMIN',
+                    ),
                   ),
                   if (selectedRole == 'ROLE_TENANT_ADMIN') ...[
                     const SizedBox(height: 12),
@@ -183,9 +222,13 @@ class _MasterUsersDirectoryScreenState
                           data: {
                             'fullName': nameCtrl.text.trim(),
                             'email': emailCtrl.text.trim(),
-                            'phone': phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
+                            'phone': phoneCtrl.text.trim().isEmpty
+                                ? null
+                                : phoneCtrl.text.trim(),
                             'initialRoleCode': selectedRole,
-                            'tenantId': tenantCtrl.text.trim().isEmpty ? null : tenantCtrl.text.trim(),
+                            'tenantId': tenantCtrl.text.trim().isEmpty
+                                ? null
+                                : tenantCtrl.text.trim(),
                           },
                         );
                         if (ctx.mounted) Navigator.pop(ctx);
@@ -229,7 +272,10 @@ class _MasterUsersDirectoryScreenState
                 ),
                 const SizedBox(height: 12),
                 if (dialogError != null) ...[
-                  Text(dialogError!, style: AppTypography.bodySmall(color: AppColors.red700)),
+                  Text(
+                    dialogError!,
+                    style: AppTypography.bodySmall(color: AppColors.red700),
+                  ),
                   const SizedBox(height: 8),
                 ],
                 DropdownButtonFormField<String>(
@@ -237,11 +283,21 @@ class _MasterUsersDirectoryScreenState
                   decoration: const InputDecoration(labelText: 'Status'),
                   items: const [
                     DropdownMenuItem(value: 'ACTIVE', child: Text('ACTIVE')),
-                    DropdownMenuItem(value: 'SUSPENDED', child: Text('SUSPENDED (Temporary Lock)')),
-                    DropdownMenuItem(value: 'LOCKED', child: Text('LOCKED (Security Lockout)')),
-                    DropdownMenuItem(value: 'DISABLED', child: Text('DISABLED (Permanent Deactivation)')),
+                    DropdownMenuItem(
+                      value: 'SUSPENDED',
+                      child: Text('SUSPENDED (Temporary Lock)'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'LOCKED',
+                      child: Text('LOCKED (Security Lockout)'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'DISABLED',
+                      child: Text('DISABLED (Permanent Deactivation)'),
+                    ),
                   ],
-                  onChanged: (v) => setDialogState(() => selectedStatus = v ?? 'ACTIVE'),
+                  onChanged: (v) =>
+                      setDialogState(() => selectedStatus = v ?? 'ACTIVE'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -296,11 +352,15 @@ class _MasterUsersDirectoryScreenState
   void _showEffectiveAccessModal(dynamic user) async {
     try {
       final client = ref.read(masterAdminApiClientProvider);
-      final res = await client.get('/api/v1/master/rbac/effective-access/${user['id']}');
+      final res = await client.get(
+        '/api/v1/master/rbac/effective-access/${user['id']}',
+      );
       final data = Map<String, dynamic>.from(res.data as Map);
       final assignedRoles = List<String>.from(data['assignedRoles'] ?? []);
-      final effective = List<String>.from(data['effectivePermissions'] ?? [])..sort();
-      final prohibited = List<String>.from(data['prohibitedPermissions'] ?? [])..sort();
+      final effective = List<String>.from(data['effectivePermissions'] ?? [])
+        ..sort();
+      final prohibited = List<String>.from(data['prohibitedPermissions'] ?? [])
+        ..sort();
 
       if (!mounted) return;
       showDialog(
@@ -309,7 +369,11 @@ class _MasterUsersDirectoryScreenState
           backgroundColor: AppColors.paperRaised,
           title: Row(
             children: [
-              const Icon(Icons.calculate_outlined, color: AppColors.navy900, size: 22),
+              const Icon(
+                Icons.calculate_outlined,
+                color: AppColors.navy900,
+                size: 22,
+              ),
               const SizedBox(width: 8),
               Text('Effective Access Calculator', style: AppTypography.h3()),
             ],
@@ -325,7 +389,10 @@ class _MasterUsersDirectoryScreenState
                     style: AppTypography.uiLabelBold(),
                   ),
                   const SizedBox(height: 8),
-                  Text('Assigned Roles: ${assignedRoles.join(', ')}', style: AppTypography.bodySmall()),
+                  Text(
+                    'Assigned Roles: ${assignedRoles.join(', ')}',
+                    style: AppTypography.bodySmall(),
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Effective Permissions (${effective.length}):',
@@ -338,20 +405,32 @@ class _MasterUsersDirectoryScreenState
                     decoration: BoxDecoration(
                       color: AppColors.green700.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: AppColors.green700.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: AppColors.green700.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Wrap(
                       spacing: 6,
                       runSpacing: 6,
                       children: effective
-                          .map((p) => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.green700,
-                                  borderRadius: BorderRadius.circular(3),
+                          .map(
+                            (p) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.green700,
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Text(
+                                p,
+                                style: AppTypography.monoSmall(
+                                  color: Colors.white,
                                 ),
-                                child: Text(p, style: AppTypography.monoSmall(color: Colors.white)),
-                              ))
+                              ),
+                            ),
+                          )
                           .toList(),
                     ),
                   ),
@@ -368,20 +447,32 @@ class _MasterUsersDirectoryScreenState
                       decoration: BoxDecoration(
                         color: AppColors.red700.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: AppColors.red700.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: AppColors.red700.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Wrap(
                         spacing: 6,
                         runSpacing: 6,
                         children: prohibited
-                            .map((p) => Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.red700,
-                                    borderRadius: BorderRadius.circular(3),
+                            .map(
+                              (p) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.red700,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Text(
+                                  p,
+                                  style: AppTypography.monoSmall(
+                                    color: Colors.white,
                                   ),
-                                  child: Text(p, style: AppTypography.monoSmall(color: Colors.white)),
-                                ))
+                                ),
+                              ),
+                            )
                             .toList(),
                       ),
                     ),
@@ -426,7 +517,10 @@ class _MasterUsersDirectoryScreenState
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Platform & Tenant Administrator Directory', style: AppTypography.h1()),
+                    Text(
+                      'Platform & Tenant Administrator Directory',
+                      style: AppTypography.h1(),
+                    ),
                     Text(
                       'Lifecycle governance, identity status, credential resets, and effective authority oversight.',
                       style: AppTypography.bodySmall(color: AppColors.inkMuted),
@@ -483,13 +577,34 @@ class _MasterUsersDirectoryScreenState
                     decoration: const InputDecoration(labelText: 'Filter Role'),
                     items: const [
                       DropdownMenuItem(value: 'ALL', child: Text('All Roles')),
-                      DropdownMenuItem(value: 'ROLE_PLATFORM_ADMIN', child: Text('Platform Admin')),
-                      DropdownMenuItem(value: 'ROLE_SAAS_ADMIN', child: Text('SaaS Admin')),
-                      DropdownMenuItem(value: 'ROLE_TENANT_ADMIN', child: Text('Tenant Admin')),
-                      DropdownMenuItem(value: 'ROLE_SECURITY_ADMIN', child: Text('Security Admin')),
-                      DropdownMenuItem(value: 'ROLE_AUDIT_ADMIN', child: Text('Audit Admin')),
-                      DropdownMenuItem(value: 'ROLE_SUPPORT_ADMIN', child: Text('Support Admin')),
-                      DropdownMenuItem(value: 'ROLE_READ_ONLY', child: Text('Read-Only')),
+                      DropdownMenuItem(
+                        value: 'ROLE_PLATFORM_ADMIN',
+                        child: Text('Platform Admin'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ROLE_SAAS_ADMIN',
+                        child: Text('SaaS Admin'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ROLE_TENANT_ADMIN',
+                        child: Text('Tenant Admin'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ROLE_SECURITY_ADMIN',
+                        child: Text('Security Admin'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ROLE_AUDIT_ADMIN',
+                        child: Text('Audit Admin'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ROLE_SUPPORT_ADMIN',
+                        child: Text('Support Admin'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ROLE_READ_ONLY',
+                        child: Text('Read-Only'),
+                      ),
                     ],
                     onChanged: (v) {
                       _selectedRoleFilter = v ?? 'ALL';
@@ -502,13 +617,24 @@ class _MasterUsersDirectoryScreenState
                   flex: 2,
                   child: DropdownButtonFormField<String>(
                     value: _selectedStatusFilter,
-                    decoration: const InputDecoration(labelText: 'Filter Status'),
+                    decoration: const InputDecoration(
+                      labelText: 'Filter Status',
+                    ),
                     items: const [
-                      DropdownMenuItem(value: 'ALL', child: Text('All Statuses')),
+                      DropdownMenuItem(
+                        value: 'ALL',
+                        child: Text('All Statuses'),
+                      ),
                       DropdownMenuItem(value: 'ACTIVE', child: Text('Active')),
-                      DropdownMenuItem(value: 'SUSPENDED', child: Text('Suspended')),
+                      DropdownMenuItem(
+                        value: 'SUSPENDED',
+                        child: Text('Suspended'),
+                      ),
                       DropdownMenuItem(value: 'LOCKED', child: Text('Locked')),
-                      DropdownMenuItem(value: 'DISABLED', child: Text('Disabled')),
+                      DropdownMenuItem(
+                        value: 'DISABLED',
+                        child: Text('Disabled'),
+                      ),
                     ],
                     onChanged: (v) {
                       _selectedStatusFilter = v ?? 'ALL';
@@ -533,7 +659,10 @@ class _MasterUsersDirectoryScreenState
                   color: AppColors.red700.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Text(_error!, style: AppTypography.bodySmall(color: AppColors.red700)),
+                child: Text(
+                  _error!,
+                  style: AppTypography.bodySmall(color: AppColors.red700),
+                ),
               ),
               const SizedBox(height: 16),
             ],
@@ -543,10 +672,7 @@ class _MasterUsersDirectoryScreenState
                   ? const Center(child: CircularProgressIndicator())
                   : TabBarView(
                       controller: _tabController,
-                      children: [
-                        _buildUsersTable(),
-                        _buildInvitationsTable(),
-                      ],
+                      children: [_buildUsersTable(), _buildInvitationsTable()],
                     ),
             ),
           ],
@@ -558,7 +684,10 @@ class _MasterUsersDirectoryScreenState
   Widget _buildUsersTable() {
     if (_users.isEmpty) {
       return Center(
-        child: Text('No administrators match the search criteria.', style: AppTypography.bodySmall()),
+        child: Text(
+          'No administrators match the search criteria.',
+          style: AppTypography.bodySmall(),
+        ),
       );
     }
 
@@ -570,7 +699,8 @@ class _MasterUsersDirectoryScreenState
       ),
       child: ListView.separated(
         itemCount: _users.length,
-        separatorBuilder: (ctx, i) => const Divider(height: 1, color: AppColors.rule),
+        separatorBuilder: (ctx, i) =>
+            const Divider(height: 1, color: AppColors.rule),
         itemBuilder: (ctx, i) {
           final u = _users[i];
           final status = u['status'] ?? 'ACTIVE';
@@ -588,7 +718,10 @@ class _MasterUsersDirectoryScreenState
           }
 
           return ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
             leading: CircleAvatar(
               backgroundColor: AppColors.navy900.withValues(alpha: 0.1),
               child: Text(
@@ -600,17 +733,26 @@ class _MasterUsersDirectoryScreenState
               children: [
                 Text(u['fullName'] ?? '', style: AppTypography.uiLabelBold()),
                 const SizedBox(width: 8),
-                Text('(@${u['username']})', style: AppTypography.monoSmall(color: AppColors.inkMuted)),
+                Text(
+                  '(@${u['username']})',
+                  style: AppTypography.monoSmall(color: AppColors.inkMuted),
+                ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: statusBg,
                     borderRadius: BorderRadius.circular(3),
                   ),
                   child: Text(
                     status,
-                    style: AppTypography.monoSmall(color: statusFg, weight: FontWeight.w700),
+                    style: AppTypography.monoSmall(
+                      color: statusFg,
+                      weight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -625,9 +767,15 @@ class _MasterUsersDirectoryScreenState
               padding: const EdgeInsets.only(top: 4),
               child: Row(
                 children: [
-                  Text('Email: ${u['email'] ?? '—'}', style: AppTypography.monoSmall()),
+                  Text(
+                    'Email: ${u['email'] ?? '—'}',
+                    style: AppTypography.monoSmall(),
+                  ),
                   const SizedBox(width: 16),
-                  Text('Role: $role', style: AppTypography.monoSmall(color: AppColors.navy900)),
+                  Text(
+                    'Role: $role',
+                    style: AppTypography.monoSmall(color: AppColors.navy900),
+                  ),
                   const SizedBox(width: 16),
                   Text(
                     'Last Login: ${u['lastLoginAt'] != null ? u['lastLoginAt'].toString().split('T').first : 'Never'}',
@@ -645,14 +793,23 @@ class _MasterUsersDirectoryScreenState
                     context: context,
                     builder: (c) => AlertDialog(
                       title: const Text('Reset MFA Protection'),
-                      content: Text('Are you sure you want to reset MFA for ${u['username']}?'),
+                      content: Text(
+                        'Are you sure you want to reset MFA for ${u['username']}?',
+                      ),
                       actions: [
-                        TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
+                        TextButton(
+                          onPressed: () => Navigator.pop(c),
+                          child: const Text('Cancel'),
+                        ),
                         ElevatedButton(
                           onPressed: () async {
                             Navigator.pop(c);
-                            final client = ref.read(masterAdminApiClientProvider);
-                            await client.post('/api/v1/master/users/${u['id']}/reset-mfa');
+                            final client = ref.read(
+                              masterAdminApiClientProvider,
+                            );
+                            await client.post(
+                              '/api/v1/master/users/${u['id']}/reset-mfa',
+                            );
                             _loadData();
                           },
                           child: const Text('Reset MFA'),
@@ -704,7 +861,10 @@ class _MasterUsersDirectoryScreenState
   Widget _buildInvitationsTable() {
     if (_invitations.isEmpty) {
       return Center(
-        child: Text('No invitations pending.', style: AppTypography.bodySmall()),
+        child: Text(
+          'No invitations pending.',
+          style: AppTypography.bodySmall(),
+        ),
       );
     }
 
@@ -716,26 +876,64 @@ class _MasterUsersDirectoryScreenState
       ),
       child: ListView.separated(
         itemCount: _invitations.length,
-        separatorBuilder: (ctx, i) => const Divider(height: 1, color: AppColors.rule),
+        separatorBuilder: (ctx, i) =>
+            const Divider(height: 1, color: AppColors.rule),
         itemBuilder: (ctx, i) {
           final inv = _invitations[i];
           final status = inv['status'] ?? 'PENDING';
           return ListTile(
-            leading: const Icon(Icons.mark_email_unread_outlined, color: AppColors.navy900),
-            title: Text('${inv['fullName']} (${inv['email']})', style: AppTypography.uiLabelBold()),
+            leading: const Icon(
+              Icons.mark_email_unread_outlined,
+              color: AppColors.navy900,
+            ),
+            title: Text(
+              '${inv['fullName']} (${inv['email']})',
+              style: AppTypography.uiLabelBold(),
+            ),
             subtitle: Text(
-              'Role: ${inv['initialRoleCode']} | Status: $status | Expires: ${inv['expiresAt']}',
+              'Role: ${inv['initialRoleCode']} | Status: $status | Expires: ${inv['expiresAt']}\n'
+              'Delivery: Email ${inv['emailDeliveryStatus'] ?? 'PENDING'} | SMS ${inv['smsDeliveryStatus'] ?? 'NOT_CONFIGURED'}',
               style: AppTypography.monoSmall(color: AppColors.inkMuted),
             ),
-            trailing: status == 'PENDING'
-                ? OutlinedButton(
-                    onPressed: () async {
-                      final client = ref.read(masterAdminApiClientProvider);
-                      await client.post('/api/v1/master/users/invitations/${inv['id']}/revoke');
-                      _loadData();
-                    },
-                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.red700),
-                    child: const Text('Revoke'),
+            trailing: status == 'PENDING' || status == 'EXPIRED'
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton(
+                        onPressed: () async {
+                          final client = ref.read(masterAdminApiClientProvider);
+                          await client.post(
+                            '/api/v1/master/users/invitations/${inv['id']}/resend',
+                          );
+                          _loadData();
+                        },
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(0, 36),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                        ),
+                        child: const Text('Resend'),
+                      ),
+                      if (status == 'PENDING') ...[
+                        const SizedBox(width: 4),
+                        TextButton(
+                          onPressed: () async {
+                            final client = ref.read(
+                              masterAdminApiClientProvider,
+                            );
+                            await client.post(
+                              '/api/v1/master/users/invitations/${inv['id']}/revoke',
+                            );
+                            _loadData();
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.red700,
+                            minimumSize: const Size(0, 36),
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                          ),
+                          child: const Text('Revoke'),
+                        ),
+                      ],
+                    ],
                   )
                 : null,
           );

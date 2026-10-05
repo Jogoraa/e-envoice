@@ -136,6 +136,19 @@ class RequestSigningFilterTest {
         assertTrue(response.getContentAsString().contains("REQUEST_SIGNING_UNAVAILABLE"));
     }
 
+    @Test
+    void invitationAcceptanceUsesItsOneTimeBearerCredentialInsteadOfTheServerOnlyHmacSecret() throws Exception {
+        AtomicBoolean reachedApplication = new AtomicBoolean();
+
+        filter().doFilter(
+                request("POST", "/api/v1/auth/invitations/accept", null, "{\"token\":\"opaque\"}".getBytes(StandardCharsets.UTF_8)),
+                new MockHttpServletResponse(),
+                (ignored, ignoredResponse) -> reachedApplication.set(true)
+        );
+
+        assertTrue(reachedApplication.get());
+    }
+
     private RequestSigningFilter filter() {
         return new RequestSigningFilter(
                 new RequestSignatureVerifier(SECRET, 300, fixedClock()), objectMapper(), true, 1_024 * 1_024

@@ -68,10 +68,19 @@ public class SmtpEmailProvider implements EmailProvider {
 
     @Override
     public boolean sendEmail(String recipientEmail, String subject, String bodyText) {
-        return sendEmailWithResult(recipientEmail, subject, bodyText).success();
+        return sendEmailWithResult(recipientEmail, subject, bodyText, null).success();
     }
 
     public EmailDeliveryResult sendEmailWithResult(String recipientEmail, String subject, String bodyText) {
+        return sendEmailWithResult(recipientEmail, subject, bodyText, null);
+    }
+
+    @Override
+    public boolean sendHtmlEmail(String recipientEmail, String subject, String htmlBody, String plainTextBody) {
+        return sendEmailWithResult(recipientEmail, subject, plainTextBody, htmlBody).success();
+    }
+
+    public EmailDeliveryResult sendEmailWithResult(String recipientEmail, String subject, String bodyText, String htmlBody) {
         if (!isConfigured) {
             if ("prod".equalsIgnoreCase(activeProfile) || "production".equalsIgnoreCase(activeProfile)) {
                 log.error("Email dispatch rejected: SMTP provider credentials are not configured in production.");
@@ -83,7 +92,7 @@ public class SmtpEmailProvider implements EmailProvider {
             return new EmailDeliveryResult(true, "ACCEPTED", devMessageId, "Simulation mode dispatch accepted (dev profile).");
         }
 
-        return executeSmtpTransmission(recipientEmail, subject, bodyText);
+        return executeSmtpTransmission(recipientEmail, subject, bodyText, htmlBody);
     }
 
     public EmailDeliveryResult checkConnection() {
@@ -93,7 +102,7 @@ public class SmtpEmailProvider implements EmailProvider {
         return executeSmtpProbe();
     }
 
-    private EmailDeliveryResult executeSmtpTransmission(String recipientEmail, String subject, String bodyText) {
+    private EmailDeliveryResult executeSmtpTransmission(String recipientEmail, String subject, String bodyText, String htmlBody) {
         String messageId = "<" + UUID.randomUUID() + "@" + (host.isBlank() ? "ut-invoice.internal" : host) + ">";
 
         try (Socket rawSocket = new Socket()) {
@@ -191,11 +200,28 @@ public class SmtpEmailProvider implements EmailProvider {
             writer.write("Message-ID: " + messageId + "\r\n");
             writer.write("Date: " + DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.now(ZoneId.of("UTC"))) + "\r\n");
             writer.write("MIME-Version: 1.0\r\n");
-            writer.write("Content-Type: text/plain; charset=UTF-8\r\n");
-            writer.write("Content-Transfer-Encoding: 8bit\r\n");
-            writer.write("\r\n");
-            if (bodyText != null) {
-                writer.write(bodyText.replace("\n.", "\n.."));
+            if (htmlBody == null || htmlBody.isBlank()) {
+                writer.write("Content-Type: text/plain; charset=UTF-8\r\n");
+                writer.write("Content-Transfer-Encoding: 8bit\r\n");
+                writer.write("\r\n");
+                if (bodyText != null) {
+                    writer.write(bodyText.replace("\n.", "\n.."));
+                }
+            } else {
+                String boundary = "UTInvoice-" + UUID.randomUUID();
+                writer.write("Content-Type: multipart/alternative; boundary=\"" + boundary + "\"\r\n");
+                writer.write("\r\n");
+                writer.write("--" + boundary + "\r\n");
+                writer.write("Content-Type: text/plain; charset=UTF-8\r\n");
+                writer.write("Content-Transfer-Encoding: 8bit\r\n\r\n");
+                if (bodyText != null) {
+                    writer.write(bodyText.replace("\n.", "\n.."));
+                }
+                writer.write("\r\n--" + boundary + "\r\n");
+                writer.write("Content-Type: text/html; charset=UTF-8\r\n");
+                writer.write("Content-Transfer-Encoding: 8bit\r\n\r\n");
+                writer.write(htmlBody.replace("\n.", "\n.."));
+                writer.write("\r\n--" + boundary + "--");
             }
             writer.write("\r\n.\r\n");
             writer.flush();

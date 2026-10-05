@@ -63,6 +63,9 @@ public class RequestSigningFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         return !enabled
                 || !MUTATING_METHODS.contains(method)
+                // The invitation bearer token is the credential for this public, one-time activation endpoint.
+                // Requiring the server-only request-signing secret here would make the browser flow impossible.
+                || path.matches("/api/v[0-9]+/auth/invitations/accept")
                 || !(path.startsWith("/api/") || path.startsWith("/v/"));
     }
 

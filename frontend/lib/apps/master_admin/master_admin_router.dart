@@ -17,6 +17,12 @@ import '../../features/master_admin/presentation/master_users_directory_screen.d
 import '../../features/master_admin/presentation/platform_config_screen.dart';
 import '../../features/master_admin/presentation/security_audit_screen.dart';
 import '../../features/master_admin/presentation/tenant_oversight_screen.dart';
+import '../../features/authentication/presentation/invitation_acceptance_screen.dart';
+import '../../features/master_admin/presentation/authority_investigation_portal_screen.dart';
+import '../../features/master_admin/presentation/provider_exit_governance_screen.dart';
+import '../../features/master_admin/presentation/system_integrity_screen.dart';
+import '../../core/routing/app_surface.dart';
+import '../../core/routing/presentation/route_recovery_screen.dart';
 
 final masterAdminRouterProvider = Provider<GoRouter>((ref) {
   final session = ref.watch(masterAdminSessionProvider);
@@ -24,6 +30,12 @@ final masterAdminRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: session != null ? '/admin/dashboard' : '/admin/login',
     routes: [
+      GoRoute(
+        path: '/auth/invitations/accept',
+        builder: (context, state) => InvitationAcceptanceScreen(
+          token: state.uri.queryParameters['token'],
+        ),
+      ),
       GoRoute(
         path: '/admin/login',
         builder: (context, state) => const MasterAdminLoginScreen(),
@@ -89,10 +101,30 @@ final masterAdminRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/admin/compliance-governance',
-            builder: (context, state) => const DirectiveComplianceGovernanceScreen(),
+            builder: (context, state) =>
+                const DirectiveComplianceGovernanceScreen(),
+          ),
+          GoRoute(
+            path: '/admin/authority-investigation',
+            builder: (context, state) =>
+                const AuthorityInvestigationPortalScreen(),
+          ),
+          GoRoute(
+            path: '/admin/provider-exit',
+            builder: (context, state) =>
+                const ProviderExitGovernanceScreen(),
+          ),
+          GoRoute(
+            path: '/admin/system-integrity',
+            builder: (context, state) =>
+                const SystemIntegrityScreen(),
           ),
         ],
       ),
     ],
+    errorBuilder: (context, state) => RouteRecoveryScreen(
+      state: state,
+      defaultSurface: AppSurface.masterAdmin,
+    ),
   );
 });

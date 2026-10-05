@@ -20,6 +20,19 @@ import '../networking/network_resilience_manager.dart';
 import '../networking/gateway_config.dart';
 import '../storage/receipt_cache_service.dart';
 
+import '../../data/services/compliance/authority_investigation_service.dart';
+import '../../data/services/compliance/business_sector_service.dart';
+import '../../data/services/compliance/cancellation_service.dart';
+import '../../data/services/compliance/device_compliance_service.dart';
+import '../../data/services/compliance/exempt_sector_service.dart';
+import '../../data/services/compliance/government_credentials_service.dart';
+import '../../data/services/compliance/marketplace_service.dart';
+import '../../data/services/compliance/offline_operations_service.dart';
+import '../../data/services/compliance/portability_exit_service.dart';
+import '../../data/services/compliance/provider_compliance_service.dart';
+import '../../data/services/compliance/statutory_documents_service.dart';
+import '../../data/services/compliance/tenant_lifecycle_service.dart';
+
 final networkResilienceManagerProvider = Provider<NetworkResilienceManager>((ref) {
   final manager = NetworkResilienceManager();
   ref.onDispose(() => manager.dispose());
@@ -135,3 +148,65 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
     syncNotifier: notifier,
   );
 });
+
+// Directive No. 1142/2026 Compliance Services
+final statutoryDocumentsServiceProvider = Provider<StatutoryDocumentsService>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return StatutoryDocumentsService(client);
+});
+
+final cancellationServiceProvider = Provider<CancellationService>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return CancellationService(client);
+});
+
+final offlineOperationsServiceProvider = Provider<OfflineOperationsService>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return OfflineOperationsService(client);
+});
+
+final deviceComplianceServiceProvider = Provider<DeviceComplianceService>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return DeviceComplianceService(client);
+});
+
+final governmentCredentialsServiceProvider = Provider<GovernmentCredentialsService>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return GovernmentCredentialsService(client);
+});
+
+final marketplaceServiceProvider = Provider<MarketplaceService>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return MarketplaceService(client);
+});
+
+final exemptSectorServiceProvider = Provider<ExemptSectorService>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return ExemptSectorService(client);
+});
+
+final authorityInvestigationServiceProvider = Provider<AuthorityInvestigationService>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return AuthorityInvestigationService(client);
+});
+
+final portabilityExitServiceProvider = Provider<PortabilityExitService>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return PortabilityExitService(client);
+});
+
+final tenantLifecycleServiceProvider = Provider<TenantLifecycleService>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return TenantLifecycleService(client);
+});
+
+final providerComplianceServiceProvider = Provider<ProviderComplianceService>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return ProviderComplianceService(client);
+});
+
+final businessSectorServiceProvider = Provider<BusinessSectorService>((ref) {
+  final client = ref.watch(apiClientProvider);
+  return BusinessSectorService(client);
+});
+

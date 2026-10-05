@@ -47,6 +47,10 @@ spring:
       max-request-size: 10MB
 
 platform:
+  invitation:
+    # Deliberately has no production fallback: a public activation link must be explicitly configured.
+    public-url: ${APP_PUBLIC_URL}
+    expiration-hours: ${INVITATION_EXPIRATION_HOURS:72}
   security:
     cors:
       allowed-origins: ${CORS_ALLOWED_ORIGINS:}

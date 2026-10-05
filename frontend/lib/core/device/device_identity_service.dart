@@ -27,6 +27,9 @@ class DeviceIdentityService {
     return storedId;
   }
 
+  /// Alias for getDeviceId to ensure full API compatibility
+  Future<String> getOrCreateDeviceId() => getDeviceId();
+
   /// Retrieves or initializes a private device signing secret.
   Future<String> getDeviceSecret() async {
     if (_cachedDeviceSecret != null) return _cachedDeviceSecret!;

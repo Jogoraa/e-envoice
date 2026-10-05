@@ -17,6 +17,14 @@ public interface EmailProvider {
     boolean sendEmail(String recipientEmail, String subject, String bodyText);
 
     /**
+     * Sends an email with an HTML body and a plain-text fallback. Providers that do not
+     * support multipart MIME continue to deliver the readable plain-text version.
+     */
+    default boolean sendHtmlEmail(String recipientEmail, String subject, String htmlBody, String plainTextBody) {
+        return sendEmail(recipientEmail, subject, plainTextBody);
+    }
+
+    /**
      * Name/identifier of the active email provider.
      */
     String getProviderName();

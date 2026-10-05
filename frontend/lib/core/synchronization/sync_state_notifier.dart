@@ -16,6 +16,8 @@ class SyncState {
     this.lastError,
   });
 
+  bool get isSyncing => status == InvoiceSyncStatus.syncing;
+
   SyncState copyWith({
     InvoiceSyncStatus? status,
     int? pendingCount,

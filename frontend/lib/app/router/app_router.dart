@@ -4,6 +4,7 @@ import '../../core/authentication/multi_gateway_session.dart';
 import '../../features/adjustments/presentation/tax_adjustment_screen.dart';
 import '../../features/audit/presentation/audit_screen.dart';
 import '../../features/authentication/presentation/login_screen.dart';
+import '../../features/authentication/presentation/invitation_acceptance_screen.dart';
 import '../../features/public_verification/presentation/public_verification_screen.dart';
 import '../../features/catalog/presentation/product_catalog_screen.dart';
 import '../../features/catalog/presentation/service_catalog_screen.dart';
@@ -44,6 +45,29 @@ import '../../features/saas_management/presentation/usage_metering_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/enterprise_shell.dart';
 import '../../features/workspace/presentation/workspace_selection_screen.dart';
+import '../../features/receipts/presentation/cash_receipt_screen.dart';
+import '../../features/receipts/presentation/purchase_voucher_screen.dart';
+import '../../features/receipts/presentation/withholding_receipt_screen.dart';
+import '../../features/invoices/presentation/credit_settlement_screen.dart';
+import '../../features/invoices/presentation/cancellation_management_screen.dart';
+import '../../features/offline/presentation/offline_operations_screen.dart';
+import '../../features/offline/presentation/manual_invoice_reconciliation_screen.dart';
+import '../../features/mpos/presentation/device_compliance_screen.dart';
+import '../../features/government/presentation/government_credentials_screen.dart';
+import '../../features/government/presentation/signature_health_screen.dart';
+import '../../features/compliance/presentation/tenant_exit_screen.dart';
+import '../../features/compliance/presentation/retention_schedule_screen.dart';
+import '../../features/compliance/presentation/exempt_sector_reporting_screen.dart';
+import '../../features/saas_management/presentation/tenant_lifecycle_notifications_screen.dart';
+import '../../features/saas_management/presentation/marketplace_management_screen.dart';
+import '../../features/saas_management/presentation/saas_tenant_exit_oversight_screen.dart';
+import '../../features/saas_management/presentation/provider_tier_dashboard_screen.dart';
+import '../../features/master_admin/presentation/authority_investigation_portal_screen.dart';
+import '../../features/master_admin/presentation/provider_exit_governance_screen.dart';
+import '../../features/master_admin/presentation/system_integrity_screen.dart';
+import '../../features/master_admin/presentation/directive_compliance_governance_screen.dart';
+import '../../core/routing/app_surface.dart';
+import '../../core/routing/presentation/route_recovery_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final tenantSession = ref.watch(authSessionProvider);
@@ -52,7 +76,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final delegatedSession = ref.watch(delegatedTenantSessionProvider);
 
   String determineInitialLocation() {
-    const appSurface = String.fromEnvironment('APP_SURFACE', defaultValue: 'desktop');
+    const appSurface = String.fromEnvironment(
+      'APP_SURFACE',
+      defaultValue: 'desktop',
+    );
     if (delegatedSession != null) return '/dashboard';
     if (tenantSession != null) return '/dashboard';
     if (appSurface == 'tenant') return '/login';
@@ -70,7 +97,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         builder: (context, state) {
-          const appSurface = String.fromEnvironment('APP_SURFACE', defaultValue: 'desktop');
+          const appSurface = String.fromEnvironment(
+            'APP_SURFACE',
+            defaultValue: 'desktop',
+          );
           if (appSurface == 'tenant') {
             return tenantSession != null || delegatedSession != null
                 ? const DashboardScreen()
@@ -83,12 +113,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/workspace',
         builder: (context, state) => const WorkspaceSelectionScreen(),
       ),
+      GoRoute(
+        path: '/auth/invitations/accept',
+        builder: (context, state) => InvitationAcceptanceScreen(
+          token: state.uri.queryParameters['token'],
+        ),
+      ),
 
       // 2. Authentication Entrypoints (Deep linkable & Switchable)
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/tenant/login',
         builder: (context, state) => const LoginScreen(),
@@ -182,6 +215,58 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/settings',
             builder: (context, state) => const SettingsScreen(),
           ),
+          GoRoute(
+            path: '/receipts/cash',
+            builder: (context, state) => const CashReceiptScreen(),
+          ),
+          GoRoute(
+            path: '/receipts/purchase-voucher',
+            builder: (context, state) => const PurchaseVoucherScreen(),
+          ),
+          GoRoute(
+            path: '/receipts/withholding',
+            builder: (context, state) => const WithholdingReceiptScreen(),
+          ),
+          GoRoute(
+            path: '/invoices/credit-settlement',
+            builder: (context, state) => const CreditSettlementScreen(),
+          ),
+          GoRoute(
+            path: '/invoices/cancellations',
+            builder: (context, state) => const CancellationManagementScreen(),
+          ),
+          GoRoute(
+            path: '/offline/operations',
+            builder: (context, state) => const OfflineOperationsScreen(),
+          ),
+          GoRoute(
+            path: '/offline/manual-reconciliation',
+            builder: (context, state) => const ManualInvoiceReconciliationScreen(),
+          ),
+          GoRoute(
+            path: '/devices/compliance',
+            builder: (context, state) => const DeviceComplianceScreen(),
+          ),
+          GoRoute(
+            path: '/government/credentials',
+            builder: (context, state) => const GovernmentCredentialsScreen(),
+          ),
+          GoRoute(
+            path: '/government/signature-health',
+            builder: (context, state) => const SignatureHealthScreen(),
+          ),
+          GoRoute(
+            path: '/compliance/tenant-exit',
+            builder: (context, state) => const TenantExitScreen(),
+          ),
+          GoRoute(
+            path: '/compliance/retention',
+            builder: (context, state) => const RetentionScheduleScreen(),
+          ),
+          GoRoute(
+            path: '/compliance/exempt-reporting',
+            builder: (context, state) => const ExemptSectorReportingScreen(),
+          ),
         ],
       ),
 
@@ -216,6 +301,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/saas/support',
             builder: (context, state) => const SupportDiagnosticsScreen(),
+          ),
+          GoRoute(
+            path: '/saas/lifecycle-notifications',
+            builder: (context, state) => const TenantLifecycleNotificationsScreen(),
+          ),
+          GoRoute(
+            path: '/saas/marketplace',
+            builder: (context, state) => const MarketplaceManagementScreen(),
+          ),
+          GoRoute(
+            path: '/saas/tenant-exit-oversight',
+            builder: (context, state) => const SaasTenantExitOversightScreen(),
+          ),
+          GoRoute(
+            path: '/saas/provider-tiers',
+            builder: (context, state) => const ProviderTierDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/saas/onboarding/wizard',
+            builder: (context, state) => const TenantOnboardingWizard(),
           ),
         ],
       ),
@@ -280,8 +385,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/admin/system/environment',
             builder: (context, state) => const MasterEnvironmentSecretsScreen(),
           ),
+          GoRoute(
+            path: '/admin/compliance-governance',
+            builder: (context, state) => const DirectiveComplianceGovernanceScreen(),
+          ),
+          GoRoute(
+            path: '/admin/authority-investigation',
+            builder: (context, state) => const AuthorityInvestigationPortalScreen(),
+          ),
+          GoRoute(
+            path: '/admin/provider-exit',
+            builder: (context, state) => const ProviderExitGovernanceScreen(),
+          ),
+          GoRoute(
+            path: '/admin/system-integrity',
+            builder: (context, state) => const SystemIntegrityScreen(),
+          ),
         ],
       ),
     ],
+    errorBuilder: (context, state) => RouteRecoveryScreen(
+      state: state,
+      defaultSurface: AppSurface.tenantClient,
+    ),
   );
 });

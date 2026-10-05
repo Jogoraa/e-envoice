@@ -32,6 +32,23 @@ abstract class AppTypography {
     color: color,
   );
 
+  // Standard Material-compatible Typography Getters
+  static TextStyle get titleLarge => h2();
+  static TextStyle get titleMedium => h3();
+  static TextStyle get titleSmall => GoogleFonts.archivo(
+    fontSize: 15,
+    height: 20 / 15,
+    fontWeight: FontWeight.w600,
+    color: AppColors.ink,
+  );
+  static TextStyle get bodyLarge => body();
+  static TextStyle get bodyMedium => GoogleFonts.inter(
+    fontSize: 15,
+    height: 22 / 15,
+    fontWeight: FontWeight.w400,
+    color: AppColors.ink,
+  );
+
   // H3: Archivo, 17 / 22, weight 600
   static TextStyle h3({
     Color color = AppColors.ink,
@@ -51,27 +68,28 @@ abstract class AppTypography {
     color: color,
   );
 
-  // Body Small / Secondary: Inter, 14 / 20, weight 400
-  static TextStyle bodySmall({Color color = AppColors.inkMuted}) =>
-      GoogleFonts.inter(
+  // Body Small / Secondary: Inter, 14 / 20, weight 400 (Callable TextStyle)
+  static BrandTextStyle get bodySmall => BrandTextStyle(
+        fontFamily: GoogleFonts.inter().fontFamily,
         fontSize: 14,
         height: 20 / 14,
         fontWeight: FontWeight.w400,
-        color: color,
+        color: AppColors.inkMuted,
       );
 
   // UI Label: Inter, 13 / 18, weight 500
-  static TextStyle uiLabel({Color color = AppColors.ink}) => GoogleFonts.inter(
-    fontSize: 13,
-    height: 18 / 13,
-    fontWeight: FontWeight.w500,
-    color: color,
-  );
+  static TextStyle uiLabel({Color color = AppColors.ink, double? size}) =>
+      GoogleFonts.inter(
+        fontSize: size ?? 13,
+        height: 18 / 13,
+        fontWeight: FontWeight.w500,
+        color: color,
+      );
 
   // UI Label Bold: Inter, 13 / 18, weight 600
-  static TextStyle uiLabelBold({Color color = AppColors.ink}) =>
+  static TextStyle uiLabelBold({Color color = AppColors.ink, double? size}) =>
       GoogleFonts.inter(
-        fontSize: 13,
+        fontSize: size ?? 13,
         height: 18 / 13,
         fontWeight: FontWeight.w600,
         color: color,
@@ -84,6 +102,18 @@ abstract class AppTypography {
     FontWeight weight = FontWeight.w400,
   }) => GoogleFonts.ibmPlexMono(
     fontSize: 15,
+    height: 20 / 15,
+    fontWeight: weight,
+    color: color,
+  );
+
+  // Monospace alias
+  static TextStyle monospace({
+    Color color = AppColors.ink,
+    FontWeight weight = FontWeight.w400,
+    double? size,
+  }) => GoogleFonts.ibmPlexMono(
+    fontSize: size ?? 15,
     height: 20 / 15,
     fontWeight: weight,
     color: color,
@@ -108,20 +138,57 @@ abstract class AppTypography {
         fontWeight: FontWeight.w600,
         color: color,
       );
-  //caption
-  static TextStyle caption({Color color = AppColors.inkMuted}) =>
-      GoogleFonts.inter(
+
+  // Caption: Inter, 13 / 18, weight 400 (Callable TextStyle)
+  static BrandTextStyle get caption => BrandTextStyle(
+        fontFamily: GoogleFonts.inter().fontFamily,
         fontSize: 13,
         height: 18 / 13,
         fontWeight: FontWeight.w400,
-        color: color,
+        color: AppColors.inkMuted,
       );
-  //captionBold
-  static TextStyle captionBold({Color color = AppColors.ink}) =>
-      GoogleFonts.inter(
+
+  // Caption Bold: Inter, 13 / 18, weight 600 (Callable TextStyle)
+  static BrandTextStyle get captionBold => BrandTextStyle(
+        fontFamily: GoogleFonts.inter().fontFamily,
         fontSize: 13,
         height: 18 / 13,
         fontWeight: FontWeight.w600,
-        color: color,
+        color: AppColors.ink,
       );
+}
+
+class BrandTextStyle extends TextStyle {
+  const BrandTextStyle({
+    super.inherit,
+    super.color,
+    super.backgroundColor,
+    super.fontSize,
+    super.fontWeight,
+    super.fontStyle,
+    super.letterSpacing,
+    super.wordSpacing,
+    super.textBaseline,
+    super.height,
+    super.leadingDistribution,
+    super.locale,
+    super.foreground,
+    super.background,
+    super.shadows,
+    super.fontFeatures,
+    super.fontVariations,
+    super.decoration,
+    super.decorationColor,
+    super.decorationStyle,
+    super.decorationThickness,
+    super.debugLabel,
+    super.fontFamily,
+    super.fontFamilyFallback,
+    super.package,
+    super.overflow,
+  });
+
+  TextStyle call({Color? color, FontWeight? fontWeight}) {
+    return copyWith(color: color, fontWeight: fontWeight);
+  }
 }

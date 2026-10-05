@@ -69,6 +69,7 @@ public class InvoiceService {
     private final et.ut.einvoice.notifications.service.InvoiceNotificationTemplateService notificationTemplateService;
     private final et.ut.einvoice.notifications.metrics.SmsMetrics smsMetrics;
     private final et.ut.einvoice.government.service.AuthoritativeGovernmentSubmissionService authoritativeGovernmentSubmissionService;
+    private final et.ut.einvoice.taxpayer.service.GeofenceService geofenceService;
 
     public InvoiceService(
             InvoiceRepository invoiceRepository,
@@ -100,7 +101,9 @@ public class InvoiceService {
             @org.springframework.beans.factory.annotation.Autowired(required = false)
             et.ut.einvoice.notifications.metrics.SmsMetrics smsMetrics,
             @org.springframework.beans.factory.annotation.Autowired(required = false)
-            et.ut.einvoice.government.service.AuthoritativeGovernmentSubmissionService authoritativeGovernmentSubmissionService
+            et.ut.einvoice.government.service.AuthoritativeGovernmentSubmissionService authoritativeGovernmentSubmissionService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            et.ut.einvoice.taxpayer.service.GeofenceService geofenceService
     ) {
         this.invoiceRepository = invoiceRepository;
         this.taxpayerProfileRepository = taxpayerProfileRepository;
@@ -124,6 +127,7 @@ public class InvoiceService {
         this.notificationTemplateService = notificationTemplateService;
         this.smsMetrics = smsMetrics;
         this.authoritativeGovernmentSubmissionService = authoritativeGovernmentSubmissionService;
+        this.geofenceService = geofenceService;
     }
 
     /**
@@ -263,6 +267,18 @@ public class InvoiceService {
         Optional<Invoice> latestInvoice = invoiceRepository.findLatestInvoice(tenantId);
         String previousIrn = latestInvoice.map(Invoice::getIrn).orElse("");
 
+        UUID deviceId = TenantContextHolder.getRequiredContext().deviceId();
+        if (geofenceService != null && deviceId != null) {
+            geofenceService.validateMposTransaction(
+                    tenantId,
+                    deviceId,
+                    request.latitude(),
+                    request.longitude(),
+                    10.0,
+                    Instant.now()
+            );
+        }
+
             Invoice invoice = new Invoice(
                     UUID.randomUUID(),
                     tenantId,
@@ -273,6 +289,9 @@ public class InvoiceService {
                     request.paymentMode(),
                     request.paymentTerm()
             );
+            invoice.setDeviceId(deviceId);
+            invoice.setLatitude(request.latitude());
+            invoice.setLongitude(request.longitude());
             invoice.setPreviousIrn(previousIrn);
             invoice.setIdempotencyKey(idempotencyKey);
             if (notificationTemplateService != null) {

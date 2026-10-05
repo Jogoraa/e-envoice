@@ -14,8 +14,30 @@ public record MorRegisterPayload(
         @JsonProperty("SourceSystem") SourceSystem sourceSystem,
         @JsonProperty("TransactionType") String transactionType,
         @JsonProperty("ValueDetails") ValueDetails valueDetails,
-        @JsonProperty("Version") String version
+        @JsonProperty("Version") String version,
+        @JsonProperty("LocationDetails") LocationDetails locationDetails
 ) {
+    public MorRegisterPayload(
+            BuyerDetails buyerDetails,
+            DocumentDetails documentDetails,
+            List<ItemDetails> itemList,
+            PaymentDetails paymentDetails,
+            ReferenceDetails referenceDetails,
+            SellerDetails sellerDetails,
+            SourceSystem sourceSystem,
+            String transactionType,
+            ValueDetails valueDetails,
+            String version
+    ) {
+        this(buyerDetails, documentDetails, itemList, paymentDetails, referenceDetails, sellerDetails, sourceSystem, transactionType, valueDetails, version, null);
+    }
+
+    public record LocationDetails(
+            @JsonProperty("Latitude") Double latitude,
+            @JsonProperty("Longitude") Double longitude,
+            @JsonProperty("Accuracy") Double accuracy,
+            @JsonProperty("DeviceId") String deviceId
+    ) {}
     public record BuyerDetails(
             @JsonProperty("City") String city,
             @JsonProperty("Country") String country,

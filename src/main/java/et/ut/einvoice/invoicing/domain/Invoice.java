@@ -57,6 +57,15 @@ public class Invoice {
     @Column(name = "credit_status", length = 32)
     private et.ut.einvoice.creditsales.domain.CreditStatus creditStatus = et.ut.einvoice.creditsales.domain.CreditStatus.NOT_APPLICABLE;
 
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
+    @Column(name = "gps_accuracy")
+    private Double gpsAccuracy;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 32)
     private InvoiceStatus status = InvoiceStatus.DRAFT;
@@ -269,6 +278,12 @@ public class Invoice {
     public void setBranchId(UUID branchId) { this.branchId = branchId; }
     public UUID getDeviceId() { return deviceId; }
     public void setDeviceId(UUID deviceId) { this.deviceId = deviceId; }
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+    public Double getGpsAccuracy() { return gpsAccuracy; }
+    public void setGpsAccuracy(Double gpsAccuracy) { this.gpsAccuracy = gpsAccuracy; }
     public String getDocumentNumber() { return documentNumber; }
     public void setDocumentNumber(String documentNumber) {
         checkNotRegistered();

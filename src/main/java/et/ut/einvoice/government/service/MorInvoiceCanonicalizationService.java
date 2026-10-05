@@ -189,6 +189,16 @@ public class MorInvoiceCanonicalizationService {
                 inv.getCurrency() != null ? inv.getCurrency() : "ETB"
         );
 
+        MorRegisterPayload.LocationDetails locationDetails = null;
+        if (inv.getLatitude() != null && inv.getLongitude() != null) {
+            locationDetails = new MorRegisterPayload.LocationDetails(
+                    inv.getLatitude(),
+                    inv.getLongitude(),
+                    inv.getGpsAccuracy() != null ? inv.getGpsAccuracy() : 10.0,
+                    inv.getDeviceId() != null ? inv.getDeviceId().toString() : null
+            );
+        }
+
         return new MorRegisterPayload(
                 buyerDetails,
                 documentDetails,
@@ -199,7 +209,8 @@ public class MorInvoiceCanonicalizationService {
                 sourceSystem,
                 inv.getTransactionType() != null ? inv.getTransactionType().name() : "B2C",
                 valueDetails,
-                "1"
+                "1",
+                locationDetails
         );
     }
 

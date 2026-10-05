@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/authentication/multi_gateway_session.dart';
 import '../../features/master_admin/presentation/deployment_readiness_screen.dart';
+import '../../features/master_admin/presentation/directive_compliance_governance_screen.dart';
 import '../../features/master_admin/presentation/government_gateway_monitor_screen.dart';
 import '../../features/master_admin/presentation/master_access_reviews_screen.dart';
 import '../../features/master_admin/presentation/master_account_settings_screen.dart';
@@ -85,6 +86,10 @@ final masterAdminRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/system/environment',
             builder: (context, state) => const MasterEnvironmentSecretsScreen(),
+          ),
+          GoRoute(
+            path: '/admin/compliance-governance',
+            builder: (context, state) => const DirectiveComplianceGovernanceScreen(),
           ),
         ],
       ),

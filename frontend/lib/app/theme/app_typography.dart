@@ -108,4 +108,20 @@ abstract class AppTypography {
         fontWeight: FontWeight.w600,
         color: color,
       );
+  //caption
+  static TextStyle caption({Color color = AppColors.inkMuted}) =>
+      GoogleFonts.inter(
+        fontSize: 13,
+        height: 18 / 13,
+        fontWeight: FontWeight.w400,
+        color: color,
+      );
+  //captionBold
+  static TextStyle captionBold({Color color = AppColors.ink}) =>
+      GoogleFonts.inter(
+        fontSize: 13,
+        height: 18 / 13,
+        fontWeight: FontWeight.w600,
+        color: color,
+      );
 }

@@ -72,11 +72,15 @@ class _DirectiveComplianceGovernanceScreenState
 
       // 2. Fetch Latest Exit Plan
       try {
-        final exitRes = await client.get('/api/v1/master/provider-exit/plans/latest');
+        final exitRes = await client.get(
+          '/api/v1/master/provider-exit/plans/latest',
+        );
         if (exitRes.data is Map) {
           _latestExitPlan = Map<String, dynamic>.from(exitRes.data as Map);
           if (_latestExitPlan!['id'] != null) {
-            final transRes = await client.get('/api/v1/master/provider-exit/plans/${_latestExitPlan!['id']}/tenants');
+            final transRes = await client.get(
+              '/api/v1/master/provider-exit/plans/${_latestExitPlan!['id']}/tenants',
+            );
             if (transRes.data is List) {
               _tenantTransitions = transRes.data as List;
             }
@@ -138,9 +142,15 @@ class _DirectiveComplianceGovernanceScreenState
             decoration: BoxDecoration(
               color: AppColors.navy900.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.navy900.withValues(alpha: 0.2)),
+              border: Border.all(
+                color: AppColors.navy900.withValues(alpha: 0.2),
+              ),
             ),
-            child: const Icon(Icons.gavel_rounded, color: AppColors.navy900, size: 28),
+            child: const Icon(
+              Icons.gavel_rounded,
+              color: AppColors.navy900,
+              size: 28,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -151,15 +161,20 @@ class _DirectiveComplianceGovernanceScreenState
                   children: [
                     Text(
                       'Statutory Compliance Governance',
-                      style: AppTypography.headingMedium(color: AppColors.inkDark),
+                      style: AppTypography.h2(color: AppColors.inkDark),
                     ),
                     const SizedBox(width: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.green700.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: AppColors.green700.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: AppColors.green700.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Text(
                         'DIRECTIVE NO. 1142/2026 (2018 E.C.)',
@@ -203,10 +218,22 @@ class _DirectiveComplianceGovernanceScreenState
         labelStyle: AppTypography.uiLabelBold(),
         unselectedLabelStyle: AppTypography.uiLabel(),
         tabs: const [
-          Tab(icon: Icon(Icons.military_tech_outlined, size: 20), text: 'Provider Tiering (Art. 12-13)'),
-          Tab(icon: Icon(Icons.search_rounded, size: 20), text: 'Authority Exports (Art. 4)'),
-          Tab(icon: Icon(Icons.receipt_long_outlined, size: 20), text: 'Exempt Sectors (Art. 20)'),
-          Tab(icon: Icon(Icons.exit_to_app_rounded, size: 20), text: 'Exit Governance (Art. 17)'),
+          Tab(
+            icon: Icon(Icons.military_tech_outlined, size: 20),
+            text: 'Provider Tiering (Art. 12-13)',
+          ),
+          Tab(
+            icon: Icon(Icons.search_rounded, size: 20),
+            text: 'Authority Exports (Art. 4)',
+          ),
+          Tab(
+            icon: Icon(Icons.receipt_long_outlined, size: 20),
+            text: 'Exempt Sectors (Art. 20)',
+          ),
+          Tab(
+            icon: Icon(Icons.exit_to_app_rounded, size: 20),
+            text: 'Exit Governance (Art. 17)',
+          ),
         ],
       ),
     );
@@ -216,7 +243,8 @@ class _DirectiveComplianceGovernanceScreenState
     final tier = _tierStatus?['currentTier'] ?? 1;
     final maxTenants = _tierStatus?['maxActiveTenants'] ?? 50;
     final activeTenants = _tierStatus?['currentActiveTenants'] ?? 5;
-    final bondAmount = _tierStatus?['currentGuaranteeBondAmount'] ?? '5,000,000.00';
+    final bondAmount =
+        _tierStatus?['currentGuaranteeBondAmount'] ?? '5,000,000.00';
     final isNearCap = _tierStatus?['isNearCapacity'] ?? false;
 
     return SingleChildScrollView(
@@ -250,7 +278,9 @@ class _DirectiveComplianceGovernanceScreenState
                 child: _buildMetricCard(
                   title: 'ACTIVE TENANTS / CAPACITY',
                   value: '$activeTenants / $maxTenants',
-                  subtitle: isNearCap ? 'PROXIMITY WARNING (>80%)' : 'Compliant Capacity Window',
+                  subtitle: isNearCap
+                      ? 'PROXIMITY WARNING (>80%)'
+                      : 'Compliant Capacity Window',
                   icon: Icons.storefront_outlined,
                   color: isNearCap ? Colors.amber[800]! : AppColors.navy900,
                 ),
@@ -260,22 +290,34 @@ class _DirectiveComplianceGovernanceScreenState
           const SizedBox(height: 24),
           _buildCard(
             title: 'Statutory Tier Scale (Directive No. 1142/2026 Annex 1)',
-            subtitle: 'Formal accreditation levels tied to guarantee bonds and maximum concurrent active user taxpayers.',
+            subtitle:
+                'Formal accreditation levels tied to guarantee bonds and maximum concurrent active user taxpayers.',
             child: _allTiers.isEmpty
-                ? const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('No tier scale records loaded.')))
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text('No tier scale records loaded.'),
+                    ),
+                  )
                 : ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _allTiers.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.rule),
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, color: AppColors.rule),
                     itemBuilder: (context, index) {
                       final item = _allTiers[index];
                       final tNum = item['tierLevel'] ?? (index + 1);
                       final isCurrent = tNum == tier;
 
                       return Container(
-                        color: isCurrent ? AppColors.navy900.withValues(alpha: 0.04) : Colors.transparent,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        color: isCurrent
+                            ? AppColors.navy900.withValues(alpha: 0.04)
+                            : Colors.transparent,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         child: Row(
                           children: [
                             Container(
@@ -283,13 +325,17 @@ class _DirectiveComplianceGovernanceScreenState
                               height: 36,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: isCurrent ? AppColors.navy900 : AppColors.rule,
+                                color: isCurrent
+                                    ? AppColors.navy900
+                                    : AppColors.rule,
                               ),
                               child: Center(
                                 child: Text(
                                   '$tNum',
                                   style: AppTypography.monoSmall(
-                                    color: isCurrent ? Colors.white : AppColors.inkDark,
+                                    color: isCurrent
+                                        ? Colors.white
+                                        : AppColors.inkDark,
                                     weight: FontWeight.w700,
                                   ),
                                 ),
@@ -306,21 +352,29 @@ class _DirectiveComplianceGovernanceScreenState
                                   ),
                                   Text(
                                     'Max Taxpayers: ${item['maxActiveTenants']} | Guarantee Bond: ETB ${item['requiredGuaranteeBond']}',
-                                    style: AppTypography.monoSmall(color: AppColors.inkMuted),
+                                    style: AppTypography.monoSmall(
+                                      color: AppColors.inkMuted,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                             if (isCurrent)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppColors.navy900,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
                                   'ACTIVE ACCREDITATION',
-                                  style: AppTypography.monoSmall(color: Colors.white, weight: FontWeight.w700),
+                                  style: AppTypography.monoSmall(
+                                    color: Colors.white,
+                                    weight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
                           ],
@@ -346,22 +400,32 @@ class _DirectiveComplianceGovernanceScreenState
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Authority Audit & Investigation (Art. 4(2)(c))', style: AppTypography.headingSmall()),
-                  Text('Cryptographically signed, AES-256 encrypted batch export for MoR tax inspection officers.',
-                      style: AppTypography.bodySmall(color: AppColors.inkMuted)),
+                  Text(
+                    'Authority Audit & Investigation (Art. 4(2)(c))',
+                    style: AppTypography.h3(),
+                  ),
+                  Text(
+                    'Cryptographically signed, AES-256 encrypted batch export for MoR tax inspection officers.',
+                    style: AppTypography.bodySmall(color: AppColors.inkMuted),
+                  ),
                 ],
               ),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.navy900,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
                 icon: const Icon(Icons.file_download_outlined, size: 18),
                 label: const Text('Initiate Inspection Export'),
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Authority inspection export wizard ready')),
+                    const SnackBar(
+                      content: Text('Authority inspection export wizard ready'),
+                    ),
                   );
                 },
               ),
@@ -370,13 +434,26 @@ class _DirectiveComplianceGovernanceScreenState
           const SizedBox(height: 24),
           _buildCard(
             title: 'Audit Investigation Protocol Requirements',
-            subtitle: 'Enforced security parameters for inspection exports under Directive Art. 4(2)(c):',
+            subtitle:
+                'Enforced security parameters for inspection exports under Directive Art. 4(2)(c):',
             child: Column(
               children: [
-                _buildAuditFeatureTile('1. Rate Limiting Enforced', 'Capped to 10 bulk requests per hour per authority auditor.'),
-                _buildAuditFeatureTile('2. Dual Encryption', 'Payload encrypted via AES-256-GCM; key wrapped with Authority X.509 certificate.'),
-                _buildAuditFeatureTile('3. Cryptographic Verification Hash', 'Deterministic SHA-256 manifest computed over all export files.'),
-                _buildAuditFeatureTile('4. Access Logging & Immutable Audit', 'Every parameter query logged to tamper-evident audit trail.'),
+                _buildAuditFeatureTile(
+                  '1. Rate Limiting Enforced',
+                  'Capped to 10 bulk requests per hour per authority auditor.',
+                ),
+                _buildAuditFeatureTile(
+                  '2. Dual Encryption',
+                  'Payload encrypted via AES-256-GCM; key wrapped with Authority X.509 certificate.',
+                ),
+                _buildAuditFeatureTile(
+                  '3. Cryptographic Verification Hash',
+                  'Deterministic SHA-256 manifest computed over all export files.',
+                ),
+                _buildAuditFeatureTile(
+                  '4. Access Logging & Immutable Audit',
+                  'Every parameter query logged to tamper-evident audit trail.',
+                ),
               ],
             ),
           ),
@@ -391,19 +468,36 @@ class _DirectiveComplianceGovernanceScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('High-Volume Exempt-Sector Summary Reporting (Art. 20)', style: AppTypography.headingSmall()),
-          Text('Authorized high-volume consumer billing entities (Telecommunications, Banking, Electric Power, Water Utility).',
-              style: AppTypography.bodySmall(color: AppColors.inkMuted)),
+          Text(
+            'High-Volume Exempt-Sector Summary Reporting (Art. 20)',
+            style: AppTypography.h3(),
+          ),
+          Text(
+            'Authorized high-volume consumer billing entities (Telecommunications, Banking, Electric Power, Water Utility).',
+            style: AppTypography.bodySmall(color: AppColors.inkMuted),
+          ),
           const SizedBox(height: 24),
           _buildCard(
             title: 'Statutory Exemptions Lifecycle',
             subtitle: 'Directives and reporting cycles:',
             child: Column(
               children: [
-                _buildAuditFeatureTile('Article 20(1) Approval', 'Special authorization granted by Authority upon formal review.'),
-                _buildAuditFeatureTile('Article 20(3) Reporting', 'Monthly or daily consolidated aggregate fiscal reporting.'),
-                _buildAuditFeatureTile('Article 20(5) B2B Exclusion', 'B2B commercial transactions strictly excluded from aggregate summaries and must be invoiced individually.'),
-                _buildAuditFeatureTile('Article 20(4) Cryptographic Freeze', 'Reports are SHA-256 hashed and frozen upon submission.'),
+                _buildAuditFeatureTile(
+                  'Article 20(1) Approval',
+                  'Special authorization granted by Authority upon formal review.',
+                ),
+                _buildAuditFeatureTile(
+                  'Article 20(3) Reporting',
+                  'Monthly or daily consolidated aggregate fiscal reporting.',
+                ),
+                _buildAuditFeatureTile(
+                  'Article 20(5) B2B Exclusion',
+                  'B2B commercial transactions strictly excluded from aggregate summaries and must be invoiced individually.',
+                ),
+                _buildAuditFeatureTile(
+                  'Article 20(4) Cryptographic Freeze',
+                  'Reports are SHA-256 hashed and frozen upon submission.',
+                ),
               ],
             ),
           ),
@@ -415,7 +509,8 @@ class _DirectiveComplianceGovernanceScreenState
   Widget _buildExitGovernanceTab() {
     final plan = _latestExitPlan;
     final status = plan?['status'] ?? 'NONE';
-    final progress = (plan?['migrationProgressPercent'] as num?)?.toDouble() ?? 0.0;
+    final progress =
+        (plan?['migrationProgressPercent'] as num?)?.toDouble() ?? 0.0;
     final activeCount = plan?['totalActiveTenants'] ?? 0;
     final migratedCount = plan?['migratedTenantsCount'] ?? 0;
 
@@ -430,45 +525,70 @@ class _DirectiveComplianceGovernanceScreenState
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Provider Exit Strategy & Cessation Governance (Art. 17)', style: AppTypography.headingSmall()),
-                  Text('Statutory 6-month voluntary exit lifecycle, taxpayer data retrieval, and 100% migration verification.',
-                      style: AppTypography.bodySmall(color: AppColors.inkMuted)),
+                  Text(
+                    'Provider Exit Strategy & Cessation Governance (Art. 17)',
+                    style: AppTypography.h3(),
+                  ),
+                  Text(
+                    'Statutory 6-month voluntary exit lifecycle, taxpayer data retrieval, and 100% migration verification.',
+                    style: AppTypography.bodySmall(color: AppColors.inkMuted),
+                  ),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.navy900.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: AppColors.navy900),
                 ),
-                child: Text('PLAN STATUS: $status', style: AppTypography.monoSmall(color: AppColors.navy900, weight: FontWeight.w700)),
+                child: Text(
+                  'PLAN STATUS: $status',
+                  style: AppTypography.monoSmall(
+                    color: AppColors.navy900,
+                    weight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 24),
           _buildCard(
             title: 'Tenant Migration Progress (Art. 17(5))',
-            subtitle: '100% of user taxpayers must be migrated before cessation of service can be legally confirmed by the Authority.',
+            subtitle:
+                '100% of user taxpayers must be migrated before cessation of service can be legally confirmed by the Authority.',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Migration Completion: ${progress.toStringAsFixed(1)}%', style: AppTypography.uiLabelBold()),
-                    Text('$migratedCount of $activeCount Taxpayers Migrated', style: AppTypography.monoSmall(color: AppColors.inkMuted)),
+                    Text(
+                      'Migration Completion: ${progress.toStringAsFixed(1)}%',
+                      style: AppTypography.uiLabelBold(),
+                    ),
+                    Text(
+                      '$migratedCount of $activeCount Taxpayers Migrated',
+                      style: AppTypography.monoSmall(color: AppColors.inkMuted),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
-                    value: activeCount > 0 ? (migratedCount / activeCount) : 0.0,
+                    value: activeCount > 0
+                        ? (migratedCount / activeCount)
+                        : 0.0,
                     minHeight: 12,
                     backgroundColor: AppColors.rule,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      progress >= 100.0 ? AppColors.green700 : AppColors.navy900,
+                      progress >= 100.0
+                          ? AppColors.green700
+                          : AppColors.navy900,
                     ),
                   ),
                 ),
@@ -506,19 +626,32 @@ class _DirectiveComplianceGovernanceScreenState
             children: [
               Icon(icon, size: 20, color: color),
               const SizedBox(width: 8),
-              Text(title, style: AppTypography.monoSmall(color: AppColors.inkMuted, weight: FontWeight.w600)),
+              Text(
+                title,
+                style: AppTypography.monoSmall(
+                  color: AppColors.inkMuted,
+                  weight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
-          Text(value, style: AppTypography.headingMedium(color: color)),
+          Text(value, style: AppTypography.h2(color: color)),
           const SizedBox(height: 4),
-          Text(subtitle, style: AppTypography.caption(color: AppColors.inkMuted)),
+          Text(
+            subtitle,
+            style: AppTypography.caption(color: AppColors.inkMuted),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildCard({required String title, required String subtitle, required Widget child}) {
+  Widget _buildCard({
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -534,9 +667,15 @@ class _DirectiveComplianceGovernanceScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: AppTypography.uiLabelBold(color: AppColors.inkDark)),
+                Text(
+                  title,
+                  style: AppTypography.uiLabelBold(color: AppColors.inkDark),
+                ),
                 const SizedBox(height: 4),
-                Text(subtitle, style: AppTypography.caption(color: AppColors.inkMuted)),
+                Text(
+                  subtitle,
+                  style: AppTypography.caption(color: AppColors.inkMuted),
+                ),
               ],
             ),
           ),
@@ -553,14 +692,21 @@ class _DirectiveComplianceGovernanceScreenState
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_outline_rounded, color: AppColors.green700, size: 20),
+          const Icon(
+            Icons.check_circle_outline_rounded,
+            color: AppColors.green700,
+            size: 20,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title, style: AppTypography.uiLabelBold()),
-                Text(desc, style: AppTypography.caption(color: AppColors.inkMuted)),
+                Text(
+                  desc,
+                  style: AppTypography.caption(color: AppColors.inkMuted),
+                ),
               ],
             ),
           ),

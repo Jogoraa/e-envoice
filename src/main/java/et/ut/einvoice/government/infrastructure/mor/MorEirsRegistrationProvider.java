@@ -59,10 +59,14 @@ public class MorEirsRegistrationProvider implements GovernmentRegistrationProvid
     private final AtomicReference<CachedToken> tokenCache = new AtomicReference<>(null);
     private final ReentrantLock authLock = new ReentrantLock();
 
+    private final et.ut.einvoice.government.service.TenantGovernmentCredentialService credentialService;
+    private final java.util.concurrent.ConcurrentHashMap<java.util.UUID, CachedToken> tenantTokenCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     public MorEirsRegistrationProvider(
             WebClient.Builder webClientBuilder,
             ObjectMapper objectMapper,
             MorInvoiceCanonicalizationService canonicalizationService,
+            et.ut.einvoice.government.service.TenantGovernmentCredentialService credentialService,
             @Value("${mor.gateway.base-url:${MOR_GATEWAY_URL:http://core.mor.gov.et}}") String baseUrl,
             @Value("${mor.gateway.client-id:${MOR_CLIENT_ID:}}") String configuredClientId,
             @Value("${mor.gateway.client-secret:${MOR_CLIENT_SECRET:}}") String configuredClientSecret,
@@ -74,6 +78,7 @@ public class MorEirsRegistrationProvider implements GovernmentRegistrationProvid
         this.webClient = webClientBuilder.baseUrl(baseUrl).build();
         this.objectMapper = objectMapper;
         this.canonicalizationService = canonicalizationService;
+        this.credentialService = credentialService;
         this.baseUrl = baseUrl;
         this.configuredClientId = configuredClientId;
         this.configuredClientSecret = configuredClientSecret;
@@ -89,6 +94,33 @@ public class MorEirsRegistrationProvider implements GovernmentRegistrationProvid
     }
 
     public String getOrAuthenticateToken(String tin) {
+        return getOrAuthenticateTokenForTenant(null, tin);
+    }
+
+    public String getOrAuthenticateTokenForTenant(java.util.UUID tenantId, String tin) {
+        // If tenantId is specified, look up in per-tenant cache first
+        if (tenantId != null) {
+            CachedToken cached = tenantTokenCache.get(tenantId);
+            if (cached != null && cached.isValid()) {
+                return cached.token;
+            }
+
+            // Attempt to resolve credentials from tenant vault
+            try {
+                var creds = credentialService.getDecryptedCredentialsForTenant(tenantId);
+                if (creds != null && creds.clientId() != null && !creds.clientId().isBlank()) {
+                    String token = authenticate(creds.clientId(), creds.clientSecret(), creds.apiKey(), creds.sellerTin());
+                    tenantTokenCache.put(tenantId, new CachedToken(token, Instant.now().plusSeconds(3500)));
+                    credentialService.recordValidationSuccess(tenantId);
+                    log.info("Successfully authenticated tenant {} with its isolated MoR credentials", tenantId);
+                    return token;
+                }
+            } catch (Exception ex) {
+                log.warn("Could not retrieve vault credentials for tenant {}: {}", tenantId, ex.getMessage());
+            }
+        }
+
+        // Fallback to configured global credentials only if non-blank (dev/legacy support)
         CachedToken current = tokenCache.get();
         if (current != null && current.isValid()) {
             return current.token;
@@ -153,7 +185,8 @@ public class MorEirsRegistrationProvider implements GovernmentRegistrationProvid
     public GovernmentRegistrationResult registerInvoice(Invoice invoice, TaxpayerProfile sellerProfile, String token) {
         String effectiveToken = token;
         if (effectiveToken == null || effectiveToken.isBlank() || "bearer-token".equalsIgnoreCase(effectiveToken) || "AUTO_AUTH".equalsIgnoreCase(effectiveToken) || !effectiveToken.contains(".")) {
-            effectiveToken = getOrAuthenticateToken(sellerProfile != null ? sellerProfile.getTin() : configuredSellerTin);
+            java.util.UUID tenantId = sellerProfile != null ? sellerProfile.getTenantId() : (invoice != null ? invoice.getTenantId() : null);
+            effectiveToken = getOrAuthenticateTokenForTenant(tenantId, sellerProfile != null ? sellerProfile.getTin() : configuredSellerTin);
         }
 
         try {
@@ -219,7 +252,10 @@ public class MorEirsRegistrationProvider implements GovernmentRegistrationProvid
         } catch (WebClientResponseException ex) {
             log.error("MoR Gateway returned HTTP error status: {}", ex.getStatusCode());
             if (ex.getStatusCode().value() == 401) {
-                tokenCache.set(null); // Invalidate token on 401
+                tokenCache.set(null); // Invalidate global token on 401
+                if (sellerProfile != null && sellerProfile.getTenantId() != null) {
+                    tenantTokenCache.remove(sellerProfile.getTenantId());
+                }
             }
             // Check if 400 has sequence mismatch error
             try {
@@ -255,8 +291,9 @@ public class MorEirsRegistrationProvider implements GovernmentRegistrationProvid
     public GovernmentVerificationResult verifySubmission(String submissionId, String documentNumber, TaxpayerProfile sellerProfile, String token) {
         try {
             log.info("Verifying submission with MoR Gateway: submissionId={}, doc={}", submissionId, documentNumber);
+            java.util.UUID tenantId = sellerProfile != null ? sellerProfile.getTenantId() : null;
             String effectiveToken = token != null && !token.isBlank() && !"bearer-token".equalsIgnoreCase(token)
-                    ? token : getOrAuthenticateToken(sellerProfile.getTin());
+                    ? token : getOrAuthenticateTokenForTenant(tenantId, sellerProfile != null ? sellerProfile.getTin() : null);
 
             var requestSpec = webClient.get()
                     .uri(uriBuilder -> uriBuilder.path("/v1/verify")

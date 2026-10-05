@@ -120,7 +120,7 @@ public class SecurityConfig {
                                 "/api/*/saas/auth/**",
                                 "/api/*/master/auth/**"
                         ).permitAll()
-                        .requestMatchers("/api/*/authority/**").hasAuthority("ROLE_AUTHORITY_AUDITOR")
+                        .requestMatchers("/api/*/authority/**").hasAnyAuthority("ROLE_AUTHORITY_AUDITOR", "ROLE_PLATFORM_ADMIN")
                         .requestMatchers(
                                 "/api/*/admin/environment/**",
                                 "/api/*/master/environment/**",

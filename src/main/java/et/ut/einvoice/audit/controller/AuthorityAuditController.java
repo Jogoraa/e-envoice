@@ -29,10 +29,21 @@ public class AuthorityAuditController {
 
     private final AuditEventRepository auditRepository;
     private final InvoiceRepository invoiceRepository;
+    private final et.ut.einvoice.compliance.service.SoftwareIntegrityService softwareIntegrityService;
 
-    public AuthorityAuditController(AuditEventRepository auditRepository, InvoiceRepository invoiceRepository) {
+    public AuthorityAuditController(AuditEventRepository auditRepository,
+                                    InvoiceRepository invoiceRepository,
+                                    et.ut.einvoice.compliance.service.SoftwareIntegrityService softwareIntegrityService) {
         this.auditRepository = auditRepository;
         this.invoiceRepository = invoiceRepository;
+        this.softwareIntegrityService = softwareIntegrityService;
+    }
+
+    @GetMapping("/system-checksum")
+    @PreAuthorize("hasAnyAuthority('ROLE_AUTHORITY_AUDITOR', 'ROLE_PLATFORM_ADMIN')")
+    @Operation(summary = "Get Software Build Checksum and Version Integrity Evidence (Directive No. 1142/2026 Art. 10(9), 11(2), 12(3))")
+    public ResponseEntity<et.ut.einvoice.compliance.dto.SystemChecksumResponseDto> getSystemChecksum() {
+        return ResponseEntity.ok(softwareIntegrityService.getSystemChecksum());
     }
 
     @GetMapping("/audit-logs")

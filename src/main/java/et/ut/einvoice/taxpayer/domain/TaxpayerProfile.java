@@ -52,6 +52,12 @@ public class TaxpayerProfile {
     @Column(name = "system_type", nullable = false)
     private String systemType = "POS";
 
+    @Column(name = "sector_code", length = 32)
+    private String sectorCode;
+
+    @Column(name = "mandatory_offline_continuity")
+    private boolean mandatoryOfflineContinuity = false;
+
     @Column(name = "is_locked", nullable = false)
     private boolean isLocked = false;
 
@@ -93,6 +99,13 @@ public class TaxpayerProfile {
     public String getSystemNumber() { return systemNumber; }
     public String getSystemType() { return systemType; }
     public boolean isLocked() { return isLocked; }
+    public String getSectorCode() { return sectorCode; }
+    public boolean isMandatoryOfflineContinuity() { return mandatoryOfflineContinuity; }
+
+    public void assignSector(String sectorCode, boolean mandatoryOfflineContinuity) {
+        this.sectorCode = sectorCode;
+        this.mandatoryOfflineContinuity = mandatoryOfflineContinuity;
+    }
 
     public void lock() {
         this.isLocked = true;

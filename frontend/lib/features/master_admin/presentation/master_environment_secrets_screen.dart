@@ -652,11 +652,12 @@ class _MasterEnvironmentSecretsScreenState
     return Scaffold(
       backgroundColor: AppColors.paper,
       body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 480),
-          margin: const EdgeInsets.all(24),
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 480),
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
             color: AppColors.paperRaised,
             borderRadius: BorderRadius.circular(4),
             border: Border.all(color: AppColors.rule),
@@ -994,6 +995,7 @@ class _MasterEnvironmentSecretsScreenState
               ),
             ],
           ),
+        ),
         ),
       ),
     );

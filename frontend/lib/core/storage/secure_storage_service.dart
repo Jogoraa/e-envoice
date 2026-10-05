@@ -35,6 +35,18 @@ class SecureStorageService {
     }
   }
 
+  /// Read with self-healing: if CryptUnprotectData fails on Windows, delete the corrupt key and return null.
+  Future<String?> _safeRead(String key) async {
+    try {
+      return await _storage.read(key: key);
+    } catch (_) {
+      try {
+        await _storage.delete(key: key);
+      } catch (_) {}
+      return null;
+    }
+  }
+
   static const String _keyToken = 'auth_jwt_token';
   static const String _keyRefreshToken = 'auth_refresh_token';
   static const String _keyApiKey = 'm2m_api_key';
@@ -51,79 +63,74 @@ class SecureStorageService {
   static const String _keyDelegatedTenantSession = 'ut_delegated_tenant_session_json';
 
   Future<void> saveToken(String token) async {
-    await _storage.write(key: _keyToken, value: token);
+    await _safeWrite(key: _keyToken, value: token);
   }
 
   Future<String?> getToken() async {
-    try {
-      return await _storage.read(key: _keyToken);
-    } catch (_) {
-      try { await _storage.delete(key: _keyToken); } catch (_) {}
-      return null;
-    }
+    return await _safeRead(_keyToken);
   }
 
   Future<void> saveRefreshToken(String token) async {
-    await _storage.write(key: _keyRefreshToken, value: token);
+    await _safeWrite(key: _keyRefreshToken, value: token);
   }
 
   Future<String?> getRefreshToken() async {
-    return await _storage.read(key: _keyRefreshToken);
+    return await _safeRead(_keyRefreshToken);
   }
 
   Future<void> saveM2MCredentials({required String apiKey, required String clientSecret}) async {
-    await _storage.write(key: _keyApiKey, value: apiKey);
-    await _storage.write(key: _keyClientSecret, value: clientSecret);
+    await _safeWrite(key: _keyApiKey, value: apiKey);
+    await _safeWrite(key: _keyClientSecret, value: clientSecret);
   }
 
   Future<String?> getApiKey() async {
-    return await _storage.read(key: _keyApiKey);
+    return await _safeRead(_keyApiKey);
   }
 
   Future<String?> getClientSecret() async {
-    return await _storage.read(key: _keyClientSecret);
+    return await _safeRead(_keyClientSecret);
   }
 
   Future<void> saveDeviceId(String deviceId) async {
-    await _storage.write(key: _keyDeviceId, value: deviceId);
+    await _safeWrite(key: _keyDeviceId, value: deviceId);
   }
 
   Future<String?> getDeviceId() async {
-    return await _storage.read(key: _keyDeviceId);
+    return await _safeRead(_keyDeviceId);
   }
 
   Future<void> saveDeviceSecret(String secret) async {
-    await _storage.write(key: _keyDeviceSecret, value: secret);
+    await _safeWrite(key: _keyDeviceSecret, value: secret);
   }
 
   Future<String?> getDeviceSecret() async {
-    return await _storage.read(key: _keyDeviceSecret);
+    return await _safeRead(_keyDeviceSecret);
   }
 
   Future<void> saveActiveTenantId(String tenantId) async {
-    await _storage.write(key: _keyActiveTenant, value: tenantId);
+    await _safeWrite(key: _keyActiveTenant, value: tenantId);
   }
 
   Future<String?> getActiveTenantId() async {
-    return await _storage.read(key: _keyActiveTenant);
+    return await _safeRead(_keyActiveTenant);
   }
 
   Future<void> saveActiveBranchId(String branchId) async {
-    await _storage.write(key: _keyActiveBranch, value: branchId);
+    await _safeWrite(key: _keyActiveBranch, value: branchId);
   }
 
   Future<String?> getActiveBranchId() async {
-    return await _storage.read(key: _keyActiveBranch);
+    return await _safeRead(_keyActiveBranch);
   }
 
   // --- Tenant Auth Session & Context Persistence ---
   Future<void> saveTenantAuthSession(AuthSession session) async {
-    await _storage.write(key: _keyTenantAuthSession, value: jsonEncode(session.toJson()));
+    await _safeWrite(key: _keyTenantAuthSession, value: jsonEncode(session.toJson()));
   }
 
   Future<AuthSession?> getTenantAuthSession() async {
     try {
-      final raw = await _storage.read(key: _keyTenantAuthSession);
+      final raw = await _safeRead(_keyTenantAuthSession);
       if (raw == null || raw.isEmpty) return null;
       final map = jsonDecode(raw) as Map<String, dynamic>;
       final session = AuthSession.fromJson(map);
@@ -138,12 +145,12 @@ class SecureStorageService {
   }
 
   Future<void> saveTenantContext(TenantContextState contextState) async {
-    await _storage.write(key: _keyTenantContext, value: jsonEncode(contextState.toJson()));
+    await _safeWrite(key: _keyTenantContext, value: jsonEncode(contextState.toJson()));
   }
 
   Future<TenantContextState?> getTenantContext() async {
     try {
-      final raw = await _storage.read(key: _keyTenantContext);
+      final raw = await _safeRead(_keyTenantContext);
       if (raw == null || raw.isEmpty) return null;
       final map = jsonDecode(raw) as Map<String, dynamic>;
       return TenantContextState.fromJson(map);
@@ -153,8 +160,10 @@ class SecureStorageService {
   }
 
   Future<void> wipeTenantAuthSession() async {
-    await _storage.delete(key: _keyTenantAuthSession);
-    await _storage.delete(key: _keyTenantContext);
+    try {
+      await _storage.delete(key: _keyTenantAuthSession);
+      await _storage.delete(key: _keyTenantContext);
+    } catch (_) {}
   }
 
   // --- Master Admin Session Persistence ---
@@ -165,22 +174,16 @@ class SecureStorageService {
   }
 
   Future<String?> getMasterAdminToken() async {
-    try {
-      return await _storage.read(key: _keyMasterAdminToken);
-    } catch (_) {
-      // Corrupt secure storage (e.g. CryptUnprotectData failure on Windows) — self-heal by deleting.
-      try { await _storage.delete(key: _keyMasterAdminToken); } catch (_) {}
-      return null;
-    }
+    return await _safeRead(_keyMasterAdminToken);
   }
 
   Future<void> saveMasterAdminSession(MasterAdminSession session) async {
-    await _storage.write(key: _keyMasterAdminSession, value: jsonEncode(session.toJson()));
+    await _safeWrite(key: _keyMasterAdminSession, value: jsonEncode(session.toJson()));
   }
 
   Future<MasterAdminSession?> getMasterAdminSession() async {
     try {
-      final raw = await _storage.read(key: _keyMasterAdminSession);
+      final raw = await _safeRead(_keyMasterAdminSession);
       if (raw == null || raw.isEmpty) return null;
       final map = jsonDecode(raw) as Map<String, dynamic>;
       final session = MasterAdminSession.fromJson(map);
@@ -195,8 +198,10 @@ class SecureStorageService {
   }
 
   Future<void> wipeMasterAdminSession() async {
-    await _storage.delete(key: _keyMasterAdminToken);
-    await _storage.delete(key: _keyMasterAdminSession);
+    try {
+      await _storage.delete(key: _keyMasterAdminToken);
+      await _storage.delete(key: _keyMasterAdminSession);
+    } catch (_) {}
   }
 
   // --- SaaS Admin Session Persistence ---
@@ -207,22 +212,16 @@ class SecureStorageService {
   }
 
   Future<String?> getSaasAdminToken() async {
-    try {
-      return await _storage.read(key: _keySaasAdminToken);
-    } catch (_) {
-      // Corrupt secure storage (e.g. CryptUnprotectData failure on Windows) — self-heal by deleting.
-      try { await _storage.delete(key: _keySaasAdminToken); } catch (_) {}
-      return null;
-    }
+    return await _safeRead(_keySaasAdminToken);
   }
 
   Future<void> saveSaasSession(SaasManagementSession session) async {
-    await _storage.write(key: _keySaasAdminSession, value: jsonEncode(session.toJson()));
+    await _safeWrite(key: _keySaasAdminSession, value: jsonEncode(session.toJson()));
   }
 
   Future<SaasManagementSession?> getSaasSession() async {
     try {
-      final raw = await _storage.read(key: _keySaasAdminSession);
+      final raw = await _safeRead(_keySaasAdminSession);
       if (raw == null || raw.isEmpty) return null;
       final map = jsonDecode(raw) as Map<String, dynamic>;
       final session = SaasManagementSession.fromJson(map);
@@ -237,28 +236,30 @@ class SecureStorageService {
   }
 
   Future<void> wipeSaasAdminSession() async {
-    await _storage.delete(key: _keySaasAdminToken);
-    await _storage.delete(key: _keySaasAdminSession);
+    try {
+      await _storage.delete(key: _keySaasAdminToken);
+      await _storage.delete(key: _keySaasAdminSession);
+    } catch (_) {}
   }
 
   // --- Delegated Tenant Session Persistence ---
   static const String _keyDelegatedTenantToken = 'auth_delegated_tenant_token';
 
   Future<void> saveDelegatedTenantToken(String token) async {
-    await _storage.write(key: _keyDelegatedTenantToken, value: token);
+    await _safeWrite(key: _keyDelegatedTenantToken, value: token);
   }
 
   Future<String?> getDelegatedTenantToken() async {
-    return await _storage.read(key: _keyDelegatedTenantToken);
+    return await _safeRead(_keyDelegatedTenantToken);
   }
 
   Future<void> saveDelegatedTenantSession(DelegatedTenantSession session) async {
-    await _storage.write(key: _keyDelegatedTenantSession, value: jsonEncode(session.toJson()));
+    await _safeWrite(key: _keyDelegatedTenantSession, value: jsonEncode(session.toJson()));
   }
 
   Future<DelegatedTenantSession?> getDelegatedTenantSession() async {
     try {
-      final raw = await _storage.read(key: _keyDelegatedTenantSession);
+      final raw = await _safeRead(_keyDelegatedTenantSession);
       if (raw == null || raw.isEmpty) return null;
       final map = jsonDecode(raw) as Map<String, dynamic>;
       final session = DelegatedTenantSession.fromJson(map);

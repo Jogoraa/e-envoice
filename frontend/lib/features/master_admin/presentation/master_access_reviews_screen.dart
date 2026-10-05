@@ -97,30 +97,32 @@ class _MasterAccessReviewsScreenState
           ),
           content: SizedBox(
             width: 500,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Automatically snapshots all active platform and tenant administrators and flags inactive accounts (>90 days without login).',
-                  style: AppTypography.bodySmall(color: AppColors.inkMuted),
-                ),
-                const SizedBox(height: 16),
-                if (dialogError != null) ...[
-                  Text(dialogError!, style: AppTypography.bodySmall(color: AppColors.red700)),
-                  const SizedBox(height: 8),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Automatically snapshots all active platform and tenant administrators and flags inactive accounts (>90 days without login).',
+                    style: AppTypography.bodySmall(color: AppColors.inkMuted),
+                  ),
+                  const SizedBox(height: 16),
+                  if (dialogError != null) ...[
+                    Text(dialogError!, style: AppTypography.bodySmall(color: AppColors.red700)),
+                    const SizedBox(height: 8),
+                  ],
+                  TextField(
+                    controller: titleCtrl,
+                    decoration: const InputDecoration(labelText: 'Campaign Title'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descCtrl,
+                    maxLines: 2,
+                    decoration: const InputDecoration(labelText: 'Regulatory Purpose & Justification'),
+                  ),
                 ],
-                TextField(
-                  controller: titleCtrl,
-                  decoration: const InputDecoration(labelText: 'Campaign Title'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descCtrl,
-                  maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'Regulatory Purpose & Justification'),
-                ),
-              ],
+              ),
             ),
           ),
           actions: [
@@ -209,17 +211,27 @@ class _MasterAccessReviewsScreenState
                   color: AppColors.navy900,
                 ),
                 const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Privileged Access Certification & Audit Reviews', style: AppTypography.h1()),
-                    Text(
-                      'Periodic verification of administrator privileges, inactive account remediation, and certified compliance audits.',
-                      style: AppTypography.bodySmall(color: AppColors.inkMuted),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Privileged Access Certification & Audit Reviews',
+                        style: AppTypography.h1(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Periodic verification of administrator privileges, inactive account remediation, and certified compliance audits.',
+                        style: AppTypography.bodySmall(color: AppColors.inkMuted),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 16),
                 ElevatedButton.icon(
                   onPressed: _showCreateCampaignDialog,
                   icon: const Icon(Icons.add_task, size: 16),
@@ -243,7 +255,7 @@ class _MasterAccessReviewsScreenState
 
             Expanded(
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Left panel: Campaigns list
                   SizedBox(
